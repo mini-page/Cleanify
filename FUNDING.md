@@ -1,6 +1,6 @@
-# Support CleanSweep Development
+# Support Cleanify Development
 
-Thank you for considering a donation! Your support helps keep CleanSweep ad-free and continuously improved.
+Thank you for considering a donation! Your support helps keep Cleanify ad-free and continuously improved.
 
 If you find the app useful, you can support development via the following crypto addresses:
 

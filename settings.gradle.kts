@@ -18,5 +18,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "cleansweep"
+rootProject.name = "Cleanify"
 include(":app")

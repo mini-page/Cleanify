@@ -1,13 +1,13 @@
-# Contributing to CleanSweep
+# Contributing to Cleanify
 
-Thank you for your interest in contributing to CleanSweep! We're excited to have your help in making the app better. This document outlines our guidelines to ensure a smooth and effective collaboration process for everyone.
+Thank you for your interest in contributing to Cleanify! We're excited to have your help in making the app better. This document outlines our guidelines to ensure a smooth and effective collaboration process for everyone.
 
 ## How to Contribute
 
 The best way to contribute is by getting involved in the discussion. All feature proposals and bug reports should start as a GitHub Issue.
 
--   **Found a Bug?** [Open a Bug Report](https://github.com/LoopOtto/cleansweep/issues/new?template=bug_report.md&title=%5BBUG%5D%20). Please be as detailed as possible, including your device model, Android version, and steps to reproduce the issue.
--   **Have a Feature Idea?** [Propose a New Feature](https://github.com/LoopOtto/cleansweep/issues/new?template=feature_request.md&title=%5BFEAT%5D%20). Explain the problem you're trying to solve and how your proposed feature would address it.
+-   **Found a Bug?** [Open a Bug Report](https://github.com/LoopOtto/Cleanify/issues/new?template=bug_report.md&title=%5BBUG%5D%20). Please be as detailed as possible, including your device model, Android version, and steps to reproduce the issue.
+-   **Have a Feature Idea?** [Propose a New Feature](https://github.com/LoopOtto/Cleanify/issues/new?template=feature_request.md&title=%5BFEAT%5D%20). Explain the problem you're trying to solve and how your proposed feature would address it.
 
 Please search the existing issues before creating a new one to avoid duplicates.
 
@@ -77,4 +77,4 @@ When your changes are ready, please submit a Pull Request with the following:
 -   A link to the GitHub Issue it resolves (e.g., `Closes #123`).
 -   Ensure your code is formatted according to the project's existing style.
 
-Thank you for helping make CleanSweep a better app!
+Thank you for helping make Cleanify a better app!

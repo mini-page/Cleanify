@@ -14,7 +14,7 @@
         errorLine1="            val resourceId = resources.getIdentifier("
         errorLine2="                             ^">
         <location
-            file="src/main/java/com/cleansweep/util/NavigationUtils.kt"
+            file="src/main/java/com/Cleanify/util/NavigationUtils.kt"
             line="72"
             column="30"/>
     </issue>
@@ -80,7 +80,7 @@
         errorLine1="    modifier: Modifier = Modifier"
         errorLine2="    ~~~~~~~~">
         <location
-            file="src/main/java/com/cleansweep/ui/screens/swiper/SwiperScreen.kt"
+            file="src/main/java/com/Cleanify/ui/screens/swiper/SwiperScreen.kt"
             line="802"
             column="5"/>
     </issue>
@@ -91,7 +91,7 @@
         errorLine1="    modifier: Modifier = Modifier"
         errorLine2="    ~~~~~~~~">
         <location
-            file="src/main/java/com/cleansweep/ui/screens/swiper/SwiperScreen.kt"
+            file="src/main/java/com/Cleanify/ui/screens/swiper/SwiperScreen.kt"
             line="832"
             column="5"/>
     </issue>
@@ -102,7 +102,7 @@
         errorLine1="            val resourceId = resources.getIdentifier("
         errorLine2="                                       ~~~~~~~~~~~~~">
         <location
-            file="src/main/java/com/cleansweep/util/NavigationUtils.kt"
+            file="src/main/java/com/Cleanify/util/NavigationUtils.kt"
             line="72"
             column="40"/>
     </issue>
@@ -179,7 +179,7 @@
         errorLine1="        android.util.Log.d(&quot;VideoPlayer&quot;, &quot;🎬 Creating VideoPlayer for URI: $uri&quot;)"
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/com/cleansweep/ui/screens/swiper/SwiperScreen.kt"
+            file="src/main/java/com/Cleanify/ui/screens/swiper/SwiperScreen.kt"
             line="871"
             column="9"/>
     </issue>
@@ -190,7 +190,7 @@
         errorLine1="        android.util.Log.d(&quot;VideoPlayer&quot;, &quot;🔑 Unique key: $uniqueKey&quot;)"
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/com/cleansweep/ui/screens/swiper/SwiperScreen.kt"
+            file="src/main/java/com/Cleanify/ui/screens/swiper/SwiperScreen.kt"
             line="872"
             column="9"/>
     </issue>
@@ -201,7 +201,7 @@
         errorLine1="        android.util.Log.d(&quot;VideoPlayer&quot;, &quot;🏗️ Building new ExoPlayer instance for: $uri&quot;)"
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/com/cleansweep/ui/screens/swiper/SwiperScreen.kt"
+            file="src/main/java/com/Cleanify/ui/screens/swiper/SwiperScreen.kt"
             line="876"
             column="9"/>
     </issue>
@@ -212,7 +212,7 @@
         errorLine1="        android.util.Log.d(&quot;VideoPlayer&quot;, &quot;📼 Setting media item for: $uri&quot;)"
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/com/cleansweep/ui/screens/swiper/SwiperScreen.kt"
+            file="src/main/java/com/Cleanify/ui/screens/swiper/SwiperScreen.kt"
             line="891"
             column="9"/>
     </issue>
@@ -223,7 +223,7 @@
         errorLine1="                android.util.Log.d("
         errorLine2="                ^">
         <location
-            file="src/main/java/com/cleansweep/ui/screens/swiper/SwiperScreen.kt"
+            file="src/main/java/com/Cleanify/ui/screens/swiper/SwiperScreen.kt"
             line="912"
             column="17"/>
     </issue>
@@ -234,7 +234,7 @@
         errorLine1="        android.util.Log.d(&quot;VideoPlayer&quot;, &quot;🔄 Setting up lifecycle observer for: $uri&quot;)"
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/com/cleansweep/ui/screens/swiper/SwiperScreen.kt"
+            file="src/main/java/com/Cleanify/ui/screens/swiper/SwiperScreen.kt"
             line="929"
             column="9"/>
     </issue>
@@ -245,7 +245,7 @@
         errorLine1="                android.util.Log.d(&quot;VideoPlayer&quot;, &quot;⏸️ Lifecycle PAUSE - pausing player for: $uri&quot;)"
         errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/com/cleansweep/ui/screens/swiper/SwiperScreen.kt"
+            file="src/main/java/com/Cleanify/ui/screens/swiper/SwiperScreen.kt"
             line="932"
             column="17"/>
     </issue>
@@ -256,7 +256,7 @@
         errorLine1="                android.util.Log.d(&quot;VideoPlayer&quot;, &quot;▶️ Lifecycle RESUME - resuming player for: $uri&quot;)"
         errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/com/cleansweep/ui/screens/swiper/SwiperScreen.kt"
+            file="src/main/java/com/Cleanify/ui/screens/swiper/SwiperScreen.kt"
             line="937"
             column="17"/>
     </issue>
@@ -267,7 +267,7 @@
         errorLine1="                android.util.Log.d(&quot;VideoPlayer&quot;, &quot;⏹️ Lifecycle STOP for: $uri&quot;)"
         errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/com/cleansweep/ui/screens/swiper/SwiperScreen.kt"
+            file="src/main/java/com/Cleanify/ui/screens/swiper/SwiperScreen.kt"
             line="942"
             column="17"/>
     </issue>
@@ -278,7 +278,7 @@
         errorLine1="                android.util.Log.d(&quot;VideoPlayer&quot;, &quot;💥 Lifecycle DESTROY for: $uri&quot;)"
         errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/com/cleansweep/ui/screens/swiper/SwiperScreen.kt"
+            file="src/main/java/com/Cleanify/ui/screens/swiper/SwiperScreen.kt"
             line="946"
             column="17"/>
     </issue>
@@ -289,7 +289,7 @@
         errorLine1="            android.util.Log.d(&quot;VideoPlayer&quot;, &quot;🗑️ DISPOSING VideoPlayer for: $uri&quot;)"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/com/cleansweep/ui/screens/swiper/SwiperScreen.kt"
+            file="src/main/java/com/Cleanify/ui/screens/swiper/SwiperScreen.kt"
             line="952"
             column="13"/>
     </issue>
@@ -374,7 +374,7 @@
     <issue
         id="UnusedResources"
         message="The resource `R.string.onboarding_welcome_title` appears to be unused"
-        errorLine1="    &lt;string name=&quot;onboarding_welcome_title&quot;>Welcome to CleanSweep&lt;/string>"
+        errorLine1="    &lt;string name=&quot;onboarding_welcome_title&quot;>Welcome to Cleanify&lt;/string>"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"

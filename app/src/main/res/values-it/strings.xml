@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  ~ CleanSweep
+  ~ Cleanify
   ~ Copyright (c) 2025 LoopOtto
   ~
   ~ This program is free software: you can redistribute it and/or modify
@@ -16,7 +16,7 @@
   ~ along with this program. If not, see <https://www.gnu.org/licenses/>.
   -->
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name">CleanSweep</string>
+    <string name="app_name">Cleanify</string>
 
     <!-- General / Common -->
     <string name="confirm">Conferma</string>
@@ -354,26 +354,26 @@
     <string name="onboarding_next">Avanti</string>
     <string name="onboarding_grant_permission">Concedi Accesso a Tutti i File</string>
     <string name="onboarding_get_started">Inizia</string>
-    <string name="onboarding_close_dialog_title">Chiudi CleanSweep</string>
-    <string name="onboarding_close_dialog_body">CleanSweep non può funzionare senza il permesso di Accesso a Tutti i File. Abbiamo provato, ma è risultato necessario affinché CleanSweep funzioni correttamente per la maggior parte degli utenti.</string>
+    <string name="onboarding_close_dialog_title">Chiudi Cleanify</string>
+    <string name="onboarding_close_dialog_body">Cleanify non può funzionare senza il permesso di Accesso a Tutti i File. Abbiamo provato, ma è risultato necessario affinché Cleanify funzioni correttamente per la maggior parte degli utenti.</string>
     <string name="permission_screen_title">Accesso a Tutti i File Richiesto</string>
-    <string name="permission_screen_desc">CleanSweep necessita del permesso di Accesso a Tutti i File per organizzare foto e video in tutte le cartelle del dispositivo.</string>
-    <string name="permission_screen_instruction">Per favore concedi il permesso nelle impostazioni del dispositivo per usare CleanSweep.</string>
+    <string name="permission_screen_desc">Cleanify necessita del permesso di Accesso a Tutti i File per organizzare foto e video in tutte le cartelle del dispositivo.</string>
+    <string name="permission_screen_instruction">Per favore concedi il permesso nelle impostazioni del dispositivo per usare Cleanify.</string>
     <string name="open_settings">Apri Impostazioni</string>
 
     <!-- Onboarding Pages -->
-    <string name="onboarding_p1_title">Benvenuto in CleanSweep</string>
-    <string name="onboarding_p1_desc">Prendi il controllo della tua galleria. Un modo semplice e potente per ordinare migliaia di foto e video.\nRecupera il tuo tempo e il tuo spazio di archiviazione.</string>
-    <string name="onboarding_p2_title">Scorrimento Semplice</string>
-    <string name="onboarding_p2_desc">Scorri a destra per tenere, a sinistra per eliminare. Hai sbagliato? Il pulsante Annulla è lì per te! Indeciso? Usa il pulsante Salta per decidere dopo.</string>
-    <string name="onboarding_p3_title">Ordinamento Potente</string>
-    <string name="onboarding_p3_desc">Tocca le cartelle per spostare istantaneamente i file. Tieni premuto un elemento per inviarlo rapidamente a una cartella \'To Edit\' o accedere ad altre scorciatoie.</string>
-    <string name="onboarding_p4_title">Trova Foto Simili</string>
-    <string name="onboarding_p4_desc">Il nostro trova duplicati va oltre le copie esatte per trovare anche foto e video visivamente simili. Puoi persino regolare la sensibilità nelle impostazioni!</string>
-    <string name="onboarding_p5_title">Superpoteri Video</string>
-    <string name="onboarding_p5_desc">Vola attraverso i video con i controlli della velocità di riproduzione. Puoi anche catturare il momento perfetto salvando un singolo fotogramma come nuova foto.</string>
-    <string name="onboarding_p6_title">Sei al Comando</string>
-    <string name="onboarding_p6_desc">Hai imparato le basi. Ora sei pronto per organizzare i tuoi media più velocemente che mai.</string>
+    <string name="onboarding_p1_title">Benvenuto in Cleanify</string>
+    <string name="onboarding_p1_desc">Il modo più intelligente per organizzare la tua vita digitale. Foto, video, audio, PDF e documenti — tutto gestito con gesti semplici. Altri formati in arrivo.</string>
+    <string name="onboarding_p2_title">Scorri per Organizzare</string>
+    <string name="onboarding_p2_desc">Scorri a destra per tenere, a sinistra per eliminare. Non sei sicuro? Salta e decidi dopo. Hai sbagliato? Annulla all\'istante. Così semplice.</string>
+    <string name="onboarding_p3_title">Tutti i Formati Supportati</string>
+    <string name="onboarding_p3_desc">Vai oltre foto e video. Cleanify gestisce anche file audio, PDF e documenti. Organizza tutto da un unico posto — senza cambiare app.</string>
+    <string name="onboarding_p4_title">Ordinamento Intelligente</string>
+    <string name="onboarding_p4_desc">Sposta file nelle cartelle con un solo tocco. Crea album personalizzati, aggiungi preferiti e organizza migliaia di file in pochi secondi.</string>
+    <string name="onboarding_p5_title">Recupera Spazio</string>
+    <string name="onboarding_p5_desc">Trova duplicati esatti e file visivamente simili di ogni tipo. Recupera gigabyte di spazio con pochi tocchi.</string>
+    <string name="onboarding_p6_title">100% Privato e Offline</string>
+    <string name="onboarding_p6_desc">I tuoi file non lasciano mai il dispositivo. Niente account, nessun tracciamento, nessuna raccolta dati. Solo tu e i tuoi file, al sicuro.</string>
 
     <!-- Settings Screen -->
     <string name="search_settings_placeholder">Cerca impostazioni…</string>
@@ -384,8 +384,26 @@
     <string name="duplicate_finder_section_title">Trova Duplicati</string>
     <string name="advanced_section_title">Avanzate</string>
     <string name="help_support_section_title">Aiuto e Supporto</string>
+    <string name="media_storage_section_title">Media e Archiviazione</string>
     <string name="about_section_title">Informazioni</string>
     <string name="no_settings_found">Nessuna impostazione trovata per \"%1$s\"</string>
+    <string name="appearance_section_desc">Personalizza tema, colori, lingua e layout delle cartelle</string>
+    <string name="behavior_section_desc">Gesti di scorrimento, selezione cartelle e azioni predefinite</string>
+    <string name="duplicate_finder_section_desc">Livello di similarità, ambito scansione e elenchi cartelle</string>
+    <string name="media_storage_section_desc">Indicizzazione, riproduzione video e comportamento ricerca</string>
+    <string name="help_support_section_desc">Tutorial, backup e gestione preferenze</string>
+    <string name="about_section_desc">Versione, codice sorgente e supporto sviluppo</string>
+
+    <!-- Settings Sub-page Section Headers -->
+    <string name="theme_section_header">Tema</string>
+    <string name="layout_section_header">Layout</string>
+    <string name="gestures_section_header">Gesti</string>
+    <string name="folder_behavior_section_header">Comportamento Cartelle</string>
+    <string name="search_section_header">Ricerca</string>
+    <string name="indexing_section_header">Indicizzazione</string>
+    <string name="video_section_header">Video</string>
+    <string name="onboarding_section_header">Guida Iniziale</string>
+    <string name="data_section_header">Dati</string>
 
     <!-- Language Settings -->
     <string name="language_title">Lingua</string>
@@ -546,12 +564,12 @@
     <string name="support_development_desc">Sostieni il progetto</string>
     <string name="version_title">Versione</string>
     <string name="app_version_copied">Versione app copiata: %1$s</string>
-    <string name="about_cleansweep_title">Informazioni su CleanSweep</string>
-    <string name="about_cleansweep_desc">Scopri di più su CleanSweep</string>
+    <string name="about_cleanify_title">Informazioni su Cleanify</string>
+    <string name="about_cleanify_desc">Scopri di più su Cleanify</string>
     <string name="github_title">GitHub</string>
-    <string name="github_summary">github.com/LoopOtto/CleanSweep</string>
+    <string name="github_summary">github.com/LoopOtto/Cleanify</string>
     <string name="gitlab_title">GitLab</string>
-    <string name="gitlab_summary">gitlab.com/LoopOtto/CleanSweep (mirror in sola lettura)</string>
+    <string name="gitlab_summary">gitlab.com/LoopOtto/Cleanify (mirror in sola lettura)</string>
     <string name="open_source_licenses_title">Licenze Open Source</string>
     <string name="open_source_licenses_desc">Visualizza le licenze open source</string>
 
@@ -630,7 +648,7 @@
     <string name="indexing_status_all_indexed">Tutti i file multimediali sono conosciuti dal MediaStore.</string>
     <string name="refresh_scan_icon_desc">Aggiorna Stato / Scansiona Ora</string>
     <string name="funding_dialog_title">Supporta lo Sviluppo</string>
-    <string name="funding_dialog_body">CleanSweep è gratuito e open source. Se lo trovi utile, considera di sostenerne lo sviluppo.</string>
+    <string name="funding_dialog_body">Cleanify è gratuito e open source. Se lo trovi utile, considera di sostenerne lo sviluppo.</string>
     <string name="address_copied">Indirizzo copiato</string>
     <string name="copy_address_icon_desc">Copia indirizzo</string>
     <string name="funding_dialog_footer">Sentiti libero di includere il tuo nome utente GitHub nella descrizione della transazione!</string>

@@ -64,7 +64,7 @@
     <!-- APPLICATION DEFINITION                                                              -->
     <!-- ===================================================================================== -->
     <application
-        android:name=".CleanSweepApp"
+        android:name=".CleanifyApp"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -72,7 +72,7 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.CleanSweep"
+        android:theme="@style/Theme.Cleanify"
         tools:targetApi="36"
         android:requestLegacyExternalStorage="true"> <!-- Required for the legacy storage model on Android 10 -->
 
@@ -83,9 +83,9 @@
         -   `windowSoftInputMode="adjustResize"` ensures the UI correctly resizes when the keyboard appears.
         -->
         <activity
-            android:name="com.cleansweep.ui.MainActivity"
+            android:name="com.cleanify.ui.MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.CleanSweep"
+            android:theme="@style/Theme.Cleanify"
             android:configChanges="locale|layoutDirection|uiMode|screenLayout|screenSize|smallestScreenSize"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
@@ -98,7 +98,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
-                    android:host="com.cleansweep"
+                    android:host="com.cleanify"
                     android:scheme="app" />
             </intent-filter>
         </activity>
