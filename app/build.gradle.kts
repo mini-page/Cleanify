@@ -40,12 +40,20 @@ android {
         applicationId = "com.cleanify"
         minSdk = 29
         targetSdk = 36
-        versionCode = 3
+        versionCode = 4
         versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
+        }
+
+        val abiFilter = project.findProperty("abiFilter") as? String
+        if (abiFilter != null) {
+            val filter = abiFilter
+            ndk {
+                abiFilters.add(filter)
+            }
         }
     }
 
@@ -90,9 +98,11 @@ androidComponents {
             val appName = "Cleanify"
             val versionName = output.versionName.get()
             val buildType = variant.buildType
+            val customAbi: String? by project
+            val abiSuffix = if (customAbi != null) "-$customAbi" else ""
 
             (output as? com.android.build.api.variant.impl.VariantOutputImpl)?.outputFileName?.set(
-                "$appName-v$versionName-$buildType.apk"
+                "$appName-v$versionName$abiSuffix-$buildType.apk"
             )
         }
     }
