@@ -420,6 +420,22 @@ class SessionSetupViewModel @Inject constructor(
         }
     }
 
+    fun selectAllInCategory(category: FolderCategory) {
+        _uiState.update { state ->
+            val paths = category.folders.map { it.path }
+            val newSelection = (state.selectedBuckets + paths).distinct()
+            state.copy(selectedBuckets = newSelection)
+        }
+    }
+
+    fun unselectAllInCategory(category: FolderCategory) {
+        _uiState.update { state ->
+            val paths = category.folders.map { it.path }.toSet()
+            val newSelection = state.selectedBuckets.filter { it !in paths }
+            state.copy(selectedBuckets = newSelection)
+        }
+    }
+
     fun selectAll() {
         _uiState.update { state ->
             val visiblePaths = state.folderCategories.flatMap { it.folders }.map { it.path }

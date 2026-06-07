@@ -132,7 +132,7 @@ fun SwiperScreen(
     onNavigateUp: () -> Unit,
     onNavigateUpAndReset: () -> Unit,
     onNavigateToSettings: () -> Unit = {},
-    onNavigateToDuplicates: () -> Unit = {},
+    onNavigateToTools: () -> Unit = {},
     viewModel: SwiperViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -282,11 +282,11 @@ fun SwiperScreen(
                             positioning = TooltipAnchorPosition.Above,
                             spacingBetweenTooltipAndAnchor = 4.dp
                         ),
-                        tooltip = { PlainTooltip { Text(stringResource(R.string.find_duplicates)) } },
+                        tooltip = { PlainTooltip { Text("Tools") } },
                         state = rememberTooltipState()
                     ) {
-                        IconButton(onClick = onNavigateToDuplicates) {
-                            Icon(Icons.Default.ControlPointDuplicate, contentDescription = stringResource(R.string.find_duplicates))
+                        IconButton(onClick = onNavigateToTools) {
+                            Icon(Icons.Default.Build, contentDescription = "Tools")
                         }
                     }
                     TooltipBox(

@@ -42,6 +42,11 @@ import com.cleanify.ui.screens.session.SessionSetupScreen
 import com.cleanify.ui.screens.session.SessionSetupViewModel
 import com.cleanify.ui.screens.settings.SettingsScreen
 import com.cleanify.ui.screens.swiper.SwiperScreen
+import com.cleanify.ui.screens.tools.BlacklistEditorScreen
+import com.cleanify.ui.screens.tools.CleanerSettingsScreen
+import com.cleanify.ui.screens.tools.EmptyCleanerScreen
+import com.cleanify.ui.screens.tools.ToolsScreen
+import com.cleanify.ui.screens.tools.WhitelistEditorScreen
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -70,8 +75,17 @@ sealed class Screen(val route: String) {
             return "swiper/${URLEncoder.encode(encodedPaths, StandardCharsets.UTF_8.toString())}"
         }
     }
-    object Settings : Screen("settings")
-    object Libraries: Screen("libraries") // New screen for licenses
+    object Settings : Screen("settings?page={page}") {
+        fun createRoute(page: String? = null): String {
+            return if (page != null) "settings?page=$page" else "settings"
+        }
+    }
+    object Libraries: Screen("libraries")
+    object Tools : Screen("tools")
+    object EmptyCleaner : Screen("empty_cleaner")
+    object CleanerSettings : Screen("cleaner_settings")
+    object CleanerBlacklist : Screen("cleaner_blacklist")
+    object CleanerWhitelist : Screen("cleaner_whitelist")
 
     // Routes for the duplicates feature, now part of a nested graph
     object Duplicates : Screen("duplicates_overview")
@@ -131,9 +145,8 @@ fun AppNavigation(
                     viewModel.saveSelectedBucketsPreference()
                     navController.navigate(Screen.Swiper.createRoute(bucketIds))
                 },
-                onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
-                // Navigate to the start of the new duplicates graph
-                onNavigateToDuplicates = { navController.navigate(DUPLICATES_GRAPH_ROUTE) },
+                onNavigateToSettings = { navController.navigate(Screen.Settings.createRoute()) },
+                onNavigateToTools = { navController.navigate(Screen.Tools.route) },
                 viewModel = viewModel
             )
         }
@@ -162,15 +175,60 @@ fun AppNavigation(
                         ?.set(RESET_SEARCH_RESULT_KEY, true)
                     navController.popBackStack()
                 },
-                onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
-                onNavigateToDuplicates = { navController.navigate(DUPLICATES_GRAPH_ROUTE) }
+                onNavigateToSettings = { navController.navigate(Screen.Settings.createRoute()) },
+                onNavigateToTools = { navController.navigate(Screen.Tools.route) }
             )
         }
 
-        composable(Screen.Settings.route) {
+        composable(Screen.Tools.route) {
+            ToolsScreen(
+                onNavigateUp = { navController.navigateUp() },
+                onNavigateToDuplicates = { navController.navigate(DUPLICATES_GRAPH_ROUTE) },
+                onNavigateToEmptyCleaner = { navController.navigate(Screen.EmptyCleaner.route) }
+            )
+        }
+
+        composable(Screen.EmptyCleaner.route) {
+            EmptyCleanerScreen(
+                onNavigateUp = { navController.navigateUp() },
+                onNavigateToSettings = { navController.navigate(Screen.CleanerSettings.route) }
+            )
+        }
+
+        composable(Screen.CleanerSettings.route) {
+            CleanerSettingsScreen(
+                onNavigateUp = { navController.navigateUp() },
+                onNavigateToBlacklist = { navController.navigate(Screen.CleanerBlacklist.route) },
+                onNavigateToWhitelist = { navController.navigate(Screen.CleanerWhitelist.route) }
+            )
+        }
+
+        composable(Screen.CleanerBlacklist.route) {
+            BlacklistEditorScreen(
+                onNavigateUp = { navController.navigateUp() }
+            )
+        }
+
+        composable(Screen.CleanerWhitelist.route) {
+            WhitelistEditorScreen(
+                onNavigateUp = { navController.navigateUp() }
+            )
+        }
+
+        composable(
+            route = Screen.Settings.route,
+            arguments = listOf(navArgument("page") {
+                type = NavType.StringType
+                defaultValue = null
+                nullable = true
+            })
+        ) { backStackEntry ->
+            val initialPage = backStackEntry.arguments?.getString("page")
             SettingsScreen(
                 onNavigateUp = { navController.navigateUp() },
-                onNavigateToLibraries = { navController.navigate(Screen.Libraries.route) }
+                onNavigateToLibraries = { navController.navigate(Screen.Libraries.route) },
+                onNavigateToCleanerSettings = { navController.navigate(Screen.CleanerSettings.route) },
+                initialPage = initialPage
             )
         }
 
@@ -203,7 +261,7 @@ fun AppNavigation(
                     onNavigateToGroup = { groupId ->
                         navController.navigate(Screen.GroupDetails.createRoute(groupId))
                     },
-                    onNavigateToSettings = { navController.navigate(Screen.Settings.route) }
+                    onNavigateToSettings = { navController.navigate(Screen.Settings.createRoute("duplicates")) }
                 )
             }
 

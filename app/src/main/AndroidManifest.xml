@@ -59,6 +59,16 @@
     <!-- Required for Android 13 (API 33) and above to post notifications, primarily for the foreground service progress. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Package query permission for cleaner corpse detection -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="PackageVisibility" />
+
+    <!-- Boot completed for clean-on-boot feature -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Kill background processes for cleaner -->
+    <uses-permission android:name="android.permission.KILL_BACKGROUND_PROCESSES" />
+
 
     <!-- ===================================================================================== -->
     <!-- APPLICATION DEFINITION                                                              -->
@@ -102,6 +112,18 @@
                     android:scheme="app" />
             </intent-filter>
         </activity>
+
+        <!--
+        Boot receiver for clean-on-boot feature.
+        Runs the cleaner once after device boots if enabled in settings.
+        -->
+        <receiver
+            android:name=".data.cleaner.BootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
         <!--
         Foreground service for the Duplicate Media Scanner.

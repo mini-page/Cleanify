@@ -368,6 +368,8 @@
     <string name="media_storage_section_desc">Indexing, video playback, and search behavior</string>
     <string name="help_support_section_desc">Tutorial, backup, and manage preferences</string>
     <string name="about_section_desc">Version info, source code, and support development</string>
+    <string name="cleaner_section_title">Cleaner Settings</string>
+    <string name="cleaner_section_desc">Empty files, junk filters, blacklist, and whitelist</string>
 
     <!-- Settings Sub-page Section Headers -->
     <string name="theme_section_header">Theme</string>

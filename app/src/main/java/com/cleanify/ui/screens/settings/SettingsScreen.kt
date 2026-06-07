@@ -2,11 +2,17 @@ package com.cleanify.ui.screens.settings
 
 import android.content.ClipData
 import android.os.Build
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -19,6 +25,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -89,6 +96,7 @@ private val categories = listOf(
     SettingsCategory("behavior", R.string.behavior_section_title, R.string.behavior_section_desc, Icons.Default.TouchApp),
     SettingsCategory("duplicates", R.string.duplicate_finder_section_title, R.string.duplicate_finder_section_desc, Icons.Default.ContentCopy),
     SettingsCategory("media_storage", R.string.media_storage_section_title, R.string.media_storage_section_desc, Icons.Default.Storage),
+    SettingsCategory("cleaner", R.string.cleaner_section_title, R.string.cleaner_section_desc, Icons.Default.CleaningServices),
     SettingsCategory("help", R.string.help_support_section_title, R.string.help_support_section_desc, Icons.AutoMirrored.Filled.HelpOutline),
     SettingsCategory("about", R.string.about_section_title, R.string.about_section_desc, Icons.Default.Info)
 )
@@ -98,6 +106,8 @@ private val categories = listOf(
 fun SettingsScreen(
     onNavigateUp: () -> Unit,
     onNavigateToLibraries: () -> Unit,
+    onNavigateToCleanerSettings: () -> Unit = {},
+    initialPage: String? = null,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -146,7 +156,21 @@ fun SettingsScreen(
     val isGestureMode = rememberIsUsingGestureNavigation()
     val supportsDynamicColors = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
-    var currentPage by remember { mutableStateOf<String?>(null) }
+    var currentPage by remember { mutableStateOf<String?>(initialPage) }
+
+    LaunchedEffect(initialPage) {
+        if (initialPage != null) {
+            currentPage = initialPage
+        }
+    }
+
+    BackHandler(enabled = currentPage != null) {
+        if (initialPage != null) {
+            onNavigateUp()
+        } else {
+            currentPage = null
+        }
+    }
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
 
@@ -184,32 +208,51 @@ fun SettingsScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    if (currentPage == null && uiState.isSearchActive) {
-                        TextField(
-                            value = uiState.searchQuery,
-                            onValueChange = viewModel::onSearchQueryChanged,
-                            modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
-                            placeholder = { Text(stringResource(R.string.search_settings_placeholder)) },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                            keyboardActions = KeyboardActions(onSearch = { keyboardController?.hide() }),
-                            colors = TextFieldDefaults.colors(
-                                focusedContainerColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent,
-                                disabledContainerColor = Color.Transparent,
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent,
-                                disabledIndicatorColor = Color.Transparent
-                            )
-                        )
-                    } else if (currentPage != null) {
+                    if (currentPage != null) {
                         Text(pageTitle ?: "")
                     } else {
-                        Text(stringResource(R.string.settings))
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            AnimatedVisibility(
+                                visible = !uiState.isSearchActive,
+                                exit = fadeOut(animationSpec = tween(200))
+                            ) {
+                                Text(stringResource(R.string.settings))
+                            }
+                            AnimatedVisibility(
+                                visible = uiState.isSearchActive,
+                                enter = slideInHorizontally(animationSpec = tween(350)) { -it } + fadeIn(animationSpec = tween(350)),
+                                exit = slideOutHorizontally(animationSpec = tween(200)) { -it } + fadeOut(animationSpec = tween(200))
+                            ) {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().heightIn(max = 40.dp)
+                                        .clip(RoundedCornerShape(24.dp))
+                                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                                        .padding(horizontal = 16.dp, vertical = 7.dp),
+                                    contentAlignment = Alignment.CenterStart
+                                ) {
+                                    if (uiState.searchQuery.isEmpty()) {
+                                        Text(
+                                            stringResource(R.string.search_settings_placeholder),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    BasicTextField(
+                                        value = uiState.searchQuery,
+                                        onValueChange = viewModel::onSearchQueryChanged,
+                                        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
+                                        textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+                                        singleLine = true,
+                                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                        keyboardActions = KeyboardActions(onSearch = { keyboardController?.hide() })
+                                    )
+                                }
+                            }
+                        }
                     }
                 },
                 navigationIcon = {
-                    BackNavigationIcon(onClick = { if (currentPage != null) currentPage = null else onNavigateUp() }, contentDescription = stringResource(R.string.navigate_back))
+                    BackNavigationIcon(onClick = { if (currentPage != null) { if (initialPage != null) onNavigateUp() else currentPage = null } else onNavigateUp() }, contentDescription = stringResource(R.string.navigate_back))
                 },
                 actions = {
                     if (currentPage == null) {
@@ -231,7 +274,8 @@ fun SettingsScreen(
                     categories = categories,
                     searchQuery = debouncedSearchQuery,
                     viewModel = viewModel,
-                    onCategoryClick = { currentPage = it }
+                    onCategoryClick = { currentPage = it },
+                    onCleanerClick = onNavigateToCleanerSettings
                 )
                 "appearance" -> AppearanceSubPage(
                     currentTheme, currentLocale, useDynamicColors, accentColorKey,
@@ -453,7 +497,8 @@ private fun SettingsMainMenu(
     categories: List<SettingsCategory>,
     searchQuery: String,
     viewModel: SettingsViewModel,
-    onCategoryClick: (String) -> Unit
+    onCategoryClick: (String) -> Unit,
+    onCleanerClick: () -> Unit = {}
 ) {
     val resources = LocalResources.current
     val filteredCategories = if (searchQuery.isBlank()) {
@@ -470,7 +515,7 @@ private fun SettingsMainMenu(
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        if (filteredCategories.isEmpty() && searchQuery.isNotBlank()) {
+        if (filteredCategories.isEmpty()) {
             Text(
                 text = stringResource(R.string.no_settings_found, searchQuery),
                 modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
@@ -482,7 +527,9 @@ private fun SettingsMainMenu(
 
         filteredCategories.forEach { category ->
             Card(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp).clickable { onCategoryClick(category.id) },
+                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp).clickable {
+                    if (category.id == "cleaner") onCleanerClick() else onCategoryClick(category.id)
+                },
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
             ) {
@@ -664,13 +711,21 @@ private fun HelpSupportSubPage(
         SettingsItem(stringResource(R.string.export_target_favorites_title), stringResource(R.string.export_target_favorites_desc), onClick = { exportFavoritesLauncher.launch(defaultExportFilename) })
         SettingsItem(stringResource(R.string.import_target_favorites_title), stringResource(R.string.import_target_favorites_desc), onClick = { importFavoritesLauncher.launch(arrayOf("application/json", "text/plain")) })
 
-        Row(modifier = Modifier.fillMaxWidth().clickable { viewModel.resetDialogWarnings() }, verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.reset_dialog_warnings_title), style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(2.dp))
-                Text(stringResource(R.string.reset_dialog_warnings_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Card(
+            modifier = Modifier.fillMaxWidth().clickable { viewModel.resetDialogWarnings() },
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+        ) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.reset_dialog_warnings_title), style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(2.dp))
+                    Text(stringResource(R.string.reset_dialog_warnings_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
         Spacer(Modifier.height(32.dp))
@@ -749,10 +804,15 @@ private fun SettingsItem(title: String, summary: String, onClick: (() -> Unit)? 
     val modifier = if (onClick != null || onLongClick != null)
         Modifier.pointerInput(Unit) { detectTapGestures(onTap = { onClick?.invoke() }, onLongPress = { onLongClick?.invoke() }) }
     else Modifier
-    Column(modifier = modifier.fillMaxWidth()) {
-        Text(text = title, style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.height(2.dp))
-        Text(text = summary, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Text(text = title, style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(2.dp))
+            Text(text = summary, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 
@@ -846,38 +906,50 @@ private fun MediaIndexingStatusItem(status: DetailedIndexingStatus?, isStatusLoa
         else stringResource(R.string.indexing_status_all_indexed)
     } else null
 
-    ListItem(
-        headlineContent = { Text(stringResource(R.string.media_indexing_status_title)) },
-        supportingContent = {
-            Column {
-                Text(statusText)
-                if (supportingText != null) {
-                    val hasFiles = status != null && status.total > status.indexed
-                    Spacer(Modifier.height(4.dp))
-                    Text(supportingText, style = MaterialTheme.typography.bodySmall, color = if (hasFiles) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, modifier = if (hasFiles) Modifier.clickable { onViewFiles() } else Modifier)
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+    ) {
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.media_indexing_status_title)) },
+            supportingContent = {
+                Column {
+                    Text(statusText)
+                    if (supportingText != null) {
+                        val hasFiles = status != null && status.total > status.indexed
+                        Spacer(Modifier.height(4.dp))
+                        Text(supportingText, style = MaterialTheme.typography.bodySmall, color = if (hasFiles) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, modifier = if (hasFiles) Modifier.clickable { onViewFiles() } else Modifier)
+                    }
+                }
+            },
+            leadingContent = { if (isStatusLoading || isScanning) CircularProgressIndicator(Modifier.size(24.dp)) else Icon(Icons.Default.Info, contentDescription = null) },
+            trailingContent = {
+                IconButton(onClick = { if (status != null && status.total > status.indexed) onScan() else onRefresh() }, enabled = !isScanning && !isStatusLoading) {
+                    Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.refresh_scan_icon_desc))
                 }
             }
-        },
-        leadingContent = { if (isStatusLoading || isScanning) CircularProgressIndicator(Modifier.size(24.dp)) else Icon(Icons.Default.Info, contentDescription = null) },
-        trailingContent = {
-            IconButton(onClick = { if (status != null && status.total > status.indexed) onScan() else onRefresh() }, enabled = !isScanning && !isStatusLoading) {
-                Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.refresh_scan_icon_desc))
-            }
-        },
-        modifier = Modifier.padding(vertical = 8.dp)
-    )
+        )
+    }
 }
 
 @Composable
 private fun AccentColorSetting(currentAccentKey: String, onClick: () -> Unit) {
     val accent = predefinedAccentColors.find { it.key == currentAccentKey } ?: predefinedAccentColors.first()
-    Row(Modifier.fillMaxWidth().clickable(onClick = onClick), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text(stringResource(R.string.accent_color_title), style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(2.dp))
-            Text(accent.displayName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.accent_color_title), style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(2.dp))
+                Text(accent.displayName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Box(Modifier.size(32.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary).border(1.dp, MaterialTheme.colorScheme.outline, CircleShape))
         }
-        Box(Modifier.size(32.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary).border(1.dp, MaterialTheme.colorScheme.outline, CircleShape))
     }
 }
 
@@ -955,25 +1027,28 @@ private fun <T> SettingsPickerItem(titleRes: Int, description: String, options: 
     val accentColor = settingsPickerAccents[titleRes] ?: Color(0xFF7F8C8D)
     var showSheet by remember { mutableStateOf(false) }
     val displayValue = getDisplayName(selectedOption)
-    Column(
-        modifier = Modifier.fillMaxWidth().clickable { showSheet = true }
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable { showSheet = true },
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
     ) {
-        Text(stringResource(titleRes), style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.height(2.dp))
-        Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(8.dp))
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            color = accentColor.copy(alpha = 0.08f),
-            border = BorderStroke(1.dp, accentColor.copy(alpha = 0.25f))
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Text(stringResource(titleRes), style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(2.dp))
+            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(8.dp))
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                color = accentColor.copy(alpha = 0.08f),
+                border = BorderStroke(1.dp, accentColor.copy(alpha = 0.25f))
             ) {
-                Text(displayValue, style = MaterialTheme.typography.bodyLarge, color = accentColor, modifier = Modifier.weight(1f))
-                Icon(imageVector = Icons.Default.UnfoldMore, contentDescription = null, tint = accentColor.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(displayValue, style = MaterialTheme.typography.bodyLarge, color = accentColor, modifier = Modifier.weight(1f))
+                    Icon(imageVector = Icons.Default.UnfoldMore, contentDescription = null, tint = accentColor.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+                }
             }
         }
     }
@@ -981,23 +1056,33 @@ private fun <T> SettingsPickerItem(titleRes: Int, description: String, options: 
         ModalBottomSheet(
             onDismissRequest = { showSheet = false },
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surface,
+            dragHandle = null
         ) {
             Column(modifier = Modifier.padding(bottom = 32.dp)) {
-                Box(
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 16.dp),
-                    contentAlignment = Alignment.Center
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(modifier = Modifier.size(40.dp, 4.dp).clip(RoundedCornerShape(2.dp)).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)))
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        Box(modifier = Modifier.size(40.dp, 4.dp).clip(RoundedCornerShape(2.dp)).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)))
+                    }
+                    Box(
+                        modifier = Modifier.padding(end = 8.dp).size(32.dp).clip(androidx.compose.foundation.shape.CircleShape).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)).clickable { showSheet = false },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Close, contentDescription = "Close",
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(stringResource(titleRes), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                    IconButton(onClick = { showSheet = false }) {
-                        Icon(Icons.Default.Close, contentDescription = null)
-                    }
                 }
                 Spacer(Modifier.height(8.dp))
                 options.forEach { option ->
@@ -1027,69 +1112,110 @@ private fun <T> SettingsPickerItem(titleRes: Int, description: String, options: 
 
 @Composable
 private fun SettingSwitch(titleRes: Int, descriptionRes: Int, checked: Boolean, onCheckedChange: (Boolean) -> Unit, enabled: Boolean = true) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text(stringResource(titleRes), style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(2.dp))
-            Text(stringResource(descriptionRes), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(titleRes), style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(2.dp))
+                Text(stringResource(descriptionRes), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Switch(checked, onCheckedChange, enabled = enabled)
         }
-        Switch(checked, onCheckedChange, enabled = enabled)
     }
 }
 
 @Composable
 private fun SettingSwitch(titleRes: Int, description: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit, enabled: Boolean = true) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text(stringResource(titleRes), style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(2.dp))
-            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(titleRes), style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(2.dp))
+                Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Switch(checked, onCheckedChange, enabled = enabled)
         }
-        Switch(checked, onCheckedChange, enabled = enabled)
     }
 }
 
 @Composable
 private fun DefaultAlbumLocationSetting(viewModel: SettingsViewModel, defaultPath: String, pathOptions: List<Pair<String, String>>) {
-    Column {
-        Text(stringResource(R.string.default_album_location_title), style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.height(2.dp))
-        Text(stringResource(R.string.default_album_location_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(8.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            pathOptions.forEach { (name, path) -> FilterChip(defaultPath == path, { viewModel.onDefaultAlbumPathChanged(path) }, label = { Text(name, Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }, modifier = Modifier.weight(1f)) }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Text(stringResource(R.string.default_album_location_title), style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(2.dp))
+            Text(stringResource(R.string.default_album_location_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(8.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                pathOptions.forEach { (name, path) -> FilterChip(defaultPath == path, { viewModel.onDefaultAlbumPathChanged(path) }, label = { Text(name, Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }, modifier = Modifier.weight(1f)) }
+            }
+            Spacer(Modifier.height(12.dp))
+            OutlinedButton({ viewModel.showDefaultPathSearchDialog() }, Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.Search, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.search_custom_folder))
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                if (defaultPath.isNotBlank()) {
+                    val std = pathOptions.find { it.second == defaultPath }
+                    stringResource(R.string.current_path_prefix, if (std != null) std.first else ".../${defaultPath.takeLast(30)}")
+                } else stringResource(R.string.no_default_folder_selected),
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis
+            )
         }
-        Spacer(Modifier.height(12.dp))
-        OutlinedButton({ viewModel.showDefaultPathSearchDialog() }, Modifier.fillMaxWidth()) {
-            Icon(Icons.Default.Search, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.search_custom_folder))
-        }
-        Spacer(Modifier.height(8.dp))
-        Text(
-            if (defaultPath.isNotBlank()) {
-                val std = pathOptions.find { it.second == defaultPath }
-                stringResource(R.string.current_path_prefix, if (std != null) std.first else ".../${defaultPath.takeLast(30)}")
-            } else stringResource(R.string.no_default_folder_selected),
-            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis
-        )
     }
 }
 
 @Composable
 private fun RememberMediaSetting(viewModel: SettingsViewModel, rememberProcessedMedia: Boolean) {
-    Column {
-        SettingSwitch(R.string.remember_organized_media_title, R.string.remember_organized_media_desc, rememberProcessedMedia, { viewModel.setRememberProcessedMedia(it) })
-        AnimatedVisibility(rememberProcessedMedia) { OutlinedButton({ viewModel.resetProcessedMediaIds() }, Modifier.fillMaxWidth().padding(top = 8.dp)) { Text(stringResource(R.string.reset_organized_media_history)) } }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.remember_organized_media_title), style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(2.dp))
+                    Text(stringResource(R.string.remember_organized_media_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Switch(rememberProcessedMedia, { viewModel.setRememberProcessedMedia(it) })
+            }
+            AnimatedVisibility(rememberProcessedMedia) {
+                Spacer(Modifier.height(4.dp))
+                OutlinedButton({ viewModel.resetProcessedMediaIds() }, Modifier.fillMaxWidth()) { Text(stringResource(R.string.reset_organized_media_history)) }
+            }
+        }
     }
 }
 
 @Composable
 private fun ForgetSortedMediaSetting(viewModel: SettingsViewModel) {
-    Column {
-        Text(stringResource(R.string.forget_sorted_media_folder_title), style = MaterialTheme.typography.titleMedium)
-        Text(stringResource(R.string.forget_sorted_media_folder_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(8.dp))
-        OutlinedButton({ viewModel.showForgetMediaSearchDialog() }, Modifier.fillMaxWidth()) {
-            Icon(Icons.Default.Search, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.select_folder_to_forget))
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Text(stringResource(R.string.forget_sorted_media_folder_title), style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.forget_sorted_media_folder_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton({ viewModel.showForgetMediaSearchDialog() }, Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.Search, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.select_folder_to_forget))
+            }
         }
     }
 }

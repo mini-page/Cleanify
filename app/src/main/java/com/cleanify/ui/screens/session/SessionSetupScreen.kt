@@ -35,6 +35,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -50,6 +51,8 @@ import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -88,7 +91,7 @@ fun SessionSetupScreen(
     windowSizeClass: WindowSizeClass,
     onStartSession: (List<String>) -> Unit,
     onNavigateToSettings: () -> Unit,
-    onNavigateToDuplicates: () -> Unit,
+    onNavigateToTools: () -> Unit,
     viewModel: SessionSetupViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -103,10 +106,6 @@ fun SessionSetupScreen(
     val pullToRefreshState = rememberPullToRefreshState()
     val logTag ="SessionSetupScreen"
     var showSortMenu by remember { mutableStateOf(false) }
-
-    val visibleFolders = uiState.folderCategories.flatMap { it.folders }
-    val areAllVisibleSelected = visibleFolders.isNotEmpty() && visibleFolders.all { it.path in uiState.selectedBuckets }
-    val isSelectAllMode = !areAllVisibleSelected
 
     BackHandler(enabled = uiState.isContextualSelectionMode) {
         viewModel.exitContextualSelectionMode()
@@ -220,7 +219,7 @@ fun SessionSetupScreen(
             } else {
                 DefaultTopAppBar(
                     uiState = uiState,
-                    onNavigateToDuplicates = onNavigateToDuplicates,
+                    onNavigateToTools = onNavigateToTools,
                     onNavigateToSettings = onNavigateToSettings
                 )
             }
@@ -262,33 +261,57 @@ fun SessionSetupScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedTextField(
-                    value = uiState.searchQuery,
-                    onValueChange = { viewModel.updateSearchQuery(it) },
+                Box(
                     modifier = Modifier
                         .weight(1f)
-                        .focusRequester(focusRequester)
-                        .heightIn(max = 48.dp),
-                    singleLine = true,
-                    placeholder = { Text(stringResource(R.string.search_hint)) },
-                    textStyle = MaterialTheme.typography.bodyMedium,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(
-                        onSearch = {
-                            keyboardController?.hide()
-                            focusManager.clearFocus()
+                        .clip(RoundedCornerShape(28.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = stringResource(R.string.search_hint),
+                            modifier = Modifier.padding(start = 8.dp, end = 4.dp).size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Box(modifier = Modifier.weight(1f)) {
+                            if (uiState.searchQuery.isEmpty()) {
+                                Text(
+                                    stringResource(R.string.search_hint),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                            BasicTextField(
+                                value = uiState.searchQuery,
+                                onValueChange = { viewModel.updateSearchQuery(it) },
+                                modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
+                                textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                keyboardActions = KeyboardActions(
+                                    onSearch = {
+                                        keyboardController?.hide()
+                                        focusManager.clearFocus()
+                                    }
+                                )
+                            )
                         }
-                    ),
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search_hint)) },
-                    trailingIcon = if (uiState.searchQuery.isNotEmpty()) {
-                        {
-                            IconButton(onClick = { viewModel.updateSearchQuery("") }) {
-                                Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.clear_search))
+                        if (uiState.searchQuery.isNotEmpty()) {
+                            IconButton(
+                                onClick = { viewModel.updateSearchQuery("") },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.clear_search), modifier = Modifier.size(18.dp))
                             }
                         }
-                    } else null,
-                    shape = RoundedCornerShape(28.dp)
-                )
+                    }
+                }
                 Spacer(modifier = Modifier.width(8.dp))
                 Box {
                     TooltipBox(
@@ -447,6 +470,8 @@ fun SessionSetupScreen(
                                 uiState.folderCategories.forEach { category ->
                                     if (category.folders.isNotEmpty()) {
                                         item {
+                                            val catFolders = category.folders
+                                            val areAllCatSelected = catFolders.isNotEmpty() && catFolders.all { it.path in uiState.selectedBuckets }
                                             Row(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
@@ -459,9 +484,9 @@ fun SessionSetupScreen(
                                                     style = MaterialTheme.typography.titleMedium,
                                                     color = MaterialTheme.colorScheme.primary
                                                 )
-                                                TextButton(onClick = { if (isSelectAllMode) viewModel.selectAll() else viewModel.unselectAll() }) {
+                                                TextButton(onClick = { if (areAllCatSelected) viewModel.unselectAllInCategory(category) else viewModel.selectAllInCategory(category) }) {
                                                     Text(
-                                                        text = if (isSelectAllMode) stringResource(R.string.select_all) else stringResource(R.string.unselect_all),
+                                                        text = if (areAllCatSelected) stringResource(R.string.unselect_all) else stringResource(R.string.select_all),
                                                         style = MaterialTheme.typography.labelLarge
                                                     )
                                                 }
@@ -585,7 +610,7 @@ private fun NoSearchResultsMessage(searchQuery: String, modifier: Modifier = Mod
 @Composable
 private fun DefaultTopAppBar(
     uiState: SessionSetupUiState,
-    onNavigateToDuplicates: () -> Unit,
+    onNavigateToTools: () -> Unit,
     onNavigateToSettings: () -> Unit
 ) {
     TopAppBar(
@@ -593,11 +618,11 @@ private fun DefaultTopAppBar(
         actions = {
             TooltipBox(
                 positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
-                tooltip = { PlainTooltip { Text(stringResource(R.string.find_duplicates)) } },
+                tooltip = { PlainTooltip { Text("Tools") } },
                 state = rememberTooltipState()
             ) {
-                IconButton(onClick = onNavigateToDuplicates) {
-                    Icon(Icons.Default.ControlPointDuplicate, contentDescription = stringResource(R.string.find_duplicates))
+                IconButton(onClick = onNavigateToTools) {
+                    Icon(Icons.Default.Build, contentDescription = "Tools")
                 }
             }
             TooltipBox(
@@ -676,6 +701,22 @@ private fun ContextualTopAppBar(
     )
 }
 
+private fun folderIcon(name: String) = when (name.uppercase()) {
+    "DCIM", "CAMERA" -> Icons.Default.PhotoCamera
+    "PICTURES", "SCREENSHOTS", "SCREENSHOT" -> Icons.Default.PhotoLibrary
+    "DOWNLOADS" -> Icons.Default.Download
+    "MUSIC", "AUDIO", "VOICE RECORDER", "NOTIFICATIONS", "RINGTONES", "ALARMS" -> Icons.Default.AudioFile
+    "VIDEOS", "MOVIES", "RECORDINGS" -> Icons.Default.VideoFile
+    "DOCUMENTS", "PDF" -> Icons.Default.Description
+    "ANDROID", "DATA", "OBB" -> Icons.Default.Android
+    "BLOB", "BLOBTORY" -> Icons.Default.Storage
+    "TEMP", "CACHE" -> Icons.Default.Delete
+    "BLUETOOTH" -> Icons.Default.Bluetooth
+    "SYSTEM", "ETC", "PROC", "DEV", "SYS", "BIN", "BOOT" -> Icons.Default.Settings
+    "TITANIUMBACKUP" -> Icons.Default.Backup
+    else -> Icons.Default.Folder
+}
+
 private val folderIconTints = listOf(
     Color(0xFF5B9BD5), // Blue
     Color(0xFF70AD47), // Green
@@ -748,7 +789,7 @@ private fun EnhancedFolderItem(
         ) {
             Box {
                 Icon(
-                    imageVector = Icons.Default.Folder,
+                    imageVector = folderIcon(folder.name),
                     contentDescription = "Folder",
                     modifier = Modifier.size(24.dp),
                     tint = iconTint

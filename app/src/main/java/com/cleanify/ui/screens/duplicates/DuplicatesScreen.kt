@@ -220,15 +220,31 @@ fun DuplicatesScreen(
             onDismiss = viewModel::hideUnscannableFiles
         )
     }
-    val title = when (uiState.scanState) {
-        ScanState.Idle -> stringResource(R.string.duplicate_finder_title)
-        ScanState.Scanning, ScanState.Cancelling -> stringResource(R.string.scanning_phase)
-        ScanState.Complete -> pluralStringResource(R.plurals.scan_result_title, uiState.resultGroups.size, uiState.resultGroups.size)
-    }
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(title) },
+                title = {
+                    val subtitle = when (uiState.scanState) {
+                        ScanState.Complete -> "(${uiState.resultGroups.size} groups)"
+                        else -> null
+                    }
+                    Column {
+                        Text(
+                            when (uiState.scanState) {
+                                ScanState.Idle -> stringResource(R.string.duplicate_finder_title)
+                                ScanState.Scanning, ScanState.Cancelling -> stringResource(R.string.scanning_phase)
+                                ScanState.Complete -> "Scan Results"
+                            }
+                        )
+                        if (subtitle != null) {
+                            Text(
+                                text = subtitle,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                },
                 navigationIcon = {
                     TooltipBox(
                         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
@@ -242,6 +258,9 @@ fun DuplicatesScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                    }
                     if (uiState.scanState == ScanState.Complete) {
                         val hasExactDuplicates = uiState.resultGroups.any { it is DuplicateGroup }
                         if (hasExactDuplicates) {
