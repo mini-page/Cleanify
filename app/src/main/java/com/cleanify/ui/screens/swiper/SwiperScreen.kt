@@ -97,6 +97,7 @@ import coil.ImageLoader
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.cleanify.R
+import com.cleanify.data.model.FileCategory
 import com.cleanify.data.model.MediaItem
 import com.cleanify.data.repository.FolderBarLayout
 import com.cleanify.data.repository.FolderNameLayout
@@ -220,12 +221,12 @@ fun SwiperScreen(
         exoPlayer.playWhenReady = false
         exoPlayer.stop()
         exoPlayer.clearMediaItems()
-        if (currentItem != null && currentItem.isVideo) {
+        if (currentItem != null && (currentItem.isVideo || currentItem.category == FileCategory.Audio)) {
             val exoMediaItem = ExoMediaItem.fromUri(currentItem.uri)
             exoPlayer.setMediaItem(exoMediaItem)
             exoPlayer.prepare()
 
-            if (uiState.videoPlaybackPosition > 0L) {
+            if (uiState.videoPlaybackPosition > 0L && currentItem.isVideo) {
                 exoPlayer.seekTo(uiState.videoPlaybackPosition)
             }
             exoPlayer.playWhenReady = true
@@ -1438,21 +1439,37 @@ private fun MediaItemCard(
                         .fillMaxSize()
                         .background(Color.Transparent)
                         .clip(MaterialTheme.shapes.medium)) {
-                        if (item.isVideo) {
-                            VideoPlayer(
-                                exoPlayer = exoPlayer,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        } else {
-                            val loader = if (item.mimeType == "image/gif") gifImageLoader else imageLoader
-                            AsyncImage(
-                                model = ImageRequest.Builder(LocalContext.current).data(item.uri).crossfade(true).build(),
-                                imageLoader = loader,
-                                contentDescription = item.displayName,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Fit,
-                                alignment = Alignment.Center
-                            )
+                        when (item.category) {
+                            FileCategory.Video -> {
+                                VideoPlayer(
+                                    exoPlayer = exoPlayer,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                            FileCategory.Audio -> {
+                                AudioPlayerCard(
+                                    exoPlayer = exoPlayer,
+                                    mediaItem = item,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                            FileCategory.Image -> {
+                                val loader = if (item.mimeType == "image/gif") gifImageLoader else imageLoader
+                                AsyncImage(
+                                    model = ImageRequest.Builder(LocalContext.current).data(item.uri).crossfade(true).build(),
+                                    imageLoader = loader,
+                                    contentDescription = item.displayName,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Fit,
+                                    alignment = Alignment.Center
+                                )
+                            }
+                            else -> {
+                                FileInfoCard(
+                                    mediaItem = item,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
                         }
                         if (leftBorderAlpha > 0f) {
                             Canvas(modifier = Modifier.fillMaxSize()) {
@@ -1467,7 +1484,7 @@ private fun MediaItemCard(
                             }
                         }
                         Box(modifier = Modifier.fillMaxSize()) {
-                            if (item.isVideo) {
+                            if (item.category == FileCategory.Video) {
                                 val muteDesc = if (isVideoMuted) stringResource(R.string.unmute_video) else stringResource(R.string.mute_video)
                                 TooltipBox(
                                     positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
@@ -1515,7 +1532,7 @@ private fun MediaItemCard(
                                     .fillMaxWidth(),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                if (item.isVideo) {
+                                if (item.category == FileCategory.Video) {
                                     TextButton(
                                         onClick = {
                                             val nextSpeed = when (videoPlaybackSpeed) {
@@ -1590,6 +1607,177 @@ private fun VideoPlayer(
         modifier = modifier
     )
 }
+
+@Composable
+private fun AudioPlayerCard(
+    exoPlayer: ExoPlayer,
+    mediaItem: MediaItem,
+    modifier: Modifier = Modifier
+) {
+    var isPlaying by remember { mutableStateOf(exoPlayer.isPlaying) }
+    var currentPosition by remember { mutableStateOf(0L) }
+    var duration by remember { mutableStateOf(1L) }
+
+    DisposableEffect(exoPlayer) {
+        val listener = object : Player.Listener {
+            override fun onIsPlayingChanged(playing: Boolean) {
+                isPlaying = playing
+            }
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == Player.STATE_READY) {
+                    duration = exoPlayer.duration.coerceAtLeast(1L)
+                }
+            }
+            override fun onPositionDiscontinuity(oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) {
+                currentPosition = exoPlayer.currentPosition
+            }
+        }
+        exoPlayer.addListener(listener)
+        onDispose { exoPlayer.removeListener(listener) }
+    }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            currentPosition = exoPlayer.currentPosition
+            delay(250)
+        }
+    }
+
+    Box(
+        modifier = modifier.background(Color(0xFF1A1A2E)),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(24.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.MusicNote,
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                tint = Color.White.copy(alpha = 0.7f)
+            )
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = mediaItem.displayName,
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = formatDuration(duration),
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White.copy(alpha = 0.6f)
+            )
+            Spacer(Modifier.height(24.dp))
+            LinearProgressIndicator(
+                progress = { if (duration > 0) (currentPosition.toFloat() / duration) else 0f },
+                modifier = Modifier.fillMaxWidth().height(4.dp),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = Color.White.copy(alpha = 0.2f),
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = formatDuration(currentPosition),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.5f)
+                )
+                Text(
+                    text = formatDuration(duration),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.5f)
+                )
+            }
+            Spacer(Modifier.height(16.dp))
+            IconButton(
+                onClick = {
+                    if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
+                },
+                modifier = Modifier.size(56.dp)
+            ) {
+                Icon(
+                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = if (isPlaying) "Pause" else "Play",
+                    modifier = Modifier.size(40.dp),
+                    tint = Color.White
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FileInfoCard(
+    mediaItem: MediaItem,
+    modifier: Modifier = Modifier
+) {
+    val icon = when {
+        mediaItem.mimeType.contains("pdf") -> Icons.Default.PictureAsPdf
+        mediaItem.mimeType.contains("text") || mediaItem.extension in setOf("txt", "rtf") -> Icons.Default.Description
+        mediaItem.mimeType.contains("spreadsheet") || mediaItem.extension in setOf("xls", "xlsx") -> Icons.Default.TableChart
+        mediaItem.mimeType.contains("presentation") || mediaItem.extension in setOf("ppt", "pptx") -> Icons.Default.Slideshow
+        else -> Icons.Default.InsertDriveFile
+    }
+
+    Box(
+        modifier = modifier.background(Color(0xFF1A1A2E)),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(24.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(72.dp),
+                tint = Color.White.copy(alpha = 0.7f)
+            )
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = mediaItem.displayName,
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = formatFileSize(mediaItem.size),
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White.copy(alpha = 0.6f)
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = mediaItem.mimeType.uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White.copy(alpha = 0.4f)
+            )
+        }
+    }
+}
+
+private fun formatDuration(millis: Long): String {
+    val totalSeconds = millis / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return "%d:%02d".format(minutes, seconds)
+}
+
+private val MediaItem.extension: String
+    get() {
+        val dot = displayName.lastIndexOf('.')
+        return if (dot >= 0) displayName.substring(dot + 1).lowercase() else ""
+    }
 
 @Composable
 private fun NoMoreItemsMessage(pendingChanges: List<PendingChange>, onShowSummarySheet: () -> Unit) {

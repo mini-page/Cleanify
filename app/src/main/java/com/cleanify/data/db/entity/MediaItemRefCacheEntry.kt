@@ -22,6 +22,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.cleanify.data.model.FileCategory
 import com.cleanify.data.model.MediaItem
 import com.cleanify.domain.model.DuplicateGroup
 import com.cleanify.domain.model.SimilarGroup
@@ -67,7 +68,7 @@ fun MediaItem.toCacheEntry(groupId: String): MediaItemRefCacheEntry {
         size = this.size,
         bucketId = this.bucketId,
         bucketName = this.bucketName,
-        isVideo = this.isVideo,
+        isVideo = this.category == FileCategory.Video,
         width = this.width,
         height = this.height
     )
@@ -84,7 +85,7 @@ fun MediaItemRefCacheEntry.toMediaItem(): MediaItem {
         size = this.size,
         bucketId = this.bucketId,
         bucketName = this.bucketName,
-        isVideo = this.isVideo,
+        category = if (this.isVideo) FileCategory.Video else FileCategory.Image,
         width = this.width,
         height = this.height
     )

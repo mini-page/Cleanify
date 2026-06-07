@@ -1,100 +1,444 @@
-# Cleanify
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
-[![GitHub issues](https://img.shields.io/github/issues/mini-page/Cleanify)](https://github.com/mini-page/Cleanify/issues)
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/mini-page/Cleanify)](https://github.com/mini-page/Cleanify/releases)
+<p align="center">
+  <img src="docs/images/logo.webp" width="140" alt="Cleanify Logo" />
+</p>
 
-**Tired of a cluttered photo gallery? Get organized with a swipe!**
+<h1 align="center">Cleanify</h1>
 
-Cleanify is a powerful and private application for Android that helps you reclaim storage space and organize your photos and videos with a fun, simple, Tinder-like interface. Swipe right to keep, swipe left to delete. It's that easy.
+<p align="center">
+  <strong>Swipe. Sort. Reclaim your space. 100% offline.</strong>
+</p>
 
-Best of all, **Cleanify is 100% offline.** Your files and your data never leave your device, ensuring your memories remain private.
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPL v3" /></a>
+  <a href="https://github.com/mini-page/Cleanify/releases"><img src="https://img.shields.io/github/v/release/mini-page/Cleanify" alt="Latest Release" /></a>
+  <a href="https://github.com/mini-page/Cleanify/issues"><img src="https://img.shields.io/github/issues/mini-page/Cleanify" alt="GitHub Issues" /></a>
+  <img src="https://img.shields.io/badge/Android-10%2B-green.svg" alt="Android 10+" />
+  <img src="https://img.shields.io/badge/Kotlin-2.2-purple.svg" alt="Kotlin" />
+</p>
 
-## Key Features
+---
 
-Cleanify is packed with smart features to make media management a breeze. **We are actively seeking translations for new and existing strings to make the app available worldwide!**
-### The Fun & Easy Way to Organize
-*   ✨ **Intuitive Swiping:** Quickly sort through thousands of files. Swipe right to keep, left to delete.
-*   📁 **One-Tap Sorting:** Add your favorite folders, and they'll appear at the bottom of the screen. Simply tap a folder icon to instantly move the current photo or video.
-*   ✂️ **Clip Video Moments:** Turn a favorite moment from a video into a still image with the built-in frame extractor.
+Cleanify is a powerful, privacy-first Android app for managing your photos, videos, and files. Sort through thousands of files with a fun Tinder-style swipe interface, find and eliminate duplicate or similar media, and clean up junk — all without ever touching the internet.
 
-### A Tailor-Made Experience
+**Your files never leave your device.**
 
-Cleanify is built on the belief that your tools should work *your* way. The app features a comprehensive settings menu that lets you fine-tune nearly every aspect of the experience to match your personal workflow.
+---
 
-*   ⚙️ **Deep Customization:** From changing swipe sensitivity and theming to controlling how folder names are displayed, you have the power to create your perfect setup.
-*   🧠 **Smart Defaults:** While highly configurable, the app comes with sensible defaults so you can be productive right out of the box.
-*   👆 **Your Workflow, Your Rules:** Adjust everything from video playback speed to confirmation dialogs and default folder selections to make Cleanify truly your own.
+## Table of Contents
 
-### Powerful Duplicate Finder
-Free up gigabytes of space by getting rid of unnecessary copies.
-*   🔎 **Finds Exact & Similar Media:** Cleanify detects files that are 100% identical, as well as photos and videos that look visually similar (like burst shots or trimmed clips).
-*   🎛️ **You Control the Similarity:** Choose your desired level of "sameness" (Strict, Balanced, or Loose) to fine-tune the scan and get the results you want.
-*   🗑️ **Smart Deletion:** Tools like "Keep Oldest" or "Keep Newest" let you clean up entire groups of duplicates with a single tap.
+- [Screenshots](#screenshots)
+- [Features](#features)
+  - [Swipe Sorter](#-swipe-sorter)
+  - [Duplicate Finder](#-duplicate-finder)
+  - [Empty Cleaner](#-empty-cleaner--junk-remover)
+  - [Session Setup](#-session-setup)
+  - [Appearance & Theming](#-appearance--theming)
+  - [Customization & Settings](#-customization--settings)
+- [Supported File Types](#supported-file-types)
+- [Privacy](#privacy-first)
+- [Getting Started](#getting-started)
+- [Permissions Explained](#permissions-explained)
+- [For Developers](#for-developers)
+- [Contributing](#contributing)
+- [Donating](#donating)
+- [License](#license)
 
-### Smart and Fast Performance
-*   ⚡ **Finds *All* Your Media:** Cleanify performs a deep scan to find media files that other apps might miss, ensuring nothing is overlooked.
-*   🚀 **Optimized for Speed:** By smartly caching information, future scans become significantly faster. The app is designed to get you organizing without the wait.
-*   ⚫ **AMOLED-Friendly:** A sleek, true-black dark mode that looks great on any screen.
+---
+
+## Screenshots
+
+<p align="center">
+  <img src="docs/images/01.png" width="22%" alt="Session Setup — Folder Selection" />
+  &nbsp;
+  <img src="docs/images/02.png" width="22%" alt="Swipe to Sort" />
+  &nbsp;
+  <img src="docs/images/03.png" width="22%" alt="Duplicate Finder" />
+  &nbsp;
+  <img src="docs/images/04.png" width="22%" alt="Quick Organize" />
+</p>
+
+<p align="center"><em>Note: The AMOLED theme has a true-black background by design.</em></p>
+
+---
+
+## Features
+
+### 🃏 Swipe Sorter
+
+The core of Cleanify — a card-based sorting experience that makes managing thousands of files effortless.
+
+#### Gestures
+| Gesture | Default Action |
+|---------|---------------|
+| **Swipe Right** | ✅ Keep file |
+| **Swipe Left** | 🗑️ Delete file |
+| **Swipe Down** | Configurable (see settings) |
+| **Tap** | Open media context menu |
+
+#### Actions Per File
+- **Keep** — mark the file to stay untouched
+- **Delete** — queue the file for deletion
+- **Move** — send the file to any target folder
+- **Skip** — defer the decision and come back later
+- **Undo** — instantly reverse the last action at any time
+- **Screenshot Frame** — extract a still image (JPEG) from any video moment
+- **Screenshot + Delete** — extract the frame *and* queue the original video for deletion
+- **Share** — send to another app directly from the review queue
+- **Open With** — launch in any compatible app
+- **Rename** — rename the file inline
+- **Open Full Screen** — view the media at full resolution
+
+#### Target Folder Bar
+- Add, remove, and reorder quick-move target folders per session
+- Horizontal or vertical layout (configurable)
+- Expand / collapse the bar
+- Favorite folders persist across sessions
+- Export and import your favorite target folder lists (JSON)
+
+#### Summary Sheet (Pending Changes Review)
+Before anything is applied, review every queued action:
+- **To Delete**, **To Keep**, **To Move** (grouped by destination), **To Convert to Image**
+- Switch between List, Grid, and Compact view modes
+- **Apply Changes** — execute all file operations at once (with confirmation dialog)
+- **Cancel All** — discard all pending decisions, start fresh
+
+#### End-of-Session
+- Review items you skipped
+- Go back to select different folders
+- Reset sorted history for a single folder
+- Reset all sorted media history
+
+#### Video Playback
+- Inline video player with play/pause and mute/unmute
+- Configurable default playback speed (e.g. 0.5x, 1x, 2x)
+- Continuous loop while reviewing
+
+#### Performance
+- Coil-powered image preloading with a dedicated GIF-optimized loader
+- JIT MediaStore indexing for unindexed `file://` URIs
+- Pending swipe decisions survive process death via `SavedStateHandle`
+
+---
+
+### 🔍 Duplicate Finder
+
+Free up gigabytes by eliminating exact copies and visually similar media.
+
+#### Two Scan Modes
+
+**Exact Duplicates**
+Uses a multi-phase hybrid hashing strategy:
+1. Group files by size (instant pre-filter)
+2. For images: pixel hash at 256px thumbnail size
+3. For videos: SHA-256 of first 256 KB
+4. For other types: full SHA-256
+
+All computed hashes are cached in the Room database and invalidated automatically when a file changes.
+
+**Similar Media**
+Finds files that *look* the same even if they're technically different:
+- **dHash** (difference hash) at 9x8 pixel scale
+- **Color histogram** comparison: 4x4x4 bins / 64-bin 3D RGB histogram
+- **Video frames**: sampled at 10% and 50% of duration for comparison
+- Parallelized across all CPU cores for speed
+- Similarity results cached in Room DB
+- **Similarity Denial** — flag a group as "not similar"; that pair is permanently excluded from future scans
+
+#### Similarity Thresholds
+Choose how aggressively duplicates are matched:
+
+| Level | Description |
+|-------|-------------|
+| **Strict** | Only very close matches (burst shots, minor crops) |
+| **Balanced** | Default — good balance of accuracy and coverage |
+| **Loose** | Broader matching (different lighting, resizes) |
+
+#### Scan Scope
+- All files on device
+- Include only specific folders
+- Exclude specific folders
+
+#### Group Actions
+| Action | Behaviour |
+|--------|-----------|
+| **Keep Oldest** | Deletes all but the earliest file in the group |
+| **Keep Newest** | Deletes all but the most recent file |
+| **Delete All Exact Duplicates** | One-tap batch delete of all exact-copy groups (keeps oldest) |
+| **Flag as Incorrect** | Reports false positives; improves future grouping |
+| **Hide Group** | Dismiss group without deleting |
+
+#### Additional UI
+- Grid view with configurable column count
+- Reclaimable space counter
+- Stale results warning with scan timestamp
+- Background scanning with foreground service notification and real-time progress
+- Unreadable / corrupt files dialog
+- Rescan button with filter active badge
+
+---
+
+### 🧹 Empty Cleaner & Junk Remover
+
+A dedicated cleaning tool that goes beyond media.
+
+#### What It Finds
+| Filter | What Is Cleaned |
+|--------|----------------|
+| **Empty Files** | Files of 0 bytes |
+| **Empty Folders** | Directories with no contents |
+| **Generic Junk** | `.tmp`, `.log` files and temp directories |
+| **APK Files** | `.apk`, `.apks`, `.apkm`, `.aab` installer packages |
+| **Corpse Files** | Orphaned `Android/data/` folders from uninstalled apps |
+
+#### Smart Automation
+- **Double-Checker** — repeat the scan 1–10x to catch files created during cleanup
+- **Auto-Whitelist** — automatically protects paths containing "backup", "important", "copy", etc.
+- **Clear Clipboard** — wipe clipboard contents after each clean
+- **Clean on Boot** — automatically clean after device restart (via `BootReceiver`)
+- **Scheduled Cleaning** — clean every 0–24 hours automatically (WorkManager)
+- **Stop Background Apps** — kill non-system background processes after cleaning to free RAM
+
+#### Blacklist / Whitelist Editors
+Full-featured list editors with regex pattern support to precisely control what gets cleaned or protected. Ships with sensible defaults (`.nomedia`, `.DS_Store`, SDK paths, analytics folders, etc.).
+
+#### Import / Export
+Export and import your full cleaner configuration (filters, blacklist, whitelist) as JSON — great for backing up your setup or sharing between devices.
+
+#### Results
+- Full list of found files with paths and sizes
+- Total reclaimable size summary
+- Post-clean report: files failed, RAM freed
+- **Quick Clean** — skip the scan and apply all enabled filters instantly
+
+---
+
+### 📂 Session Setup
+
+The starting point for every sort session.
+
+- **Auto-discover** all media folders on device with live scanning progress
+- Browse folders by category: **Favorites**, **System**, **User**
+- **Sort folders** by: Name A–Z, Name Z–A, Size, Item Count
+- **Search folders** by name (with optional auto-focus)
+- **Pull to refresh** the folder list
+- **Multi-select** folders for a session (bulk select/deselect)
+- **Recursive selection** — include a folder and all its sub-folders
+- **Favorite source folders** — persist preferred scan locations
+- **Mark as Sorted** — permanently hide a folder from appearing in future sessions
+- **Long-press context actions**: favorite, unfavorite, hide (bulk)
+- **Move / Rename** folders directly from the list
+- Quick shortcut to **Find Duplicates**
+- **Select All** / **Unselect All** scoped to search results or globally
+
+---
+
+### 🎨 Appearance & Theming
+
+| Option | Choices |
+|--------|---------|
+| **Theme** | Follow System · Light · Dark · Darker · AMOLED (true black) |
+| **Dynamic Colors** | Material You wallpaper-based colors (Android 12+) |
+| **Accent Color** | Curated palette picker |
+| **Language** | System Default · English · Italiano *(more translations welcome!)* |
+| **AMOLED Mode** | True black backgrounds — zero power on OLED displays |
+
+---
+
+### ⚙️ Customization & Settings
+
+Every detail of the experience is configurable. Settings are fully text-searchable.
+
+#### Layout
+- Folder name position: Above card / Below card / Hidden
+- Compact folder view in session setup
+- Folder bar layout: Horizontal / Vertical
+- Use initial-based (legacy) folder icons
+- Hide media filename overlay on cards
+- Skip partial summary sheet expansion
+- Use full-screen summary sheet
+
+#### Gestures
+- Swipe sensitivity: Low / Medium / High
+- Swipe Down action: None / Move to Edit / Skip / Add Target / Share / Open With
+- Full-screen swipe (swipe anywhere on screen, not just the card)
+- Invert swipe direction (Left = Keep, Right = Delete)
+- Hide the Skip button
+
+#### Folder Behaviour
+- Folder selection mode on launch: All / Remember Previous / None
+- Add target folders to Favorites by default
+- Unfavoriting also removes from session bar
+- Show hint when a folder already exists
+- Initial focus in Add Folder dialog: path field vs. name field
+- Show favorites first in session setup
+- Default album creation path
+
+#### Media & History
+- **Remember Organized Media** — skip already-sorted files in future sessions
+- Reset sorted history globally or per-folder
+- Search autofocus in session setup
+- "Unselect All" scope in search: global or visible-only
+- Scan Audio Files toggle (MP3, WAV, FLAC, AAC, OGG, WMA)
+- Scan Documents toggle (PDF, DOCX, XLSX, PPTX, TXT)
+- View media indexing status and trigger a MediaStore rescan
+
+#### Video
+- Default playback speed
+- Screenshot JPEG quality: High (95) / Good (90) / Balanced (85) / Low (75)
+- Screenshot automatically deletes the original video
+
+#### Data & Reset
+- Export / Import target folder favorites (JSON)
+- Export / Import full cleaner settings (JSON)
+- Reset all "Do not ask again" confirmation dialogs
+- Reset source folder favorites
+- Reset target folder favorites
+
+---
+
+## Supported File Types
+
+| Category | Formats |
+|----------|---------|
+| **Images** | JPEG, PNG, GIF, WEBP, HEIC, and all Android-supported image formats |
+| **Videos** | MP4, MKV, AVI, MOV, and all Android-supported video formats |
+| **Audio** | MP3, WAV, FLAC, AAC, OGG, WMA |
+| **Documents** | PDF, DOCX, XLSX, PPTX, TXT |
+| **Other** | Any file accessible via MediaStore or direct file path |
+
+---
 
 ## Privacy First
-We take your privacy seriously. Cleanify is designed from the ground up to respect your data:
-*   **Completely Offline:** The app works without any internet connection.
-*   **No Tracking or Analytics:** We don't collect any data on how you use the app.
-*   **Your Files Stay Yours:** Your photos and videos are never uploaded or shared. All processing happens securely on your device.
 
-## Gallery
-<p align="center">
-  <img src="docs/images/01.png" width="45%" alt="Folder Selection" />
-  &nbsp;
-  <img src="docs/images/02.png" width="45%" alt="Swipe to Sort" />
-</p>
-<p align="center">
-  <img src="docs/images/03.png" width="45%" alt="Duplicate Finder" />
-  &nbsp;
-  <img src="docs/images/04.png" width="45%" alt="Quickly Organize" />
-</p>
+Cleanify is designed from the ground up with privacy as a non-negotiable requirement:
 
-*Note: AMOLED theme has a slightly different look on purpose!*
+- 🔒 **Completely Offline** — zero network requests, zero internet permission
+- 🚫 **No Tracking or Analytics** — no SDKs, no telemetry, no crash reporting services
+- 📵 **No Account Required** — open the app and start immediately
+- 🏠 **All Processing On-Device** — your photos, videos, and documents never leave your phone
+- 📖 **Open Source** — full source code available under GPL-3.0; audit it yourself
+
+---
 
 ## Getting Started
 
-1.  **Requirements:** You'll need a device running **Android 10 or newer**.
-2.  **Installation:** Download the latest release from the [Releases page](https://github.com/mini-page/Cleanify/releases).
-3.  **Onboarding:** The first time you open Cleanify, a helpful tutorial will walk you through all the features and gestures.
+1. **Requirements:** Android 10 (API 29) or newer
+2. **Install:** Download the latest APK from the [Releases page](https://github.com/mini-page/Cleanify/releases)
+3. **Grant Permission:** Allow "All Files Access" when prompted — this is required to find, move, and delete files
+4. **Onboarding:** A 6-page interactive tutorial walks you through all gestures and features on first launch
+
+> **Tip:** You can replay the onboarding tutorial at any time from **Settings → Help & Support → Replay Tutorial**
+
+---
 
 ## Permissions Explained
-Cleanify needs certain permissions to manage your files. Here's a simple breakdown of why each one is necessary:
 
-| Permission Needed    | Why We Need It                                                                                                                                  |
-|:---------------------|:------------------------------------------------------------------------------------------------------------------------------------------------|
-| **All Files Access** | This is the core permission. It allows Cleanify to find, move, and delete your photos and videos, no matter where they are stored on your device. |
-| **Notifications**    | To show you the progress of long-running tasks, like a duplicate scan, even when the app is in the background.                                      |
+| Permission | Why It's Needed |
+|:-----------|:----------------|
+| **All Files Access** (`MANAGE_EXTERNAL_STORAGE`) | Core permission. Required to discover, move, rename, and delete media files across all storage locations, including folders MediaStore might miss. |
+| **Read / Write External Storage** | Legacy fallback for Android 10 and below. |
+| **Notifications** (`POST_NOTIFICATIONS`) | Shows progress for long-running background tasks like duplicate scans and scheduled cleaning. |
+| **Foreground Service** | Keeps the duplicate scan running reliably in the background even when the app is minimized. |
+| **Wake Lock** | Prevents the device from sleeping mid-scan, ensuring large scans complete successfully. |
+| **Receive Boot Completed** | Enables the "Clean on Boot" feature — runs the junk cleaner once after device restart. |
+| **Kill Background Processes** | Powers the "Stop Background Apps" feature in the Empty Cleaner. |
+| **Query All Packages** | Enables detection of "corpse" folders left by uninstalled apps. |
+
+---
 
 ## For Developers
 
-### Technologies Used
-Cleanify is built with a modern Android development approach, leveraging the following key technologies and libraries:
+### Tech Stack
 
-*   **Language:** Kotlin
-*   **UI Toolkit:** Jetpack Compose with Material 3
-*   **Dependency Injection:** Hilt
-*   **Local Database:** Room Persistence Library (for caching file signatures and scan results)
-*   **Image Loading:** Coil
-*   **Media Playback:** ExoPlayer (Media3)
-*   **Asynchronous Storage:** DataStore Preferences
-*   **Background Processing:** WorkManager
+| Layer | Technology |
+|-------|-----------|
+| **Language** | Kotlin 2.2 |
+| **UI** | Jetpack Compose + Material 3 |
+| **Architecture** | MVVM + Clean Architecture + UDF |
+| **Dependency Injection** | Hilt 2.57 |
+| **Local Database** | Room 2.8 (7 tables, 6 DAOs — hash caches & scan results) |
+| **Preferences** | DataStore |
+| **Image Loading** | Coil (standard + dedicated GIF loader) |
+| **Video Playback** | ExoPlayer (Media3) |
+| **Background Work** | WorkManager (scheduled clean, proactive indexing) |
+| **Foreground Service** | Duplicate scan progress |
+| **Navigation** | Jetpack Navigation Compose with deep links |
 
-### Contributing
-We welcome contributions of all kinds, from bug reports to feature requests, code improvements and translations!
+### Architecture
 
-To ensure a smooth and collaborative process, please read our **[Contributing Guidelines](CONTRIBUTING.md)** before you start. This document outlines our development workflow, coding standards, and how to submit your changes.
+```
++--------------------------------------------------+
+|  UI Layer (Compose)                              |
+|  Screens: Onboarding, Session, Swiper,           |
+|           Duplicates, Settings, Tools, Cleaner   |
+|  ViewModels per screen                           |
++--------------------------------------------------+
+|  Domain Layer                                    |
+|  UseCases: DuplicateFinderUseCase,               |
+|            SimilarFinderUseCase                  |
+|  Event Buses: FileModification, FolderUpdate,    |
+|               AppLifecycle                       |
++--------------------------------------------------+
+|  Data Layer                                      |
+|  Room DB · DataStore · Direct File I/O           |
+|  MediaStore API + file:// URI fallback           |
++--------------------------------------------------+
+|  DI: Hilt (3 modules)                            |
+|  Background: WorkManager · ForegroundService     |
++--------------------------------------------------+
+```
 
-**Note:** Translation contributions are highly valued and will be merged promptly after review. Feature requests from project supporters, such as donors and contributors, will also receive priority.
+### Build Info
+
+| Property | Value |
+|----------|-------|
+| Min SDK | 29 (Android 10) |
+| Target SDK | 36 |
+| Compile SDK | 36 |
+| AGP | 8.11.2 |
+| Compose BOM | 2026.01.01 |
+
+### Screen Flow
+
+```
+Launch -> Splash -> Permission Check
+           |-- No Permission   -> PermissionRequiredScreen
+           |-- First Launch    -> Onboarding (6 pages) -> Session Setup
+           +-- Returning User  -> Session Setup
+                                   +-- Swiper Screen
+                                        |-- Summary Sheet -> Apply Changes
+                                        +-- Tools Hub
+                                             |-- Duplicate Finder -> Group Details
+                                             +-- Empty Cleaner -> Results
+```
+
+---
+
+## Contributing
+
+Contributions of all kinds are welcome — bug reports, feature requests, code, and especially **translations**!
+
+We are actively looking for translators to bring Cleanify to more languages. Translation PRs are merged promptly after review.
+
+Please read the **[Contributing Guidelines](CONTRIBUTING.md)** before submitting changes. It covers our development workflow, coding standards (state decoupling, UDF, composable parameter discipline), and PR process.
+
+> Feature requests from donors and active contributors receive priority consideration.
+
+---
+
 ## Donating
-If you enjoy using Cleanify and want to support its development, check out our **[Funding Page](FUNDING.md)**(only crypto for now, GitHub sponsors coming soon)
+
+If Cleanify saves you time and storage, consider supporting its continued development.
+
+See the **[Funding Page](FUNDING.md)** for details. Cryptocurrency donations are available now; GitHub Sponsors coming soon.
+
+---
 
 ## License
 
-Copyright (c) 2025 LoopOtto.
+Copyright © 2025 LoopOtto.
 
-This project is licensed under the GNU General Public License v3.0. See the [LICENSE](LICENSE) file for the full license text.
+This project is licensed under the **GNU General Public License v3.0**.
+See the [LICENSE](LICENSE) file for the full text.
+
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)

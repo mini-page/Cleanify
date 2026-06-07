@@ -27,6 +27,7 @@ import androidx.core.graphics.scale
 import com.cleanify.data.db.dao.PHashDao
 import com.cleanify.data.db.entity.PHashCache
 import com.cleanify.data.db.entity.SimilarityDenial
+import com.cleanify.data.model.FileCategory
 import com.cleanify.data.model.MediaItem
 import com.cleanify.data.repository.PreferencesRepository
 import com.cleanify.data.repository.SimilarityThresholdLevel
@@ -128,6 +129,7 @@ class SimilarFinderUseCase @Inject constructor(
         val skippedFiles = mutableListOf<String>()
 
         val mediaToProcess = allMediaItems.filter { it.id !in pathsToExclude }
+            .filter { it.category == FileCategory.Image || it.category == FileCategory.Video }
         val itemsToHashMap = mediaToProcess.associateBy { it.id }
         val itemsToHash = mediaToProcess.filter { mediaItem ->
             val cached = pHashCache[mediaItem.id]

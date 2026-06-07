@@ -87,10 +87,10 @@ class DuplicateFinderUseCase @Inject constructor(
                         cached.hash
                     } else {
                         try {
-                            val newHash = if (mediaItem.isVideo) {
-                                generatePartialFileHash(mediaItem)
-                            } else {
-                                generatePixelHash(mediaItem)
+                            val newHash = when {
+                                mediaItem.isVideo -> generatePartialFileHash(mediaItem)
+                                mediaItem.isImage -> generatePixelHash(mediaItem)
+                                else -> generateFullFileHash(mediaItem)
                             }
 
                             if (newHash.isNotEmpty()) {
@@ -161,6 +161,25 @@ class DuplicateFinderUseCase @Inject constructor(
             "video-partial-$hash"
         } catch (e: Exception) {
             Log.w(TAG, "DEBUG: Partial file hashing failed for ${mediaItem.id}. Message: ${e.message}")
+            ""
+        }
+    }
+
+    private suspend fun generateFullFileHash(mediaItem: MediaItem): String {
+        return try {
+            val hash = context.contentResolver.openInputStream(mediaItem.uri)?.use { inputStream ->
+                val md = MessageDigest.getInstance("SHA-256")
+                val buffer = ByteArray(8192)
+                var bytesRead: Int
+                while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                    coroutineContext.ensureActive()
+                    md.update(buffer, 0, bytesRead)
+                }
+                md.digest().joinToString("") { "%02x".format(it) }
+            } ?: ""
+            "full-$hash"
+        } catch (e: Exception) {
+            Log.w(TAG, "DEBUG: Full file hashing failed for ${mediaItem.id}. Message: ${e.message}")
             ""
         }
     }

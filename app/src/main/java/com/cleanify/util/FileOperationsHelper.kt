@@ -25,6 +25,7 @@ import android.net.Uri
 import android.provider.MediaStore
 import android.util.Log
 import androidx.core.net.toUri
+import com.cleanify.data.model.FileCategory
 import com.cleanify.data.model.MediaItem
 import com.cleanify.ui.screens.swiper.PendingChange
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -249,7 +250,7 @@ class FileOperationsHelper @Inject constructor(
             size = file.length(),
             bucketId = file.parent ?: "",
             bucketName = file.parentFile?.name ?: "",
-            isVideo = isVideo,
+            category = FileCategory.Image,
             width = width,
             height = height
         )

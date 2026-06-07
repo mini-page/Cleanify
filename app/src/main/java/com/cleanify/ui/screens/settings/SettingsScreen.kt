@@ -149,6 +149,8 @@ fun SettingsScreen(
     val duplicateScanScope by viewModel.duplicateScanScope.collectAsState()
     val duplicateScanIncludeList by viewModel.duplicateScanIncludeList.collectAsState()
     val duplicateScanExcludeList by viewModel.duplicateScanExcludeList.collectAsState()
+    val scanAudioEnabled by viewModel.scanAudioEnabled.collectAsState()
+    val scanDocumentEnabled by viewModel.scanDocumentEnabled.collectAsState()
 
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
@@ -297,6 +299,7 @@ fun SettingsScreen(
                 )
                 "media_storage" -> MediaStorageSubPage(
                     defaultVideoSpeed, screenshotDeletesVideo, screenshotJpegQuality,
+                    scanAudioEnabled, scanDocumentEnabled,
                     uiState, viewModel
                 )
                 "help" -> HelpSupportSubPage(
@@ -665,7 +668,9 @@ private fun DuplicateFinderSubPage(
 @Composable
 private fun MediaStorageSubPage(
     defaultVideoSpeed: Float, screenshotDeletesVideo: Boolean,
-    screenshotJpegQuality: String, uiState: SettingsUiState,
+    screenshotJpegQuality: String,
+    scanAudioEnabled: Boolean, scanDocumentEnabled: Boolean,
+    uiState: SettingsUiState,
     viewModel: SettingsViewModel
 ) {
     Column(
@@ -674,6 +679,10 @@ private fun MediaStorageSubPage(
     ) {
         SectionHeader(R.string.indexing_section_header)
         MediaIndexingStatusItem(uiState.indexingStatus, uiState.isIndexingStatusLoading, uiState.isIndexing, viewModel::refreshIndexingStatus, viewModel::triggerFullScan, viewModel::showUnindexedFilesDialog)
+
+        SectionHeader(R.string.scan_section_header)
+        SettingSwitch(R.string.scan_audio_title, R.string.scan_audio_desc, scanAudioEnabled, viewModel::setScanAudioEnabled)
+        SettingSwitch(R.string.scan_document_title, R.string.scan_document_desc, scanDocumentEnabled, viewModel::setScanDocumentEnabled)
 
         SectionHeader(R.string.video_section_header)
         SettingsPickerItem(R.string.default_video_speed_title, R.string.default_video_speed_desc, listOf(1.0f, 1.5f, 2.0f), defaultVideoSpeed, { viewModel.setDefaultVideoSpeed(it) }, { s -> "${s}x" })

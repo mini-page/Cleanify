@@ -167,6 +167,8 @@ class PreferencesRepository @Inject constructor(
         val SHOW_CONFIRM_RESET_TARGET_FAVS = booleanPreferencesKey("show_confirm_reset_target_favs")
         val SHOW_CONFIRM_DELETE_ALL_EXACT = booleanPreferencesKey("show_confirm_delete_all_exact")
         val UNSELECT_ALL_IN_SEARCH_SCOPE = stringPreferencesKey("unselect_all_in_search_scope")
+        val SCAN_AUDIO_ENABLED = booleanPreferencesKey("scan_audio_enabled")
+        val SCAN_DOCUMENT_ENABLED = booleanPreferencesKey("scan_document_enabled")
     }
 
     val themeFlow: Flow<AppTheme> = context.dataStore.data
@@ -312,7 +314,17 @@ class PreferencesRepository @Inject constructor(
 
     val addFavoriteToTargetByDefaultFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
-            preferences[PreferencesKeys.ADD_FAVORITE_TO_TARGET_BY_DEFAULT] ?: true
+            preferences[PreferencesKeys.ADD_FAVORITE_TO_TARGET_BY_DEFAULT] ?: false
+        }
+
+    val scanAudioEnabledFlow: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.SCAN_AUDIO_ENABLED] ?: true
+        }
+
+    val scanDocumentEnabledFlow: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.SCAN_DOCUMENT_ENABLED] ?: true
         }
 
     val hintOnExistingFolderNameFlow: Flow<Boolean> = context.dataStore.data
@@ -918,6 +930,18 @@ class PreferencesRepository @Inject constructor(
     suspend fun setUnselectAllInSearchScope(scope: UnselectScanScope) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.UNSELECT_ALL_IN_SEARCH_SCOPE] = scope.name
+        }
+    }
+
+    suspend fun setScanAudioEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.SCAN_AUDIO_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setScanDocumentEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.SCAN_DOCUMENT_ENABLED] = enabled
         }
     }
 }

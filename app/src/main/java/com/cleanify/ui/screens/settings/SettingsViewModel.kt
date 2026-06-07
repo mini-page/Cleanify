@@ -374,6 +374,20 @@ class SettingsViewModel @Inject constructor(
                 initialValue = UnselectScanScope.GLOBAL
             )
 
+    val scanAudioEnabled: StateFlow<Boolean> = preferencesRepository.scanAudioEnabledFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = true
+        )
+
+    val scanDocumentEnabled: StateFlow<Boolean> = preferencesRepository.scanDocumentEnabledFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = true
+        )
+
 
     val standardAlbumDirectories: List<Pair<String, String>> = listOf(
         "Pictures" to Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).absolutePath,
@@ -1093,6 +1107,18 @@ class SettingsViewModel @Inject constructor(
                 val newList = duplicateScanExcludeList.value.toMutableSet().apply { remove(path) }
                 preferencesRepository.setDuplicateScanExcludeList(newList)
             }
+        }
+    }
+
+    fun setScanAudioEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.setScanAudioEnabled(enabled)
+        }
+    }
+
+    fun setScanDocumentEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.setScanDocumentEnabled(enabled)
         }
     }
 }

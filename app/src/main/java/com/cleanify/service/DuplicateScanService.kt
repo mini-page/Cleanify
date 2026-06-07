@@ -267,9 +267,13 @@ class DuplicateScanService : LifecycleService() {
                 val videoCount = scopedPaths.count { path ->
                     videoExtensions.any { ext -> path.endsWith(ext, ignoreCase = true) }
                 }
-                val imageCount = scopedPaths.size - videoCount
-                // Heuristic: 2 min base + 150ms/image + 750ms/video
-                val timeout = 120_000L + (imageCount * 150L) + (videoCount * 750L)
+                val audioExtensions = setOf(".mp3", ".wav", ".flac", ".aac", ".ogg", ".wma")
+                val audioCount = scopedPaths.count { path ->
+                    audioExtensions.any { ext -> path.endsWith(ext, ignoreCase = true) }
+                }
+                val imageCount = scopedPaths.size - videoCount - audioCount
+                // Heuristic: 2 min base + 150ms/image + 750ms/video + 150ms/audio
+                val timeout = 120_000L + (imageCount * 150L) + (videoCount * 750L) + (audioCount * 150L)
                 acquireWakeLock(timeout)
 
                 // Forceful cancellation check after blocking I/O

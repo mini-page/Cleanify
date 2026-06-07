@@ -19,7 +19,6 @@ package com.cleanify.ui
 
 import android.app.Activity
 import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.os.Bundle
 import android.util.TypedValue
@@ -63,15 +62,14 @@ class MainActivity : BaseActivity() {
         // This ensures the first frame rendered after the splash is the correct theme.
         splashScreen.setKeepOnScreenCondition { !mainViewModel.isReady.value }
 
-        // 1. Enable edge-to-edge drawing
+        // Enable edge-to-edge drawing
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        // 2. Set the window background color instantly to prevent black flicker on recreation (e.g., language change).
-        // This resolves the window background before Compose initializes.
+        // Set the window background color instantly to prevent flicker on activity recreation.
         window.setWindowAnimations(0)
         applyImmediateBackgroundColor()
 
-        // Observe locale changes from the preference repository (via MainViewModel) and apply them to the system using AppCompatDelegate.
+        // Observe locale changes and apply them via AppCompatDelegate.
         lifecycleScope.launch {
             mainViewModel.appLocale.collectLatest { locale ->
                 val appLocales = if (locale.tag != null) {
@@ -79,9 +77,6 @@ class MainActivity : BaseActivity() {
                 } else {
                     LocaleListCompat.getEmptyLocaleList()
                 }
-
-                // Strictly check if the new locale list is different from the current configuration
-                // to prevent redundant activity recreations.
                 val currentLocales = AppCompatDelegate.getApplicationLocales()
                 if (currentLocales.toLanguageTags() != appLocales.toLanguageTags()) {
                     AppCompatDelegate.setApplicationLocales(appLocales)
@@ -90,7 +85,6 @@ class MainActivity : BaseActivity() {
         }
 
         // Schedule the proactive indexing job on app startup.
-        // WorkManager's unique work policy will prevent redundant runs.
         proactiveIndexer.scheduleGlobalIndex()
 
         setContent {
@@ -127,7 +121,6 @@ class MainActivity : BaseActivity() {
                 Color.BLACK
             }
         }
-
         window.setBackgroundDrawable(color.toDrawable())
         window.decorView.setBackgroundColor(color)
     }

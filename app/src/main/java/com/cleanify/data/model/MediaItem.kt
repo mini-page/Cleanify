@@ -22,6 +22,10 @@ import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 import java.io.File
 
+enum class FileCategory {
+    Image, Video, Audio, Document, Other
+}
+
 @Parcelize
 data class MediaItem(
     val id: String,
@@ -33,12 +37,16 @@ data class MediaItem(
     val size: Long,
     val bucketId: String,
     val bucketName: String,
-    val isVideo: Boolean,
+    val category: FileCategory,
     val width: Int,
-    val height: Int
+    val height: Int,
+    val duration: Long = 0
 ) : Parcelable {
+    val isVideo: Boolean
+        get() = category == FileCategory.Video
+
     val isImage: Boolean
-        get() = !isVideo
+        get() = category == FileCategory.Image
 
     val filePath: String
         get() = when (uri.scheme) {

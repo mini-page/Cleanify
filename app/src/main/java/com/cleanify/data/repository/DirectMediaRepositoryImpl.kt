@@ -32,6 +32,7 @@ import coil.size.Size
 import com.cleanify.R
 import com.cleanify.data.db.dao.FolderDetailsDao
 import com.cleanify.data.db.entity.FolderDetailsCache
+import com.cleanify.data.model.FileCategory
 import com.cleanify.data.model.MediaItem
 import com.cleanify.di.AppModule
 import com.cleanify.domain.bus.AppLifecycleEventBus
@@ -80,6 +81,11 @@ class DirectMediaRepositoryImpl @Inject constructor(
     @Volatile
     private var lastKnownFolderState: Set<String>? = null
 
+    @Volatile
+    private var scanAudioEnabled: Boolean = true
+    @Volatile
+    private var scanDocumentEnabled: Boolean = true
+
     private val _isPerformingBackgroundRefresh = MutableStateFlow(false)
     override val isPerformingBackgroundRefresh: StateFlow<Boolean> = _isPerformingBackgroundRefresh.asStateFlow()
     private val isBackgroundRefreshRunning = AtomicBoolean(false)
@@ -89,10 +95,14 @@ class DirectMediaRepositoryImpl @Inject constructor(
 
 
     init {
-        // Listen for folder updates and apply them directly to the DB cache.
         listenForFolderUpdates()
-        // Listen for app lifecycle events to invalidate session caches
         listenForAppLifecycle()
+        externalScope.launch {
+            preferencesRepository.scanAudioEnabledFlow.collect { scanAudioEnabled = it }
+        }
+        externalScope.launch {
+            preferencesRepository.scanDocumentEnabledFlow.collect { scanDocumentEnabled = it }
+        }
     }
 
     private fun listenForAppLifecycle() {
@@ -168,6 +178,7 @@ class DirectMediaRepositoryImpl @Inject constructor(
         val bucketId: String?,
         val bucketName: String?,
         val isVideo: Boolean,
+        val isAudio: Boolean,
         val width: Int,
         val height: Int,
         val orientation: Int
@@ -245,6 +256,11 @@ class DirectMediaRepositoryImpl @Inject constructor(
 
     private val supportedImageExtensions = setOf("jpg", "jpeg", "png", "gif", "bmp", "webp", "heic", "heif")
     private val supportedVideoExtensions = setOf("mp4", "webm", "mkv", "3gp", "mov", "avi", "mpg", "mpeg", "wmv", "flv")
+    private val supportedAudioExtensions = setOf("mp3", "wav", "flac", "aac", "ogg", "wma")
+    private val supportedDocumentExtensions = setOf("pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "rtf")
+
+    private fun isAudioScanEnabled(): Boolean = scanAudioEnabled
+    private fun isDocumentScanEnabled(): Boolean = scanDocumentEnabled
 
     override suspend fun cleanupGhostFolders() { /* No-op */ }
 
@@ -352,21 +368,33 @@ class DirectMediaRepositoryImpl @Inject constructor(
 
             // Create a WHERE clause with placeholders: "BUCKET_ID IN (?,?,?)"
             val placeholders = calculatedBucketIds.joinToString(separator = ",") { "?" }
-            selection = "${MediaStore.Files.FileColumns.BUCKET_ID} IN ($placeholders)" +
-                    " AND ${MediaStore.Files.FileColumns.MEDIA_TYPE} IN (?, ?)"
-
-            selectionArgs = (calculatedBucketIds +
-                    arrayOf(
-                        MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString(),
-                        MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString()
-                    )).toTypedArray()
-        } else {
-            // Original behavior for full scans (no specific buckets).
-            selection = "${MediaStore.Files.FileColumns.MEDIA_TYPE} IN (?, ?)"
-            selectionArgs = arrayOf(
+            val mediaTypePlaceholders = mutableListOf(
                 MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString(),
                 MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString()
             )
+            if (isAudioScanEnabled()) {
+                mediaTypePlaceholders.add(MediaStore.Files.FileColumns.MEDIA_TYPE_AUDIO.toString())
+            }
+            val mediaTypeArgs = mediaTypePlaceholders.toTypedArray()
+            val mediaTypePlaceholderStr = mediaTypeArgs.joinToString(separator = ",") { "?" }
+
+            selection = "${MediaStore.Files.FileColumns.BUCKET_ID} IN ($placeholders)" +
+                    " AND ${MediaStore.Files.FileColumns.MEDIA_TYPE} IN ($mediaTypePlaceholderStr)"
+
+            selectionArgs = (calculatedBucketIds + mediaTypeArgs).toTypedArray()
+        } else {
+            val mediaTypePlaceholders = mutableListOf(
+                MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString(),
+                MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString()
+            )
+            if (isAudioScanEnabled()) {
+                mediaTypePlaceholders.add(MediaStore.Files.FileColumns.MEDIA_TYPE_AUDIO.toString())
+            }
+            val mediaTypeArgs = mediaTypePlaceholders.toTypedArray()
+            val mediaTypePlaceholderStr = mediaTypeArgs.joinToString(separator = ",") { "?" }
+
+            selection = "${MediaStore.Files.FileColumns.MEDIA_TYPE} IN ($mediaTypePlaceholderStr)"
+            selectionArgs = mediaTypeArgs
         }
 
         val queryUri = MediaStore.Files.getContentUri("external")
@@ -390,20 +418,22 @@ class DirectMediaRepositoryImpl @Inject constructor(
                 while (cursor.moveToNext()) {
                     val path = cursor.getString(dataColumn)
                     if (!path.isNullOrBlank()) {
-                        cacheMap[path] = MediaStoreCache(
-                            id = cursor.getLong(idColumn),
-                            displayName = cursor.getString(nameColumn),
-                            mimeType = cursor.getString(mimeColumn),
-                            dateAdded = cursor.getLong(dateAddedColumn),
-                            dateModified = cursor.getLong(dateModifiedColumn),
-                            size = cursor.getLong(sizeColumn),
-                            bucketId = cursor.getString(bucketIdColumn),
-                            bucketName = cursor.getString(bucketNameColumn),
-                            isVideo = cursor.getInt(mediaTypeColumn) == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO,
-                            width = cursor.getInt(widthColumn),
-                            height = cursor.getInt(heightColumn),
-                            orientation = cursor.getInt(orientationColumn)
-                        )
+                            val mediaType = cursor.getInt(mediaTypeColumn)
+                            cacheMap[path] = MediaStoreCache(
+                                id = cursor.getLong(idColumn),
+                                displayName = cursor.getString(nameColumn),
+                                mimeType = cursor.getString(mimeColumn),
+                                dateAdded = cursor.getLong(dateAddedColumn),
+                                dateModified = cursor.getLong(dateModifiedColumn),
+                                size = cursor.getLong(sizeColumn),
+                                bucketId = cursor.getString(bucketIdColumn),
+                                bucketName = cursor.getString(bucketNameColumn),
+                                isVideo = mediaType == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO,
+                                isAudio = mediaType == MediaStore.Files.FileColumns.MEDIA_TYPE_AUDIO,
+                                width = cursor.getInt(widthColumn),
+                                height = cursor.getInt(heightColumn),
+                                orientation = cursor.getInt(orientationColumn)
+                            )
                     }
                 }
             }
@@ -420,6 +450,12 @@ class DirectMediaRepositoryImpl @Inject constructor(
         val finalWidth = if (needsSwap) cache.height else cache.width
         val finalHeight = if (needsSwap) cache.width else cache.height
 
+        val category = when {
+            cache.isVideo -> FileCategory.Video
+            cache.isAudio -> FileCategory.Audio
+            else -> FileCategory.Image
+        }
+
         return MediaItem(
             id = file.absolutePath,
             uri = ContentUris.withAppendedId(queryUri, cache.id),
@@ -430,7 +466,7 @@ class DirectMediaRepositoryImpl @Inject constructor(
             size = cache.size,
             bucketId = cache.bucketId ?: file.parent ?: "",
             bucketName = cache.bucketName ?: file.parentFile?.name ?: "",
-            isVideo = cache.isVideo,
+            category = category,
             width = finalWidth,
             height = finalHeight
         )
@@ -445,42 +481,60 @@ class DirectMediaRepositoryImpl @Inject constructor(
     private suspend fun createMediaItemFromFile(file: File): MediaItem? = withContext(Dispatchers.IO) {
         try {
             val extension = file.extension.lowercase(Locale.ROOT)
-            val isVideo = supportedVideoExtensions.contains(extension)
+            val category = categorizeFile(file)
             val mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension) ?: "application/octet-stream"
             val uri = file.toUri()
 
             var width = 0
             var height = 0
+            var duration = 0L
 
-            if (isVideo) {
-                try {
-                    MediaMetadataRetriever().use { retriever ->
-                        retriever.setDataSource(file.absolutePath)
-                        val videoWidth = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull() ?: 0
-                        val videoHeight = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: 0
-                        val rotation = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
+            when (category) {
+                FileCategory.Video -> {
+                    try {
+                        MediaMetadataRetriever().use { retriever ->
+                            retriever.setDataSource(file.absolutePath)
+                            val videoWidth = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull() ?: 0
+                            val videoHeight = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: 0
+                            val rotation = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
+                            val durationMs = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0
 
-                        if (rotation == 90 || rotation == 270) {
-                            width = videoHeight
-                            height = videoWidth
-                        } else {
-                            width = videoWidth
-                            height = videoHeight
+                            if (rotation == 90 || rotation == 270) {
+                                width = videoHeight
+                                height = videoWidth
+                            } else {
+                                width = videoWidth
+                                height = videoHeight
+                            }
+                            duration = durationMs
                         }
+                    } catch (e: Exception) {
+                        Log.e(dimensionlogTag, "Failed to get metadata for video: ${file.path}", e)
                     }
-                } catch (e: Exception) {
-                    Log.e(dimensionlogTag, "Failed to get dimensions for video: ${file.path}", e)
                 }
-            } else { // Is image
-                try {
-                    val request = ImageRequest.Builder(context).data(file).size(Size.ORIGINAL).build()
-                    imageLoader.execute(request).drawable?.let {
-                        width = it.intrinsicWidth
-                        height = it.intrinsicHeight
+                FileCategory.Image -> {
+                    try {
+                        val request = ImageRequest.Builder(context).data(file).size(Size.ORIGINAL).build()
+                        imageLoader.execute(request).drawable?.let {
+                            width = it.intrinsicWidth
+                            height = it.intrinsicHeight
+                        }
+                    } catch (e: Exception) {
+                        Log.e(dimensionlogTag, "Failed to get dimensions for image: ${file.path}", e)
                     }
-                } catch (e: Exception) {
-                    Log.e(dimensionlogTag, "Failed to get dimensions for image: ${file.path}", e)
                 }
+                FileCategory.Audio -> {
+                    try {
+                        MediaMetadataRetriever().use { retriever ->
+                            retriever.setDataSource(file.absolutePath)
+                            val durationMs = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0
+                            duration = durationMs
+                        }
+                    } catch (e: Exception) {
+                        Log.e(dimensionlogTag, "Failed to get metadata for audio: ${file.path}", e)
+                    }
+                }
+                else -> { /* Documents/Other: no dimensions needed */ }
             }
 
             MediaItem(
@@ -493,9 +547,10 @@ class DirectMediaRepositoryImpl @Inject constructor(
                 size = file.length(),
                 bucketId = file.parent ?: "",
                 bucketName = file.parentFile?.name ?: "",
-                isVideo = isVideo,
+                category = category,
                 width = width,
-                height = height
+                height = height,
+                duration = duration
             )
         } catch (e: Exception) {
             Log.e(logTag, "Failed to create MediaItem for file: ${file.path}", e)
@@ -536,7 +591,21 @@ class DirectMediaRepositoryImpl @Inject constructor(
 
     private fun isMediaFile(file: File): Boolean {
         val extension = file.extension.lowercase(Locale.ROOT)
-        return supportedImageExtensions.contains(extension) || supportedVideoExtensions.contains(extension)
+        return supportedImageExtensions.contains(extension) ||
+                supportedVideoExtensions.contains(extension) ||
+                (isAudioScanEnabled() && supportedAudioExtensions.contains(extension)) ||
+                (isDocumentScanEnabled() && supportedDocumentExtensions.contains(extension))
+    }
+
+    private fun categorizeFile(file: File): FileCategory {
+        val extension = file.extension.lowercase(Locale.ROOT)
+        return when {
+            supportedImageExtensions.contains(extension) -> FileCategory.Image
+            supportedVideoExtensions.contains(extension) -> FileCategory.Video
+            supportedAudioExtensions.contains(extension) -> FileCategory.Audio
+            supportedDocumentExtensions.contains(extension) -> FileCategory.Document
+            else -> FileCategory.Other
+        }
     }
 
     override suspend fun moveMediaToFolder(mediaId: String, targetFolderId: String): MediaItem? {
