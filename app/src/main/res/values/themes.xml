@@ -35,14 +35,10 @@
 
         <!--
           SplashScreen API (androidx.core.splashscreen) attributes.
-          - windowSplashScreenBackground:    the full-screen background color
-          - windowSplashScreenAnimatedIcon:  the icon shown at center (animated vector = bouncy pop-in)
-          - windowSplashScreenIconBackgroundColor: circle behind the icon (set to transparent so icon stands alone)
-          - windowSplashScreenBrandingImage: "Cleanify" text shown at bottom (Android 12+ only)
-          - postSplashScreenTheme:           reverts to the real theme after splash exits
+          - windowSplashScreenBackground: the full-screen background color
+          - postSplashScreenTheme:        reverts to the real theme after splash exits
         -->
         <item name="windowSplashScreenBackground">@color/splash_background</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon_animated</item>
         <item name="windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
         <item name="postSplashScreenTheme">@style/Theme.Cleanify</item>
     </style>

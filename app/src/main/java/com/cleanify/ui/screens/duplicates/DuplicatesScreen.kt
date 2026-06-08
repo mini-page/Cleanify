@@ -18,6 +18,9 @@
 package com.cleanify.ui.screens.duplicates
 
 import android.Manifest
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.text.format.DateUtils
@@ -68,6 +71,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -222,13 +226,10 @@ fun DuplicatesScreen(
     }
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    val subtitle = when (uiState.scanState) {
-                        ScanState.Complete -> "(${uiState.resultGroups.size} groups)"
-                        else -> null
-                    }
-                    Column {
+            Column {
+                // ── Primary header: back · title · settings only ──────────────
+                TopAppBar(
+                    title = {
                         Text(
                             when (uiState.scanState) {
                                 ScanState.Idle -> stringResource(R.string.duplicate_finder_title)
@@ -236,100 +237,69 @@ fun DuplicatesScreen(
                                 ScanState.Complete -> "Scan Results"
                             }
                         )
-                        if (subtitle != null) {
-                            Text(
-                                text = subtitle,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                    },
+                    navigationIcon = {
+                        BackNavigationIcon(
+                            onClick = onNavigateUp,
+                            contentDescription = stringResource(R.string.navigate_back)
+                        )
+                    },
+                    actions = {
+                        IconButton(onClick = onNavigateToSettings) {
+                            Icon(Icons.Default.Settings, contentDescription = "Settings")
                         }
                     }
-                },
-                navigationIcon = {
-                    TooltipBox(
-                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                            positioning = TooltipAnchorPosition.Above,
-                            spacingBetweenTooltipAndAnchor = 4.dp
-                        ),
-                        tooltip = { PlainTooltip { Text(stringResource(R.string.navigate_back)) } },
-                        state = rememberTooltipState()
+                )
+                // ── Secondary sub-header: group count + contextual actions ────
+                if (uiState.scanState == ScanState.Complete && uiState.resultGroups.isNotEmpty()) {
+                    HorizontalDivider()
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        BackNavigationIcon(onClick = onNavigateUp, contentDescription = stringResource(R.string.navigate_back))
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onNavigateToSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings")
-                    }
-                    if (uiState.scanState == ScanState.Complete) {
+                        Text(
+                            text = "${uiState.resultGroups.size} group${if (uiState.resultGroups.size == 1) "" else "s"} found",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f)
+                        )
+                        // Delete all exact duplicates
                         val hasExactDuplicates = uiState.resultGroups.any { it is DuplicateGroup }
                         if (hasExactDuplicates) {
-                            TooltipBox(
-                                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                                    positioning = TooltipAnchorPosition.Above,
-                                    spacingBetweenTooltipAndAnchor = 4.dp
-                                ),
-                                tooltip = { PlainTooltip { Text(stringResource(R.string.delete_all_exact_duplicates)) } },
-                                state = rememberTooltipState()
-                            ) {
-                                IconButton(onClick = {
-                                    if (uiState.showConfirmDeleteAllExact) {
-                                        showConfirmDeleteAllExactDialog = true
-                                    } else {
-                                        viewModel.deleteAllExactDuplicates()
-                                    }
-                                }) {
-                                    Icon(Icons.Outlined.DeleteSweep, contentDescription = stringResource(R.string.delete_all_exact_duplicates), tint = MaterialTheme.colorScheme.error)
+                            IconButton(onClick = {
+                                if (uiState.showConfirmDeleteAllExact) {
+                                    showConfirmDeleteAllExactDialog = true
+                                } else {
+                                    viewModel.deleteAllExactDuplicates()
                                 }
+                            }) {
+                                Icon(
+                                    Icons.Outlined.DeleteSweep,
+                                    contentDescription = stringResource(R.string.delete_all_exact_duplicates),
+                                    tint = MaterialTheme.colorScheme.error
+                                )
                             }
                         }
-
-                        TooltipBox(
-                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                                positioning = TooltipAnchorPosition.Above,
-                                spacingBetweenTooltipAndAnchor = 4.dp
-                            ),
-                            tooltip = { PlainTooltip { Text(stringResource(R.string.new_scan)) } },
-                            state = rememberTooltipState()
-                        ) {
-                            IconButton(onClick = viewModel::resetToIdle) {
-                                Icon(Icons.Outlined.Cached, contentDescription = stringResource(R.string.new_scan))
-                            }
+                        // Toggle list/grid view
+                        IconButton(onClick = viewModel::toggleResultViewMode) {
+                            Icon(
+                                imageVector = if (uiState.resultViewMode == ResultViewMode.LIST)
+                                    Icons.Outlined.ViewModule else Icons.AutoMirrored.Outlined.ViewList,
+                                contentDescription = stringResource(R.string.toggle_view_mode)
+                            )
                         }
-                    }
-                    if (uiState.resultViewMode == ResultViewMode.GRID && uiState.scanState == ScanState.Complete) {
-                        TooltipBox(
-                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                                positioning = TooltipAnchorPosition.Above,
-                                spacingBetweenTooltipAndAnchor = 4.dp
-                            ),
-                            tooltip = { PlainTooltip { Text(stringResource(R.string.change_grid_columns)) } },
-                            state = rememberTooltipState()
-                        ) {
+                        // Grid column zoom
+                        if (uiState.resultViewMode == ResultViewMode.GRID) {
                             IconButton(onClick = viewModel::cycleGridViewZoom) {
                                 Icon(Icons.Outlined.ZoomIn, contentDescription = stringResource(R.string.change_grid_columns))
                             }
                         }
                     }
-                    if (uiState.scanState == ScanState.Complete && uiState.resultGroups.isNotEmpty()) {
-                        TooltipBox(
-                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                                positioning = TooltipAnchorPosition.Above,
-                                spacingBetweenTooltipAndAnchor = 4.dp
-                            ),
-                            tooltip = { PlainTooltip { Text(stringResource(R.string.toggle_view_mode)) } },
-                            state = rememberTooltipState()
-                        ) {
-                            IconButton(onClick = viewModel::toggleResultViewMode) {
-                                Icon(
-                                    imageVector = if (uiState.resultViewMode == ResultViewMode.LIST) Icons.Outlined.ViewModule else Icons.AutoMirrored.Outlined.ViewList,
-                                    contentDescription = stringResource(R.string.toggle_view_mode)
-                                )
-                            }
-                        }
-                    }
+                    HorizontalDivider()
                 }
-            )
+            }
         },
         bottomBar = {
             if (uiState.scanState == ScanState.Complete && uiState.resultGroups.isNotEmpty()) {
@@ -975,7 +945,6 @@ private fun ResultsView(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun StaleResultsWarningCard(
     timestamp: Long,
@@ -990,68 +959,48 @@ private fun StaleResultsWarningCard(
             DateUtils.FORMAT_ABBREV_RELATIVE
         ).toString()
     }
-    Card(
+    // Compact single-row info chip
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.tertiaryContainer
     ) {
-        Column {
-            Row(
-                modifier = Modifier.padding(start = 16.dp, top = 8.dp, end = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    modifier = Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.History,
-                        contentDescription = stringResource(R.string.warning),
-                        tint = MaterialTheme.colorScheme.onTertiaryContainer
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Column(modifier = Modifier.padding(top = 8.dp)) {
-                        Text(
-                            text = stringResource(R.string.stale_results_warning, formattedDate),
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer
-                        )
-                        Text(
-                            text = stringResource(R.string.run_new_scan_hint),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer
-                        )
-                    }
-                }
-                TooltipBox(
-                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                        positioning = TooltipAnchorPosition.Above,
-                        spacingBetweenTooltipAndAnchor = 4.dp
-                    ),
-                    tooltip = { PlainTooltip { Text(stringResource(R.string.dismiss_warning)) } },
-                    state = rememberTooltipState()
-                ) {
-                    IconButton(onClick = onDismiss) {
-                        Icon(
-                            imageVector = Icons.Outlined.Close,
-                            contentDescription = stringResource(R.string.dismiss_warning),
-                            tint = MaterialTheme.colorScheme.onTertiaryContainer
-                        )
-                    }
-                }
-            }
+        Row(
+            modifier = Modifier.padding(start = 12.dp, top = 4.dp, bottom = 4.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.History,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = "Results from $formattedDate",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                modifier = Modifier.weight(1f)
+            )
             TextButton(
                 onClick = onRescan,
-                modifier = Modifier
-                    .align(Alignment.End)
-                    .padding(end = 8.dp, bottom = 8.dp),
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer
-                ),
-                contentPadding = ButtonDefaults.TextButtonWithIconContentPadding
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
             ) {
-                Text(stringResource(R.string.rescan))
+                Text(
+                    text = "Rescan",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                )
+            }
+            IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    imageVector = Icons.Outlined.Close,
+                    contentDescription = stringResource(R.string.dismiss_warning),
+                    tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
     }
@@ -1548,7 +1497,6 @@ private fun GridGroupCard(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DuplicateGroupCard(
     group: DuplicateGroup,
@@ -1570,37 +1518,37 @@ private fun DuplicateGroupCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        colors = CardDefaults.cardColors(containerColor = accent.copy(alpha = 0.03f))
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Column(modifier = Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 12.dp)) {
+        Column(modifier = Modifier.padding(top = 12.dp, start = 16.dp, end = 8.dp, bottom = 12.dp)) {
+            // ── Group header row ─────────────────────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Surface(
-                    shape = MaterialTheme.shapes.small,
-                    color = accent.copy(alpha = 0.12f),
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Outlined.FileCopy,
-                            contentDescription = null,
-                            tint = accent,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(pluralStringResource(R.plurals.duplicates_found_count, group.items.size, group.items.size), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     Text(
-                        stringResource(R.string.size_per_file, android.text.format.Formatter.formatShortFileSize(context, group.sizePerFile)),
+                        text = "${group.items.size} items",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = "${android.text.format.Formatter.formatShortFileSize(context, group.sizePerFile)} each",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                // Inline select-all toggle
+                TextButton(
+                    onClick = { onToggleSelectAll(group) },
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = if (isAllSelected) stringResource(R.string.unselect_all) else stringResource(R.string.select_all),
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+                // 3-dot menu: hide only
                 Box {
                     IconButton(onClick = { showMenu = true }) {
                         Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.more_options))
@@ -1617,45 +1565,34 @@ private fun DuplicateGroupCard(
                     }
                 }
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(8.dp))
+            // ── File rows ────────────────────────────────────────────────
             group.items.forEach { item ->
                 MediaItemRow(item, item.id in selectedIds, { onToggleSelection(item) }, onOpenFile = { onOpenFile(item) })
                 if (item != group.items.last()) {
-                    HorizontalDivider(Modifier.padding(vertical = 2.dp), thickness = DividerDefaults.Thickness, color = DividerDefaults.color)
+                    HorizontalDivider(Modifier.padding(vertical = 1.dp))
                 }
             }
-            Spacer(Modifier.height(12.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilledTonalButton(
-                    onClick = { onToggleSelectAll(group) },
-                    Modifier.weight(1f)
-                ) {
-                    Icon(
-                        imageVector = if (isAllSelected) Icons.Outlined.CheckBox else Icons.Outlined.CheckBoxOutlineBlank,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(if (isAllSelected) stringResource(R.string.unselect_all) else stringResource(R.string.select_all))
-                }
+            Spacer(Modifier.height(10.dp))
+            // ── Keep Oldest | Keep Newest (no Select All here) ───────────
+            Row(Modifier.fillMaxWidth().padding(end = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilledTonalButton(
                     onClick = { onSelectAllButOldest(group) },
-                    Modifier.weight(1f)
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Text(stringResource(R.string.keep_oldest))
+                    Text(stringResource(R.string.keep_oldest), maxLines = 1)
                 }
                 FilledTonalButton(
                     onClick = { onSelectAllButNewest(group) },
-                    Modifier.weight(1f)
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Text(stringResource(R.string.keep_newest))
+                    Text(stringResource(R.string.keep_newest), maxLines = 1)
                 }
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SimilarMediaGroupCard(
     group: SimilarGroup,
@@ -1679,35 +1616,33 @@ private fun SimilarMediaGroupCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        colors = CardDefaults.cardColors(containerColor = accent.copy(alpha = 0.03f))
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Column(modifier = Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 12.dp)) {
+        Column(modifier = Modifier.padding(top = 12.dp, start = 16.dp, end = 8.dp, bottom = 12.dp)) {
+            // ── Group header row ─────────────────────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Surface(
-                    shape = MaterialTheme.shapes.small,
-                    color = accent.copy(alpha = 0.12f),
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Outlined.Collections,
-                            contentDescription = null,
-                            tint = accent,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(pluralStringResource(R.plurals.similar_media_found_count, group.items.size, group.items.size), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     Text(
-                        stringResource(R.string.total_group_size, android.text.format.Formatter.formatShortFileSize(context, totalSize)),
+                        text = "${group.items.size} similar items",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = android.text.format.Formatter.formatShortFileSize(context, totalSize) + " total",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                TextButton(
+                    onClick = { onToggleSelectAll(group) },
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = if (isAllSelected) stringResource(R.string.unselect_all) else stringResource(R.string.select_all),
+                        style = MaterialTheme.typography.labelMedium
                     )
                 }
                 Box {
@@ -1731,43 +1666,33 @@ private fun SimilarMediaGroupCard(
                     }
                 }
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(8.dp))
             group.items.forEach { item ->
                 MediaItemRow(item, item.id in selectedIds, { onToggleSelection(item) }, showFileSize = true, onOpenFile = { onOpenFile(item) })
                 if (item != group.items.last()) {
-                    HorizontalDivider(Modifier.padding(vertical = 2.dp), thickness = DividerDefaults.Thickness, color = DividerDefaults.color)
+                    HorizontalDivider(Modifier.padding(vertical = 1.dp))
                 }
             }
-            Spacer(Modifier.height(12.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilledTonalButton(
-                    onClick = { onToggleSelectAll(group) },
-                    Modifier.weight(1f)
-                ) {
-                    Icon(
-                        imageVector = if (isAllSelected) Icons.Outlined.CheckBox else Icons.Outlined.CheckBoxOutlineBlank,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(if (isAllSelected) stringResource(R.string.unselect_all) else stringResource(R.string.select_all))
-                }
+            Spacer(Modifier.height(10.dp))
+            Row(Modifier.fillMaxWidth().padding(end = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilledTonalButton(
                     onClick = { onSelectAllButOldest(group) },
-                    Modifier.weight(1f)
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Text(stringResource(R.string.keep_oldest))
+                    Text(stringResource(R.string.keep_oldest), maxLines = 1)
                 }
                 FilledTonalButton(
                     onClick = { onSelectAllButNewest(group) },
-                    Modifier.weight(1f)
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Text(stringResource(R.string.keep_newest))
+                    Text(stringResource(R.string.keep_newest), maxLines = 1)
                 }
             }
         }
     }
 }
+
+
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -1780,19 +1705,31 @@ private fun MediaItemRow(
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val context = LocalContext.current
+
+    // Compact path: show only last two path segments, front-truncated
+    val compactPath = remember(item.id) {
+        val file = File(item.id)
+        val parent = file.parentFile?.name ?: ""
+        val grandParent = file.parentFile?.parentFile?.name
+        if (grandParent != null) "…/$grandParent/$parent/${file.name}"
+        else "…/$parent/${file.name}"
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(MaterialTheme.shapes.medium)
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = { onToggle() },
-                    onLongPress = { showMenu = true }
-                )
-            },
+            .clip(MaterialTheme.shapes.small)
+            .clickable { onToggle() }
+            .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Checkbox(checked = isSelected, onCheckedChange = { onToggle() })
+        Checkbox(
+            checked = isSelected,
+            onCheckedChange = { onToggle() },
+            modifier = Modifier.size(36.dp)
+        )
+        Spacer(Modifier.width(4.dp))
+        // Thumbnail
         Box(contentAlignment = Alignment.Center) {
             val imageRequest = remember(item.uri) {
                 ImageRequest.Builder(context)
@@ -1803,7 +1740,9 @@ private fun MediaItemRow(
             AsyncImage(
                 model = imageRequest,
                 contentDescription = item.displayName,
-                modifier = Modifier.size(48.dp),
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(MaterialTheme.shapes.small),
                 contentScale = ContentScale.Crop
             )
             if (item.isVideo) {
@@ -1812,25 +1751,52 @@ private fun MediaItemRow(
                     contentDescription = stringResource(R.string.video),
                     tint = Color.White,
                     modifier = Modifier
-                        .size(24.dp)
+                        .size(20.dp)
                         .background(Color.Black.copy(alpha = 0.5f), shape = MaterialTheme.shapes.extraSmall)
                         .padding(2.dp)
                 )
             }
-            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.open)) },
-                    onClick = { onOpenFile(); showMenu = false },
-                    leadingIcon = { Icon(Icons.Outlined.OpenInFull, null) }
+        }
+        Spacer(modifier = Modifier.width(10.dp))
+        // Path (single line, front-truncated) + optional size
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = compactPath,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (showFileSize) {
+                Text(
+                    android.text.format.Formatter.formatShortFileSize(context, item.size),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
-        Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text("...${File(item.id).parent?.takeLast(30) ?: ""}/${item.displayName}", style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            if (showFileSize) {
-                Text(android.text.format.Formatter.formatShortFileSize(LocalContext.current, item.size), style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-            }
+        // ⓘ copy full path to clipboard
+        IconButton(
+            onClick = {
+                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                clipboard.setPrimaryClip(ClipData.newPlainText("path", item.id))
+                Toast.makeText(context, "Path copied", Toast.LENGTH_SHORT).show()
+            },
+            modifier = Modifier.size(32.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Info,
+                contentDescription = "Copy full path",
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        // Long-press opens file
+        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.open)) },
+                onClick = { onOpenFile(); showMenu = false },
+                leadingIcon = { Icon(Icons.Outlined.OpenInFull, null) }
+            )
         }
     }
 }
@@ -1848,29 +1814,26 @@ private fun BottomActionBar(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         tonalElevation = 3.dp,
-        shadowElevation = 8.dp
+        shadowElevation = 4.dp
     ) {
         Row(
             modifier = Modifier
                 .navigationBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            // Compact info: space + count in one block
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.reclaim_space_format, android.text.format.Formatter.formatShortFileSize(context, spaceToReclaim)),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
+                val sizeText = android.text.format.Formatter.formatShortFileSize(context, spaceToReclaim)
                 val fileCountText = pluralStringResource(R.plurals.files_selected_count_plurals, selectedCount, selectedCount)
                 Text(
-                    text = stringResource(R.string.files_selected_format, fileCountText),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = "$sizeText  ·  $fileCountText selected",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = if (selectedCount > 0) MaterialTheme.colorScheme.onSurface
+                            else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Spacer(modifier = Modifier.width(16.dp))
             Button(
                 onClick = onDeleteClick,
                 enabled = !isDeleting && (selectedCount > 0 || actionButtonText != stringResource(R.string.delete))
