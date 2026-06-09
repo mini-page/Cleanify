@@ -26,6 +26,7 @@ import com.cleanify.data.db.converter.Converters
 import com.cleanify.data.db.dao.FileSignatureDao
 import com.cleanify.data.db.dao.FolderDetailsDao
 import com.cleanify.data.db.dao.PHashDao
+import com.cleanify.data.db.dao.RecycleBinDao
 import com.cleanify.data.db.dao.ScanResultCacheDao
 import com.cleanify.data.db.dao.SimilarityDenialDao
 import com.cleanify.data.db.dao.UnreadableFileCacheDao
@@ -33,6 +34,7 @@ import com.cleanify.data.db.entity.FileSignatureCache
 import com.cleanify.data.db.entity.FolderDetailsCache
 import com.cleanify.data.db.entity.MediaItemRefCacheEntry
 import com.cleanify.data.db.entity.PHashCache
+import com.cleanify.data.db.entity.RecycleBinEntry
 import com.cleanify.data.db.entity.ScanResultGroupCacheEntry
 import com.cleanify.data.db.entity.SimilarityDenial
 import com.cleanify.data.db.entity.UnreadableFileCache
@@ -45,9 +47,10 @@ import com.cleanify.data.db.entity.UnreadableFileCache
         ScanResultGroupCacheEntry::class,
         MediaItemRefCacheEntry::class,
         UnreadableFileCache::class,
-        SimilarityDenial::class
+        SimilarityDenial::class,
+        RecycleBinEntry::class
     ],
-    version = 3,
+    version = 4,
     autoMigrations = [],
     exportSchema = true
 )
@@ -59,6 +62,7 @@ abstract class CleanifyDatabase : RoomDatabase() {
     abstract fun scanResultCacheDao(): ScanResultCacheDao
     abstract fun unreadableFileCacheDao(): UnreadableFileCacheDao
     abstract fun similarityDenialDao(): SimilarityDenialDao
+    abstract fun recycleBinDao(): RecycleBinDao
 
     companion object {
         const val DATABASE_NAME = "Cleanify_db"
@@ -82,6 +86,25 @@ abstract class CleanifyDatabase : RoomDatabase() {
                 """.trimIndent())
                 // Purge the old similar_groups table if it exists to reclaim space
                 db.execSQL("DROP TABLE IF EXISTS similar_groups")
+            }
+        }
+
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS recycle_bin (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        originalPath TEXT NOT NULL,
+                        recycledPath TEXT NOT NULL,
+                        fileName TEXT NOT NULL,
+                        fileSize INTEGER NOT NULL,
+                        fileCategory TEXT NOT NULL,
+                        mimeType TEXT NOT NULL,
+                        deletedAt INTEGER NOT NULL,
+                        expiresAt INTEGER NOT NULL,
+                        sourceTool TEXT NOT NULL
+                    )
+                """.trimIndent())
             }
         }
     }

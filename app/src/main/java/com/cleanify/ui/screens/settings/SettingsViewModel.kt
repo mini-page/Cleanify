@@ -31,8 +31,10 @@ import com.cleanify.data.repository.FolderNameLayout
 import com.cleanify.data.repository.FolderSelectionMode
 import com.cleanify.data.repository.PreferencesRepository
 import com.cleanify.data.repository.SimilarityThresholdLevel
+import com.cleanify.data.repository.DoubleTapAction
 import com.cleanify.data.repository.SwipeDownAction
 import com.cleanify.data.repository.SwipeSensitivity
+import com.cleanify.data.repository.TapAction
 import com.cleanify.data.repository.UnselectScanScope
 import com.cleanify.domain.bus.AppLifecycleEventBus
 import com.cleanify.domain.bus.FolderUpdateEvent
@@ -292,6 +294,22 @@ class SettingsViewModel @Inject constructor(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5000),
                 initialValue = SwipeDownAction.NONE
+            )
+
+    val tapAction: StateFlow<TapAction> =
+        preferencesRepository.tapActionFlow
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = TapAction.PLAY_PAUSE
+            )
+
+    val doubleTapAction: StateFlow<DoubleTapAction> =
+        preferencesRepository.doubleTapActionFlow
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = DoubleTapAction.FAVORITE
             )
 
     val addFavoriteToTargetByDefault: StateFlow<Boolean> =
@@ -710,6 +728,18 @@ class SettingsViewModel @Inject constructor(
     fun setSwipeDownAction(action: SwipeDownAction) {
         viewModelScope.launch {
             preferencesRepository.setSwipeDownAction(action)
+        }
+    }
+
+    fun setTapAction(action: TapAction) {
+        viewModelScope.launch {
+            preferencesRepository.setTapAction(action)
+        }
+    }
+
+    fun setDoubleTapAction(action: DoubleTapAction) {
+        viewModelScope.launch {
+            preferencesRepository.setDoubleTapAction(action)
         }
     }
 

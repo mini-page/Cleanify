@@ -37,7 +37,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.cleanify.ui.theme.AppTheme
 import com.cleanify.ui.theme.CleanifyTheme
+import com.cleanify.data.cleaner.RecycleBinPurgeWorker
 import com.cleanify.util.ProactiveIndexer
+import com.cleanify.util.RecycleBinManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -49,6 +51,9 @@ class MainActivity : BaseActivity() {
 
     @Inject
     lateinit var proactiveIndexer: ProactiveIndexer
+
+    @Inject
+    lateinit var recycleBinManager: RecycleBinManager
 
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -86,6 +91,12 @@ class MainActivity : BaseActivity() {
 
         // Schedule the proactive indexing job on app startup.
         proactiveIndexer.scheduleGlobalIndex()
+
+        // Schedule daily recycle bin purge and clean any already-expired entries
+        RecycleBinPurgeWorker.scheduleDailyPurge(this)
+        lifecycleScope.launch {
+            recycleBinManager.purgeExpired()
+        }
 
         setContent {
             val currentTheme by mainViewModel.currentTheme.collectAsStateWithLifecycle()

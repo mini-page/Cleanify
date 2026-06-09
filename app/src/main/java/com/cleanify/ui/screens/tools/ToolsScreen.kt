@@ -6,6 +6,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.ControlPointDuplicate
+import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -20,7 +22,9 @@ import com.cleanify.ui.components.BackNavigationIcon
 fun ToolsScreen(
     onNavigateUp: () -> Unit,
     onNavigateToDuplicates: () -> Unit,
-    onNavigateToEmptyCleaner: () -> Unit
+    onNavigateToEmptyCleaner: () -> Unit,
+    onNavigateToRecycleBin: () -> Unit,
+    onNavigateToContactCleaner: () -> Unit = {}
 ) {
     Scaffold(
         topBar = {
@@ -48,6 +52,18 @@ fun ToolsScreen(
                 title = "Empty Cleaner",
                 description = "Scan and delete empty files and empty folders across your device",
                 onClick = onNavigateToEmptyCleaner
+            )
+            ToolCard(
+                icon = { Icon(Icons.Default.DeleteSweep, contentDescription = null, modifier = Modifier.size(32.dp)) },
+                title = "Recycle Bin",
+                description = "Restore or permanently delete files you previously removed",
+                onClick = onNavigateToRecycleBin
+            )
+            ToolCard(
+                icon = { Icon(Icons.Default.Contacts, contentDescription = null, modifier = Modifier.size(32.dp)) },
+                title = "Contact Cleaner",
+                description = "Manage contacts, merge duplicates, and fix contact issues",
+                onClick = onNavigateToContactCleaner
             )
         }
     }

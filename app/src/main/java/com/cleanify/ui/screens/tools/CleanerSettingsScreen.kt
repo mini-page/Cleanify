@@ -336,6 +336,37 @@ fun CleanerSettingsScreen(
                     onClick = { importLauncher.launch(arrayOf("application/json")) }
                 )
             }
+
+            item {
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = "About this tool",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                )
+            }
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            "The Empty File Cleaner scans your device for junk files — " +
+                            "empty files, empty folders, temporary files, APKs, and orphaned app data. " +
+                            "It supports scheduled cleanups, auto-whitelisting, blacklist/whitelist filters, " +
+                            "and can stop background apps after cleaning.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            item {
+                Spacer(Modifier.height(16.dp))
+            }
         }
     }
 

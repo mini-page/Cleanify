@@ -21,8 +21,24 @@ import android.net.Uri
 import androidx.core.net.toUri
 import androidx.room.TypeConverter
 
+import com.cleanify.data.db.entity.FileCategory
+
 class Converters {
     private val listSeparator = "|||---|||" // A unique separator less likely to be in a file path
+
+    @TypeConverter
+    fun fromFileCategory(category: FileCategory): String {
+        return category.name
+    }
+
+    @TypeConverter
+    fun toFileCategory(value: String): FileCategory {
+        return try {
+            FileCategory.valueOf(value)
+        } catch (e: IllegalArgumentException) {
+            FileCategory.Other
+        }
+    }
 
     @TypeConverter
     fun fromStringList(list: List<String>): String {
