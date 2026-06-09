@@ -19,6 +19,7 @@ package com.cleanify.ui.screens.swiper
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Parcelable
 import android.util.Log
 import android.widget.Toast
@@ -36,8 +37,10 @@ import com.cleanify.data.repository.FolderBarLayout
 import com.cleanify.data.repository.FolderNameLayout
 import com.cleanify.data.repository.PreferencesRepository
 import com.cleanify.data.repository.SummaryViewMode
+import com.cleanify.data.repository.DoubleTapAction
 import com.cleanify.data.repository.SwipeDownAction
 import com.cleanify.data.repository.SwipeSensitivity
+import com.cleanify.data.repository.TapAction
 import com.cleanify.di.AppModule
 import com.cleanify.domain.bus.AppLifecycleEventBus
 import com.cleanify.domain.bus.FileModificationEvent
@@ -134,7 +137,10 @@ data class SwiperUiState(
     val sessionSkippedMediaIds: Set<String> = emptySet(),
     val useFullScreenSummarySheet: Boolean = false,
     val fullScreenSwipe: Boolean = false,
-
+    val favoriteItemIds: Set<String> = emptySet(),
+    val showItemInfoSheet: Boolean = false,
+    val tapAction: TapAction = TapAction.PLAY_PAUSE,
+    val doubleTapAction: DoubleTapAction = DoubleTapAction.FAVORITE,
 
     // Pre-processed lists for Summary Sheet performance
     val toDelete: List<PendingChange> = emptyList(),
@@ -412,6 +418,21 @@ class SwiperViewModel @Inject constructor(
         viewModelScope.launch {
             preferencesRepository.fullScreenSwipeFlow.collect { enabled ->
                 _uiState.update { it.copy(fullScreenSwipe = enabled) }
+            }
+        }
+        viewModelScope.launch {
+            preferencesRepository.favoriteMediaItemsFlow.collect { ids ->
+                _uiState.update { it.copy(favoriteItemIds = ids) }
+            }
+        }
+        viewModelScope.launch {
+            preferencesRepository.tapActionFlow.collect { action ->
+                _uiState.update { it.copy(tapAction = action) }
+            }
+        }
+        viewModelScope.launch {
+            preferencesRepository.doubleTapActionFlow.collect { action ->
+                _uiState.update { it.copy(doubleTapAction = action) }
             }
         }
     }
@@ -699,6 +720,14 @@ class SwiperViewModel @Inject constructor(
     fun handleSkip() {
         if (_uiState.value.currentItem == null) return
         processAndAdvance(skipCurrent = true)
+    }
+
+    /** Jump directly to a specific item in the batch (used by thumbnail strip tap). */
+    fun navigateToIndex(index: Int) {
+        val state = _uiState.value
+        val clamped = index.coerceIn(0, state.allMediaItems.lastIndex)
+        if (clamped == state.currentIndex) return
+        _uiState.update { it.copy(currentIndex = clamped, currentItem = it.allMediaItems[clamped]) }
     }
 
     fun moveToFolder(folderPath: String) {
@@ -1206,6 +1235,79 @@ class SwiperViewModel @Inject constructor(
 
     fun dismissMediaItemMenu() {
         _uiState.update { it.copy(showMediaItemMenu = false) }
+    }
+
+    fun toggleItemFavorite(itemId: String) {
+        viewModelScope.launch {
+            val isFav = itemId in _uiState.value.favoriteItemIds
+            if (isFav) {
+                preferencesRepository.removeFavoriteMediaItem(itemId)
+            } else {
+                preferencesRepository.addFavoriteMediaItem(itemId)
+            }
+        }
+    }
+
+    fun showItemInfoSheet() {
+        _uiState.update { it.copy(showItemInfoSheet = true) }
+    }
+
+    fun dismissItemInfoSheet() {
+        _uiState.update { it.copy(showItemInfoSheet = false) }
+    }
+
+    fun renameCurrentItem(newName: String) {
+        val item = _uiState.value.currentItem ?: return
+        viewModelScope.launch {
+            try {
+                val file = File(item.id)
+                val parentDir = file.parentFile ?: return@launch
+                val newFile = File(parentDir, newName)
+                if (file.renameTo(newFile)) {
+                    val newUri = Uri.fromFile(newFile)
+                    val updated = item.copy(id = newFile.absolutePath, uri = newUri, displayName = newName)
+                    _uiState.update { s ->
+                        val updatedList = s.allMediaItems.map { if (it.id == item.id) updated else it }
+                        s.copy(currentItem = updated, allMediaItems = updatedList)
+                    }
+                    showToast("Renamed to $newName")
+                } else {
+                    showToast("Rename failed")
+                }
+            } catch (e: Exception) {
+                showToast("Error: ${e.message}")
+            }
+        }
+    }
+
+    fun dropMetadataFromCurrentItem() {
+        val item = _uiState.value.currentItem ?: return
+        viewModelScope.launch {
+            try {
+                when {
+                    item.isImage -> {
+                        val file = File(item.id)
+                        if (file.exists()) {
+                            android.media.ExifInterface(file.absolutePath).apply {
+                                setAttribute(android.media.ExifInterface.TAG_ARTIST, null)
+                                setAttribute(android.media.ExifInterface.TAG_DATETIME, null)
+                                setAttribute(android.media.ExifInterface.TAG_GPS_LATITUDE, null)
+                                setAttribute(android.media.ExifInterface.TAG_GPS_LONGITUDE, null)
+                                setAttribute(android.media.ExifInterface.TAG_GPS_ALTITUDE, null)
+                                setAttribute(android.media.ExifInterface.TAG_MAKE, null)
+                                setAttribute(android.media.ExifInterface.TAG_MODEL, null)
+                                setAttribute(android.media.ExifInterface.TAG_SOFTWARE, null)
+                                saveAttributes()
+                            }
+                            showToast("Metadata removed")
+                        }
+                    }
+                    else -> showToast("Metadata removal not supported for this type")
+                }
+            } catch (e: Exception) {
+                showToast("Error: ${e.message}")
+            }
+        }
     }
 
     fun shareCurrentItem() {

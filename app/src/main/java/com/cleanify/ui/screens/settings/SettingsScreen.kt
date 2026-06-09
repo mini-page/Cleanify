@@ -21,6 +21,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -32,6 +33,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material3.*
@@ -54,6 +56,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -70,8 +74,10 @@ import com.cleanify.data.repository.FolderBarLayout
 import com.cleanify.data.repository.FolderNameLayout
 import com.cleanify.data.repository.FolderSelectionMode
 import com.cleanify.data.repository.SimilarityThresholdLevel
+import com.cleanify.data.repository.DoubleTapAction
 import com.cleanify.data.repository.SwipeDownAction
 import com.cleanify.data.repository.SwipeSensitivity
+import com.cleanify.data.repository.TapAction
 import com.cleanify.data.repository.UnselectScanScope
 import com.cleanify.ui.components.AppDialog
 import com.cleanify.ui.components.BackNavigationIcon
@@ -93,10 +99,12 @@ private data class SettingsCategory(
 
 private val categories = listOf(
     SettingsCategory("appearance", R.string.appearance_section_title, R.string.appearance_section_desc, Icons.Default.Palette),
+    SettingsCategory("sorting", R.string.gestures_section_title, R.string.gestures_section_desc, Icons.AutoMirrored.Filled.Sort),
     SettingsCategory("behavior", R.string.behavior_section_title, R.string.behavior_section_desc, Icons.Default.TouchApp),
     SettingsCategory("duplicates", R.string.duplicate_finder_section_title, R.string.duplicate_finder_section_desc, Icons.Default.ContentCopy),
     SettingsCategory("media_storage", R.string.media_storage_section_title, R.string.media_storage_section_desc, Icons.Default.Storage),
     SettingsCategory("cleaner", R.string.cleaner_section_title, R.string.cleaner_section_desc, Icons.Default.CleaningServices),
+    SettingsCategory("contact_cleaner", R.string.contact_cleaner_section_title, R.string.contact_cleaner_section_desc, Icons.Default.Contacts),
     SettingsCategory("help", R.string.help_support_section_title, R.string.help_support_section_desc, Icons.AutoMirrored.Filled.HelpOutline),
     SettingsCategory("about", R.string.about_section_title, R.string.about_section_desc, Icons.Default.Info)
 )
@@ -138,6 +146,8 @@ fun SettingsScreen(
     val addFolderFocusTarget by viewModel.addFolderFocusTarget.collectAsState()
     val swipeSensitivity by viewModel.swipeSensitivity.collectAsState()
     val swipeDownAction by viewModel.swipeDownAction.collectAsState()
+    val tapAction by viewModel.tapAction.collectAsState()
+    val doubleTapAction by viewModel.doubleTapAction.collectAsState()
     val addFavoriteToTargetByDefault by viewModel.addFavoriteToTargetByDefault.collectAsState()
     val hintOnExistingFolderName by viewModel.hintOnExistingFolderName.collectAsState()
     val pathOptions = viewModel.standardAlbumDirectories
@@ -191,15 +201,16 @@ fun SettingsScreen(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri -> uri?.let { viewModel.importTargetFavorites(it) } }
 
-    var showAboutSortMediaDialog by remember { mutableStateOf(false) }
     var showFundingDialog by remember { mutableStateOf(false) }
 
     val pageTitle = currentPage?.let { id ->
         when (id) {
             "appearance" -> R.string.appearance_section_title
+            "sorting" -> R.string.gestures_section_title
             "behavior" -> R.string.behavior_section_title
             "duplicates" -> R.string.duplicate_finder_section_title
             "media_storage" -> R.string.media_storage_section_title
+            "contact_cleaner" -> R.string.contact_cleaner_section_title
             "help" -> R.string.help_support_section_title
             "about" -> R.string.about_section_title
             else -> null
@@ -285,8 +296,12 @@ fun SettingsScreen(
                     folderBarLayout, skipPartialExpansion, useFullScreenSummarySheet,
                     supportsDynamicColors, isGestureMode, viewModel
                 )
-                "behavior" -> BehaviorSubPage(
+                "sorting" -> SortingSubPage(
                     swipeSensitivity, swipeDownAction, fullScreenSwipe, invertSwipe,
+                    tapAction, doubleTapAction,
+                    viewModel
+                )
+            "behavior" -> BehaviorSubPage(
                     folderSelectionMode, showFavoritesInSetup, hideSkipButton,
                     addFavoriteToTargetByDefault, unfavoriteRemovesFromBar,
                     hintOnExistingFolderName, addFolderFocusTarget, defaultPath, pathOptions,
@@ -302,31 +317,21 @@ fun SettingsScreen(
                     scanAudioEnabled, scanDocumentEnabled,
                     uiState, viewModel
                 )
+                "contact_cleaner" -> ContactCleanerSubPage(viewModel)
                 "help" -> HelpSupportSubPage(
                     onNavigateToLibraries, exportFavoritesLauncher, importFavoritesLauncher,
                     defaultExportFilename, viewModel
                 )
                 "about" -> AboutSubPage(
-                    showFundingDialog, showAboutSortMediaDialog, viewModel,
+                    showFundingDialog, viewModel,
                     onNavigateToLibraries,
-                    onShowFunding = { showFundingDialog = true },
-                    onShowAbout = { showAboutSortMediaDialog = true }
+                    onShowFunding = { showFundingDialog = true }
                 )
             }
         }
     }
 
     if (showFundingDialog) FundingDialog(onDismiss = { showFundingDialog = false })
-    if (showAboutSortMediaDialog) {
-        AppDialog(
-            onDismissRequest = { showAboutSortMediaDialog = false },
-            title = { Text(stringResource(R.string.about_cleanify_title), style = MaterialTheme.typography.headlineSmall) },
-            text = { Text(stringResource(R.string.version_title) + ": ${viewModel.appVersion}", style = MaterialTheme.typography.bodyLarge) },
-            buttons = {
-                TextButton(onClick = { showAboutSortMediaDialog = false }) { Text(stringResource(R.string.close)) }
-            }
-        )
-    }
 
     if (uiState.showUnindexedFilesDialog) {
         UnindexedFilesDialog(
@@ -594,15 +599,13 @@ private fun AppearanceSubPage(
 }
 
 @Composable
-private fun BehaviorSubPage(
-    swipeSensitivity: SwipeSensitivity, swipeDownAction: SwipeDownAction,
-    fullScreenSwipe: Boolean, invertSwipe: Boolean,
-    folderSelectionMode: FolderSelectionMode, showFavoritesInSetup: Boolean,
-    hideSkipButton: Boolean, addFavoriteToTargetByDefault: Boolean,
-    unfavoriteRemovesFromBar: Boolean, hintOnExistingFolderName: Boolean,
-    addFolderFocusTarget: AddFolderFocusTarget, defaultPath: String,
-    pathOptions: List<Pair<String, String>>, rememberProcessedMedia: Boolean,
-    searchAutofocusEnabled: Boolean, unselectAllInSearchScope: UnselectScanScope,
+private fun SortingSubPage(
+    swipeSensitivity: SwipeSensitivity,
+    swipeDownAction: SwipeDownAction,
+    fullScreenSwipe: Boolean,
+    invertSwipe: Boolean,
+    tapAction: TapAction,
+    doubleTapAction: DoubleTapAction,
     viewModel: SettingsViewModel
 ) {
     Column(
@@ -616,6 +619,28 @@ private fun BehaviorSubPage(
         SettingSwitch(R.string.invert_swipe_title, R.string.invert_swipe_desc, invertSwipe, { viewModel.setInvertSwipe(it) })
 
         HorizontalDivider(Modifier.padding(vertical = 4.dp))
+        SectionHeader(R.string.tap_section_header)
+        SettingsPickerItem(R.string.tap_action_title, R.string.tap_action_desc, TapAction.entries, tapAction, { viewModel.setTapAction(it) }, ::getTapActionDisplayName)
+        SettingsPickerItem(R.string.double_tap_action_title, R.string.double_tap_action_desc, DoubleTapAction.entries, doubleTapAction, { viewModel.setDoubleTapAction(it) }, ::getDoubleTapActionDisplayName)
+
+        Spacer(Modifier.height(32.dp))
+    }
+}
+
+@Composable
+private fun BehaviorSubPage(
+    folderSelectionMode: FolderSelectionMode, showFavoritesInSetup: Boolean,
+    hideSkipButton: Boolean, addFavoriteToTargetByDefault: Boolean,
+    unfavoriteRemovesFromBar: Boolean, hintOnExistingFolderName: Boolean,
+    addFolderFocusTarget: AddFolderFocusTarget, defaultPath: String,
+    pathOptions: List<Pair<String, String>>, rememberProcessedMedia: Boolean,
+    searchAutofocusEnabled: Boolean, unselectAllInSearchScope: UnselectScanScope,
+    viewModel: SettingsViewModel
+) {
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
         SectionHeader(R.string.folder_behavior_section_header)
 
         SettingsPickerItem(R.string.folder_selection_mode_title, getFolderSelectionModeDescriptionRes(folderSelectionMode), FolderSelectionMode.entries, folderSelectionMode, { viewModel.setFolderSelectionMode(it) }, ::getFolderSelectionModeDisplayName)
@@ -661,7 +686,21 @@ private fun DuplicateFinderSubPage(
                 OutlinedButton(onClick = { viewModel.showDuplicateScanScopeDialog() }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.manage_list_format, title, listSize)) }
             }
         }
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(16.dp))
+
+        HorizontalDivider()
+
+        ToolAboutCard(
+            icon = Icons.Default.ContentCopy,
+            title = "Duplicate Finder",
+            description = "Finds duplicate files across your device using content-based similarity checks. " +
+                "Supports adjustable similarity thresholds, include/exclude folder scoping, " +
+                "and batch management of duplicate groups.",
+            warning = "Review duplicates carefully before deleting. Some files may share the same content " +
+                "but be needed by different apps. Use the preview and selective deletion features."
+        )
+
+        Spacer(Modifier.height(16.dp))
     }
 }
 
@@ -743,14 +782,11 @@ private fun HelpSupportSubPage(
 
 @Composable
 private fun AboutSubPage(
-    showFundingDialog: Boolean, showAboutSortMediaDialog: Boolean,
+    showFundingDialog: Boolean,
     viewModel: SettingsViewModel,
     onNavigateToLibraries: () -> Unit,
-    onShowFunding: () -> Unit, onShowAbout: () -> Unit
+    onShowFunding: () -> Unit
 ) {
-    val clipboard = LocalClipboard.current
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val uriHandler = LocalUriHandler.current
 
     Column(
@@ -759,41 +795,182 @@ private fun AboutSubPage(
     ) {
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             Spacer(Modifier.height(8.dp))
-            Box(modifier = Modifier.size(80.dp).clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
-            }
+            androidx.compose.foundation.Image(
+                painter = painterResource(R.mipmap.ic_launcher_foreground),
+                contentDescription = null,
+                modifier = Modifier.size(120.dp),
+                contentScale = ContentScale.Fit
+            )
             Spacer(Modifier.height(16.dp))
-            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text(stringResource(R.string.version_title) + " " + viewModel.appVersion, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Cleanify", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text("v${viewModel.appVersion}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
         HorizontalDivider()
 
-        SettingsItem(stringResource(R.string.support_development_title), stringResource(R.string.support_development_desc), onClick = onShowFunding)
-
-        val versionString = viewModel.appVersion
-        val copyMessage = stringResource(R.string.app_version_copied, versionString)
-        SettingsItem(stringResource(R.string.version_title), versionString, onLongClick = {
-            scope.launch {
-                val clipData = ClipData.newPlainText("label", versionString)
-                val clipEntry = ClipEntry(clipData)
-                clipboard.setClipEntry(clipEntry)
-                if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2)
-                    android.widget.Toast.makeText(context, copyMessage, android.widget.Toast.LENGTH_SHORT).show()
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.25f))
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(stringResource(R.string.features_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(10.dp))
+                val features = listOf(
+                    R.string.feature_swipe,
+                    R.string.feature_duplicates,
+                    R.string.feature_cleaner,
+                    R.string.feature_contacts,
+                    R.string.feature_recycle,
+                    R.string.feature_themes,
+                    R.string.feature_language,
+                    R.string.feature_offline,
+                    R.string.feature_opensource
+                )
+                features.forEach { res ->
+                    Row(modifier = Modifier.padding(vertical = 3.dp)) {
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.tertiary
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(res),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
-        })
+        }
 
-        SettingsItem(stringResource(R.string.about_cleanify_title), stringResource(R.string.about_cleanify_desc), onClick = onShowAbout)
+        Text(stringResource(R.string.social_section_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
 
-        val githubUrl = stringResource(R.string.github_summary)
-        SettingsItem(stringResource(R.string.github_title), githubUrl, onClick = { uriHandler.openUri("https://$githubUrl") })
+        val socialLinks = remember {
+            listOf(
+                Triple(Icons.Default.Star, "Star Repo", "https://github.com/mini-page/Cleanify"),
+                Triple(Icons.Default.Code, "GitHub", "https://github.com/mini-page/"),
+                Triple(Icons.Default.BusinessCenter, "LinkedIn", "https://www.linkedin.com/in/ug5711"),
+                Triple(Icons.Default.CameraAlt, "Instagram", "https://www.instagram.com/ug_5711"),
+                Triple(Icons.Default.Send, "Telegram", "https://t.me/ug_5711"),
+                Triple(Icons.Default.Mood, "Snapchat", "https://www.snapchat.com/add/rg_5711"),
+                Triple(Icons.Default.Email, "Email", "mailto:raghavans5711+Support@gmail.com")
+            )
+        }
 
-        val gitlabSummary = stringResource(R.string.gitlab_summary)
-        SettingsItem(stringResource(R.string.gitlab_title), gitlabSummary, onClick = { uriHandler.openUri("https://${gitlabSummary.substringBefore(" ")}") })
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            items(socialLinks.size) { index ->
+                val (icon, label, url) = socialLinks[index]
+                Surface(
+                    onClick = { uriHandler.openUri(url) },
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh
+                ) {
+                    Column(
+                        modifier = Modifier.size(88.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.secondaryContainer,
+                            modifier = Modifier.size(44.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    icon,
+                                    contentDescription = label,
+                                    modifier = Modifier.size(24.dp),
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onShowFunding)
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                    modifier = Modifier.size(44.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.Favorite,
+                            contentDescription = null,
+                            modifier = Modifier.size(22.dp),
+                            tint = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                    }
+                }
+                Spacer(Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.support_development_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.support_development_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+            }
+        }
 
         SettingsItem(stringResource(R.string.open_source_licenses_title), stringResource(R.string.open_source_licenses_desc), onClick = onNavigateToLibraries)
 
         Spacer(Modifier.height(32.dp))
+    }
+}
+
+@Composable
+private fun ContactCleanerSubPage(
+    viewModel: SettingsViewModel
+) {
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
+        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Spacer(Modifier.height(8.dp))
+            Box(modifier = Modifier.size(80.dp).clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.Contacts, contentDescription = null, modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+            }
+            Spacer(Modifier.height(16.dp))
+            Text(stringResource(R.string.contact_cleaner_section_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.contact_cleaner_section_desc), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+        }
+
+        HorizontalDivider()
+
+        ToolAboutCard(
+            icon = Icons.Default.Contacts,
+            title = "Contact Cleaner",
+            description = "Contact Cleaner helps you find and fix issues in your contacts list. " +
+                "It detects duplicate contacts (by phone number or name), " +
+                "and flags contacts with missing names or phone numbers so you can clean them up.",
+            warning = "Deleting contacts permanently removes them from your device and synced accounts. " +
+                "Merging combines duplicate entries using Android's aggregation mechanism — " +
+                "the first contact in each group becomes the primary. These actions cannot be undone."
+        )
+
+        Spacer(Modifier.height(16.dp))
     }
 }
 
@@ -1254,6 +1431,19 @@ private fun getSwipeDownActionDisplayName(a: SwipeDownAction): String = when (a)
 }
 
 @Composable
+private fun getTapActionDisplayName(a: TapAction): String = when (a) {
+    TapAction.PLAY_PAUSE -> stringResource(R.string.tap_action_play_pause)
+    TapAction.NONE -> stringResource(R.string.tap_action_none)
+}
+
+@Composable
+private fun getDoubleTapActionDisplayName(a: DoubleTapAction): String = when (a) {
+    DoubleTapAction.FAVORITE -> stringResource(R.string.double_tap_favorite)
+    DoubleTapAction.FULLSCREEN -> stringResource(R.string.double_tap_fullscreen)
+    DoubleTapAction.NONE -> stringResource(R.string.action_none)
+}
+
+@Composable
 private fun getSimilarityLevelDisplayName(l: SimilarityThresholdLevel): String = when (l) {
     SimilarityThresholdLevel.STRICT -> stringResource(R.string.similarity_level_strict)
     SimilarityThresholdLevel.BALANCED -> stringResource(R.string.similarity_level_balanced)
@@ -1284,7 +1474,6 @@ private fun getScanScopeDescription(s: DuplicateScanScope, inc: Set<String>, exc
 @Composable
 private fun getFolderNameLayoutDisplayName(l: FolderNameLayout): String = when (l) {
     FolderNameLayout.ABOVE -> stringResource(R.string.folder_name_layout_above)
-    FolderNameLayout.BELOW -> stringResource(R.string.folder_name_layout_below)
     FolderNameLayout.HIDDEN -> stringResource(R.string.folder_name_layout_hidden)
 }
 
@@ -1337,6 +1526,43 @@ private fun getUnselectAllScopeDisplayName(s: UnselectScanScope): String = when 
 private fun getUnselectAllScopeDescriptionRes(s: UnselectScanScope): Int = when (s) {
     UnselectScanScope.GLOBAL -> R.string.desc_unselect_global
     UnselectScanScope.VISIBLE_ONLY -> R.string.desc_unselect_visible
+}
+
+@Composable
+private fun ToolAboutCard(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    description: String,
+    warning: String? = null
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.tertiaryContainer, modifier = Modifier.size(36.dp)) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onTertiaryContainer)
+                    }
+                }
+                Spacer(Modifier.width(10.dp))
+                Text("About this tool", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (warning != null) {
+                Spacer(Modifier.height(8.dp))
+                Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f)) {
+                    Row(modifier = Modifier.padding(8.dp)) {
+                        Icon(Icons.Default.Warning, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
+                        Spacer(Modifier.width(6.dp))
+                        Text(warning, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable

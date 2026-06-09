@@ -676,7 +676,7 @@ class DirectMediaRepositoryImpl @Inject constructor(
             val deletedPaths = mutableListOf<String>()
             unindexedItems.forEach { item ->
                 // For unindexed items, 'id' is the absolute path
-                if (FileManager.deleteFile(item.id)) {
+                if (fileOperationsHelper.moveToTrash(item.id, "swiper")) {
                     deletedPaths.add(item.id)
                     successCount++
                 } else {

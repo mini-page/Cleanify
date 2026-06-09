@@ -17,8 +17,6 @@
 
 package com.cleanify.ui.screens.swiper
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -26,7 +24,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,12 +36,12 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.DialogProperties
 import com.cleanify.data.repository.AddFolderFocusTarget
-import com.cleanify.ui.components.AppDialog
 import com.cleanify.ui.components.FolderSearchState
 import com.cleanify.ui.theme.LocalAppTheme
 import com.cleanify.ui.theme.isDark
@@ -76,6 +76,7 @@ private fun levenshtein(lhs: CharSequence, rhs: CharSequence): Int {
     return cost[lhsLength - 1]
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddTargetFolderDialog(
     folderSearchState: FolderSearchState,
@@ -96,23 +97,19 @@ fun AddTargetFolderDialog(
     val searchPathFocusRequester = remember { FocusRequester() }
     val newFolderNameFocusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val warningColor = if (LocalAppTheme.current.isDark) {
-        Color(0xFFFFB86F) // Light Amber for Dark/AMOLED Theme
+        Color(0xFFFFB86F)
     } else {
-        Color(0xFFC07600) // Dark Amber for Light Theme
+        Color(0xFFC07600)
     }
 
-    // Initialize the "Add to Favorites" checkbox from settings
     LaunchedEffect(addFavoriteToTargetByDefault) {
         addToFavorites = addFavoriteToTargetByDefault
     }
 
-    // Handle focus based on the addFolderFocusTarget
     LaunchedEffect(addFolderFocusTarget) {
-        // Workaround for a focus timing issue introduced in a recent Compose library update.
-        // The tap event that triggers this dialog now clears system focus. This delay allows the
-        // focus system to stabilize before we request focus, preventing the request from being ignored.
         delay(50)
         when (addFolderFocusTarget) {
             AddFolderFocusTarget.FOLDER_NAME -> {
@@ -139,24 +136,19 @@ fun AddTargetFolderDialog(
 
             val allFolderPaths = folderSearchState.allFolders.map { it.first }
             for (path in allFolderPaths) {
-                // Check for exact match first
                 if (path.equals(newFullPath, ignoreCase = true)) {
                     exactMatchPath = path
-                    break // Exact match is highest priority, no need to check further
+                    break
                 }
-
-                // Check for similar names only within the same parent directory
                 val existingFile = File(path)
                 if (existingFile.parent.equals(parentPath, ignoreCase = true)) {
                     val distance = levenshtein(newFolderName, existingFile.name)
                     val nameLength = newFolderName.length
-
                     val isSimilar = when {
                         nameLength in 1..3 -> distance == 1
                         nameLength > 3 -> distance > 0 && distance < (nameLength * 0.4)
                         else -> false
                     }
-
                     if (isSimilar && distance < minDistance) {
                         minDistance = distance
                         similarMatchPath = path
@@ -173,213 +165,334 @@ fun AddTargetFolderDialog(
         }
     }
 
-    AppDialog(
+    ModalBottomSheet(
         onDismissRequest = onDismissRequest,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            dismissOnClickOutside = true
-        )
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 0.dp,
+        modifier = Modifier.fillMaxWidth(),
+        contentWindowInsets = { WindowInsets(0) }
     ) {
         Column(
             modifier = Modifier
-                .widthIn(max = 400.dp)
-                .padding(24.dp)
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp)
         ) {
-            Text("Add Target Folder", style = MaterialTheme.typography.headlineSmall)
-            Spacer(modifier = Modifier.height(16.dp))
-            Column(
+            // ── Header ──
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedTextField(
-                    value = folderSearchState.searchQuery,
-                    onValueChange = onSearchQueryChange,
-                    label = { Text("Search or Enter Path") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(searchPathFocusRequester)
-                        .onFocusChanged { focusState ->
-                            onSearchFocusChanged(focusState.isFocused)
-                        }
+                Text(
+                    "Add Target Folder",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold
                 )
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .border(
-                            1.dp,
-                            MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                            RoundedCornerShape(8.dp)
-                        )
-                ) {
-                    when {
-                        folderSearchState.isLoading -> {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(72.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator()
-                            }
+                IconButton(onClick = onDismissRequest) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Close",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Search for an existing folder or create a new one",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            // ── Search field ──
+            OutlinedTextField(
+                value = folderSearchState.searchQuery,
+                onValueChange = onSearchQueryChange,
+                placeholder = { Text("Search folders...") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.FolderOpen,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(searchPathFocusRequester)
+                    .onFocusChanged { focusState ->
+                        onSearchFocusChanged(focusState.isFocused)
+                    }
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            // ── Folder results ──
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 200.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                )
+            ) {
+                when {
+                    folderSearchState.isLoading -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(72.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp
+                            )
                         }
-                        folderSearchState.displayedResults.isNotEmpty() -> {
-                            Box(modifier = Modifier.heightIn(max = 200.dp)) {
-                                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                                    folderSearchState.displayedResults.forEach { path ->
-                                        Column(modifier = Modifier.padding(horizontal = 8.dp)) {
-                                            Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .clickable {
-                                                        onPathSelected(path)
-                                                        newFolderNameFocusRequester.requestFocus()
-                                                    }
-                                                    .padding(vertical = 8.dp),
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Icon(Icons.Default.Folder, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
-                                                Text(
-                                                    text = getFormattedPath(path),
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    maxLines = 1
-                                                )
-                                            }
-                                            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                                        }
+                    }
+                    folderSearchState.displayedResults.isNotEmpty() -> {
+                        Column(
+                            modifier = Modifier
+                                .heightIn(max = 200.dp)
+                                .verticalScroll(rememberScrollState())
+                        ) {
+                            folderSearchState.displayedResults.forEach { path ->
+                                Surface(
+                                    onClick = {
+                                        onPathSelected(path)
+                                        newFolderNameFocusRequester.requestFocus()
+                                    },
+                                    color = Color.Transparent,
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Folder,
+                                            contentDescription = null,
+                                            modifier = Modifier
+                                                .padding(end = 12.dp)
+                                                .size(20.dp),
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                        Text(
+                                            text = getFormattedPath(path),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
                                     }
                                 }
                             }
                         }
-                        folderSearchState.searchQuery.isNotBlank() && !folderSearchState.isLoading -> {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "No folders found.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
-                            }
-                        }
                     }
-                    if (folderSearchState.browsePath != null && folderSearchState.searchQuery.isBlank()) {
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
-                        Text(
-                            text = "Selected: .../${folderSearchState.browsePath.takeLast(35)}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
+                    folderSearchState.searchQuery.isNotBlank() && !folderSearchState.isLoading -> {
+                        Box(
                             modifier = Modifier
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f))
                                 .fillMaxWidth()
-                                .clickable { onResetFolderSelection() }
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
-                }
-                OutlinedTextField(
-                    value = newFolderName,
-                    onValueChange = { newFolderName = it },
-                    label = { Text("New Folder Name (optional)") },
-                    placeholder = { Text("Leave blank to import folder") },
-                    singleLine = true,
-                    supportingText = {
-                        when (hintState) {
-                            is HintState.ExactMatch -> {
-                                val friendlyPath = ".../${File(hintState.path).parentFile?.name}/${File(hintState.path).name}"
-                                Text("A folder with this name already exists: $friendlyPath")
-                            }
-                            is HintState.SimilarMatch -> {
-                                val friendlyPath = ".../${File(hintState.path).parentFile?.name}/${File(hintState.path).name}"
-                                Text("A folder with a similar name exists: $friendlyPath")
-                            }
-                            HintState.None -> { /* No text */ }
+                                .padding(20.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "No folders found",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
-                    },
-                    colors = if (hintState != HintState.None) {
-                        TextFieldDefaults.colors(
-                            focusedIndicatorColor = warningColor,
-                            unfocusedIndicatorColor = warningColor.copy(alpha = 0.7f),
-                            focusedLabelColor = warningColor,
-                            cursorColor = warningColor,
-                            focusedSupportingTextColor = warningColor,
-                            unfocusedSupportingTextColor = warningColor.copy(alpha = 0.7f),
-                            unfocusedContainerColor = Color.Transparent,
-                            focusedContainerColor = Color.Transparent,
-                        )
-                    } else {
-                        TextFieldDefaults.colors(
-                            unfocusedContainerColor = Color.Transparent,
-                            focusedContainerColor = Color.Transparent,
-                        )
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(newFolderNameFocusRequester)
-                )
-
-                val isSelectedFolderFavorite = folderSearchState.browsePath in targetFavorites
-                val isFavoritesRowEnabled = folderSearchState.browsePath != null && !isSelectedFolderFavorite
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(
-                            enabled = isFavoritesRowEnabled,
-                            onClick = { addToFavorites = !addToFavorites }
-                        )
-                        .padding(vertical = 4.dp)
-                ) {
-                    Checkbox(
-                        checked = addToFavorites,
-                        onCheckedChange = { addToFavorites = it },
-                        enabled = isFavoritesRowEnabled
-                    )
-                    Text("Add to Target Favorites", color = if (isFavoritesRowEnabled) LocalContentColor.current else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
+                    }
                 }
             }
-            Spacer(modifier = Modifier.height(24.dp))
-            Row(
-                modifier = Modifier.align(Alignment.End),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                val isNewNameEntered = newFolderName.isNotBlank()
-                val isLocationValid = folderSearchState.browsePath != null || (isNewNameEntered && folderSearchState.searchQuery.isNotBlank())
 
-                // Logic to check if the selected folder is the same as the current item's parent
-                val isSameFolderAsCurrent = remember(folderSearchState.browsePath, currentItemPath) {
-                    val currentPath = currentItemPath ?: return@remember false
-                    val parentDirectory = try { File(currentPath).parent } catch (e: Exception) { null }
-                    parentDirectory != null && parentDirectory == folderSearchState.browsePath
-                }
-
-                val primaryButtonText = when {
-                    isNewNameEntered -> "Create"
-                    else -> "Import"
-                }
-                val moveButtonText = when {
-                    isNewNameEntered -> "Create & Move"
-                    else -> "Import & Move"
-                }
-
-                // A move is only invalid if a new name is NOT entered AND it's the same folder.
-                val isMoveActionInvalid = !isNewNameEntered && isSameFolderAsCurrent
-
-                TextButton(onClick = onDismissRequest) { Text("Cancel") }
-                Button(
-                    onClick = { onConfirm(newFolderName, addToFavorites, false) },
-                    enabled = isLocationValid
-                ) { Text(primaryButtonText) }
-                Button(
-                    onClick = { onConfirm(newFolderName, addToFavorites, true) },
-                    enabled = isLocationValid && !isMoveActionInvalid
+            // ── Selected path chip ──
+            if (folderSearchState.browsePath != null && folderSearchState.searchQuery.isBlank()) {
+                Spacer(Modifier.height(8.dp))
+                Surface(
+                    onClick = onResetFolderSelection,
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text(moveButtonText, textAlign = TextAlign.Center)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Folder,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = ".../${folderSearchState.browsePath.takeLast(35)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            "Change",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // ── New folder name ──
+            OutlinedTextField(
+                value = newFolderName,
+                onValueChange = { newFolderName = it },
+                label = { Text("New folder name (optional)") },
+                placeholder = { Text("Leave blank to use selected folder") },
+                singleLine = true,
+                supportingText = {
+                    when (hintState) {
+                        is HintState.ExactMatch -> {
+                            val friendlyPath = ".../${File(hintState.path).parentFile?.name}/${File(hintState.path).name}"
+                            Text("A folder with this name already exists: $friendlyPath")
+                        }
+                        is HintState.SimilarMatch -> {
+                            val friendlyPath = ".../${File(hintState.path).parentFile?.name}/${File(hintState.path).name}"
+                            Text("A folder with a similar name exists: $friendlyPath")
+                        }
+                        HintState.None -> {}
+                    }
+                },
+                colors = if (hintState != HintState.None) {
+                    TextFieldDefaults.colors(
+                        focusedIndicatorColor = warningColor,
+                        unfocusedIndicatorColor = warningColor.copy(alpha = 0.7f),
+                        focusedLabelColor = warningColor,
+                        cursorColor = warningColor,
+                        focusedSupportingTextColor = warningColor,
+                        unfocusedSupportingTextColor = warningColor.copy(alpha = 0.7f),
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedContainerColor = Color.Transparent,
+                    )
+                } else {
+                    TextFieldDefaults.colors(
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedContainerColor = Color.Transparent,
+                    )
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(newFolderNameFocusRequester)
+            )
+
+            Spacer(Modifier.height(4.dp))
+
+            // ── Add to favorites checkbox ──
+            val isSelectedFolderFavorite = folderSearchState.browsePath in targetFavorites
+            val isFavoritesRowEnabled = folderSearchState.browsePath != null && !isSelectedFolderFavorite
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(
+                        enabled = isFavoritesRowEnabled,
+                        onClick = { addToFavorites = !addToFavorites }
+                    )
+                    .padding(vertical = 2.dp)
+            ) {
+                Checkbox(
+                    checked = addToFavorites,
+                    onCheckedChange = { addToFavorites = it },
+                    enabled = isFavoritesRowEnabled
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    "Keep as favorite folder",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (isFavoritesRowEnabled) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    }
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // ── Action buttons ──
+            val isNewNameEntered = newFolderName.isNotBlank()
+            val isLocationValid = folderSearchState.browsePath != null || (isNewNameEntered && folderSearchState.searchQuery.isNotBlank())
+
+            val isSameFolderAsCurrent = remember(folderSearchState.browsePath, currentItemPath) {
+                val currentPath = currentItemPath ?: return@remember false
+                val parentDirectory = try { File(currentPath).parent } catch (e: Exception) { null }
+                parentDirectory != null && parentDirectory == folderSearchState.browsePath
+            }
+
+            val primaryButtonText = when {
+                isNewNameEntered -> "Create"
+                else -> "Import"
+            }
+            val moveButtonText = when {
+                isNewNameEntered -> "Create & Move"
+                else -> "Import & Move"
+            }
+
+            val isMoveActionInvalid = !isNewNameEntered && isSameFolderAsCurrent
+
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val isWide = maxWidth > 380.dp
+                if (isWide) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
+                    ) {
+                        Button(
+                            onClick = { onConfirm(newFolderName, addToFavorites, false) },
+                            enabled = isLocationValid
+                        ) {
+                            Text(primaryButtonText)
+                        }
+                        FilledTonalButton(
+                            onClick = { onConfirm(newFolderName, addToFavorites, true) },
+                            enabled = isLocationValid && !isMoveActionInvalid
+                        ) {
+                            Text(moveButtonText, textAlign = TextAlign.Center)
+                        }
+                    }
+                } else {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = { onConfirm(newFolderName, addToFavorites, false) },
+                            enabled = isLocationValid,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(primaryButtonText)
+                        }
+                        FilledTonalButton(
+                            onClick = { onConfirm(newFolderName, addToFavorites, true) },
+                            enabled = isLocationValid && !isMoveActionInvalid,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(moveButtonText, textAlign = TextAlign.Center)
+                        }
+                    }
                 }
             }
         }
@@ -396,7 +509,6 @@ private fun getFormattedPath(fullPath: String): String {
             file.name
         }
     } catch (e: Exception) {
-        // Fallback for weird paths
         fullPath.takeLast(40)
     }
 }

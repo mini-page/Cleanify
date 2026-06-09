@@ -23,6 +23,7 @@ import com.cleanify.data.db.CleanifyDatabase
 import com.cleanify.data.db.dao.FileSignatureDao
 import com.cleanify.data.db.dao.FolderDetailsDao
 import com.cleanify.data.db.dao.PHashDao
+import com.cleanify.data.db.dao.RecycleBinDao
 import com.cleanify.data.db.dao.ScanResultCacheDao
 import com.cleanify.data.db.dao.SimilarityDenialDao
 import com.cleanify.data.db.dao.UnreadableFileCacheDao
@@ -46,7 +47,8 @@ object DatabaseModule {
             CleanifyDatabase.DATABASE_NAME
         ).addMigrations(
             CleanifyDatabase.MIGRATION_1_2,
-            CleanifyDatabase.MIGRATION_2_3
+            CleanifyDatabase.MIGRATION_2_3,
+            CleanifyDatabase.MIGRATION_3_4
         ).build()
     }
 
@@ -84,5 +86,11 @@ object DatabaseModule {
     @Singleton
     fun provideSimilarityDenialDao(database: CleanifyDatabase): SimilarityDenialDao {
         return database.similarityDenialDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideRecycleBinDao(database: CleanifyDatabase): RecycleBinDao {
+        return database.recycleBinDao()
     }
 }

@@ -368,13 +368,29 @@
     <string name="media_storage_section_desc">Indexing, video playback, and search behavior</string>
     <string name="help_support_section_desc">Tutorial, backup, and manage preferences</string>
     <string name="about_section_desc">Version info, source code, and support development</string>
+    <string name="features_title">Features</string>
+    <string name="feature_swipe">Swipe-based media sorting with customizable gestures</string>
+    <string name="feature_duplicates">Duplicate file finder with similarity detection</string>
+    <string name="feature_cleaner">Empty file and folder cleaner with scheduled scans</string>
+    <string name="feature_contacts">Contact cleaner with duplicate merge and issue detection</string>
+    <string name="feature_recycle">Recycle bin for recovering deleted files</string>
+    <string name="feature_themes">Customizable themes with dynamic colors and accent colors</string>
+    <string name="feature_language">Multi-language support</string>
+    <string name="feature_offline">100%% offline — no data ever leaves your device</string>
+    <string name="feature_opensource">Open source under GPLv3 license</string>
+    <string name="social_section_title">Connect</string>
     <string name="cleaner_section_title">Cleaner Settings</string>
     <string name="cleaner_section_desc">Empty files, junk filters, blacklist, and whitelist</string>
+    <string name="contact_cleaner_section_title">Contact Cleaner</string>
+    <string name="contact_cleaner_section_desc">Duplicate contacts, missing info, and contact cleanup</string>
 
     <!-- Settings Sub-page Section Headers -->
     <string name="theme_section_header">Theme</string>
     <string name="layout_section_header">Layout</string>
-    <string name="gestures_section_header">Gestures</string>
+    <string name="gestures_section_title">Sorting</string>
+    <string name="gestures_section_desc">Swipe sensitivity, tap actions, invert swipe, and swiper behavior</string>
+    <string name="gestures_section_header">Sorting</string>
+    <string name="tap_section_header">Tap</string>
     <string name="folder_behavior_section_header">Folder Behavior</string>
     <string name="search_section_header">Search</string>
     <string name="indexing_section_header">Indexing</string>
@@ -415,15 +431,14 @@
     <!-- UI Layout Settings -->
     <string name="folder_name_position_title">Folder Name Position</string>
     <string name="folder_name_position_desc">Choose where to display the current folder name on the sorting screen.</string>
-    <string name="folder_name_layout_above">Above Media Card</string>
-    <string name="folder_name_layout_below">Below Media Card</string>
+    <string name="folder_name_layout_above">Header</string>
     <string name="folder_name_layout_hidden">Hidden</string>
     <string name="compact_folder_view_title">Compact Folder View</string>
     <string name="compact_folder_view_desc">Show folders in a more compact list style</string>
     <string name="legacy_folder_icons_title">Use Initial-based Folder Icons</string>
     <string name="legacy_folder_icons_desc">Use the first letter of a folder\'s name as its icon</string>
     <string name="hide_media_filename_title">Hide Media Filename</string>
-    <string name="hide_media_filename_desc">Hide the filename overlay on media cards</string>
+    <string name="hide_media_filename_desc">Show filename in the info bar above the media card instead</string>
     <string name="folder_bar_layout_title">Folder Bar Layout</string>
     <string name="folder_bar_layout_desc">Choose the scrolling direction for the \'Move to\' bar.</string>
     <string name="layout_horizontal">Horizontal</string>
@@ -444,6 +459,14 @@
     <string name="action_none">None</string>
     <string name="full_screen_swipe_title">Full Screen Swipe</string>
     <string name="full_screen_swipe_desc">Allow swiping on the background area, not just the image itself.</string>
+    <string name="tap_action_title">Tap Action</string>
+    <string name="tap_action_desc">Choose what happens when you tap the media.</string>
+    <string name="double_tap_action_title">Double-Tap Action</string>
+    <string name="double_tap_action_desc">Choose what happens when you double-tap the media.</string>
+    <string name="tap_action_play_pause">Play / Pause</string>
+    <string name="tap_action_none">None</string>
+    <string name="double_tap_favorite">Toggle Favorite</string>
+    <string name="double_tap_fullscreen">Fullscreen</string>
 
     <!-- Video & Media Settings -->
     <string name="default_video_speed_title">Default Video Speed</string>

@@ -25,9 +25,13 @@ android {
         create("release") {
             val storeFileProp = project.properties["CLEANIFY_RELEASE_STORE_FILE"] as? String
             val keyAliasProp = project.properties["CLEANIFY_RELEASE_KEY_ALIAS"] as? String
+            val storePasswordProp = project.properties["CLEANIFY_RELEASE_STORE_PASSWORD"] as? String
+            val keyPasswordProp = project.properties["CLEANIFY_RELEASE_KEY_PASSWORD"] as? String
             if (storeFileProp != null && keyAliasProp != null) {
                 storeFile = file(storeFileProp)
                 keyAlias = keyAliasProp
+                storePassword = storePasswordProp
+                keyPassword = keyPasswordProp
             }
         }
     }
@@ -40,8 +44,8 @@ android {
         applicationId = "com.cleanify"
         minSdk = 29
         targetSdk = 36
-        versionCode = 7
-        versionName = "2.2.0"
+        versionCode = 9
+        versionName = "2.4.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -187,6 +191,9 @@ dependencies {
 
     // Licenses
     implementation("com.mikepenz:aboutlibraries-compose:12.2.4")
+
+    // PDFBox — renders PDFs the system PdfRenderer can't handle
+    implementation("com.tom-roush:pdfbox-android:2.0.27.0")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

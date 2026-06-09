@@ -42,6 +42,8 @@ import com.cleanify.ui.screens.session.SessionSetupScreen
 import com.cleanify.ui.screens.session.SessionSetupViewModel
 import com.cleanify.ui.screens.settings.SettingsScreen
 import com.cleanify.ui.screens.swiper.SwiperScreen
+import com.cleanify.ui.screens.contacts.ContactCleanerScreen
+import com.cleanify.ui.screens.recyclebin.RecycleBinScreen
 import com.cleanify.ui.screens.tools.BlacklistEditorScreen
 import com.cleanify.ui.screens.tools.CleanerSettingsScreen
 import com.cleanify.ui.screens.tools.EmptyCleanerScreen
@@ -86,6 +88,8 @@ sealed class Screen(val route: String) {
     object CleanerSettings : Screen("cleaner_settings")
     object CleanerBlacklist : Screen("cleaner_blacklist")
     object CleanerWhitelist : Screen("cleaner_whitelist")
+    object RecycleBin : Screen("recycle_bin")
+    object ContactCleaner : Screen("contact_cleaner")
 
     // Routes for the duplicates feature, now part of a nested graph
     object Duplicates : Screen("duplicates_overview")
@@ -175,8 +179,21 @@ fun AppNavigation(
                         ?.set(RESET_SEARCH_RESULT_KEY, true)
                     navController.popBackStack()
                 },
-                onNavigateToSettings = { navController.navigate(Screen.Settings.createRoute()) },
+onNavigateToSettings = { navController.navigate(Screen.Settings.createRoute("sorting")) },
                 onNavigateToTools = { navController.navigate(Screen.Tools.route) }
+            )
+        }
+
+        composable(Screen.RecycleBin.route) {
+            RecycleBinScreen(
+                onNavigateUp = { navController.navigateUp() }
+            )
+        }
+
+        composable(Screen.ContactCleaner.route) {
+            ContactCleanerScreen(
+                onNavigateUp = { navController.navigateUp() },
+                onNavigateToSettings = { navController.navigate(Screen.Settings.createRoute("contact_cleaner")) }
             )
         }
 
@@ -184,7 +201,9 @@ fun AppNavigation(
             ToolsScreen(
                 onNavigateUp = { navController.navigateUp() },
                 onNavigateToDuplicates = { navController.navigate(DUPLICATES_GRAPH_ROUTE) },
-                onNavigateToEmptyCleaner = { navController.navigate(Screen.EmptyCleaner.route) }
+                onNavigateToEmptyCleaner = { navController.navigate(Screen.EmptyCleaner.route) },
+                onNavigateToRecycleBin = { navController.navigate(Screen.RecycleBin.route) },
+                onNavigateToContactCleaner = { navController.navigate(Screen.ContactCleaner.route) }
             )
         }
 

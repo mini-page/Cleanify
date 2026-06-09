@@ -616,22 +616,35 @@ private fun DefaultTopAppBar(
     TopAppBar(
         title = { Text(stringResource(R.string.app_name)) },
         actions = {
-            TooltipBox(
-                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
-                tooltip = { PlainTooltip { Text("Tools") } },
-                state = rememberTooltipState()
+            Surface(
+                shape = MaterialTheme.shapes.extraLarge,
+                color = MaterialTheme.colorScheme.surfaceVariant
             ) {
-                IconButton(onClick = onNavigateToTools) {
-                    Icon(Icons.Default.Build, contentDescription = "Tools")
-                }
-            }
-            TooltipBox(
-                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
-                tooltip = { PlainTooltip { Text(stringResource(R.string.settings)) } },
-                state = rememberTooltipState()
-            ) {
-                IconButton(onClick = onNavigateToSettings) {
-                    Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.settings))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TooltipBox(
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
+                        tooltip = { PlainTooltip { Text("Tools") } },
+                        state = rememberTooltipState()
+                    ) {
+                        IconButton(onClick = onNavigateToTools) {
+                            Icon(Icons.Default.Build, contentDescription = "Tools")
+                        }
+                    }
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .height(20.dp)
+                            .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+                    )
+                    TooltipBox(
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
+                        tooltip = { PlainTooltip { Text(stringResource(R.string.settings)) } },
+                        state = rememberTooltipState()
+                    ) {
+                        IconButton(onClick = onNavigateToSettings) {
+                            Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.settings))
+                        }
+                    }
                 }
             }
         }

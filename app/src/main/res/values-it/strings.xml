@@ -397,7 +397,7 @@
     <!-- Settings Sub-page Section Headers -->
     <string name="theme_section_header">Tema</string>
     <string name="layout_section_header">Layout</string>
-    <string name="gestures_section_header">Gesti</string>
+    <string name="gestures_section_header">Ordinamento</string>
     <string name="folder_behavior_section_header">Comportamento Cartelle</string>
     <string name="search_section_header">Ricerca</string>
     <string name="indexing_section_header">Indicizzazione</string>
@@ -433,8 +433,7 @@
     <!-- UI Layout Settings -->
     <string name="folder_name_position_title">Posizione Nome Cartella</string>
     <string name="folder_name_position_desc">Scegli dove visualizzare il nome della cartella corrente nella schermata di ordinamento.</string>
-    <string name="folder_name_layout_above">Sopra il media</string>
-    <string name="folder_name_layout_below">Sotto il media</string>
+    <string name="folder_name_layout_above">Intestazione</string>
     <string name="folder_name_layout_hidden">Nascosto</string>
     <string name="compact_folder_view_title">Vista Cartelle Compatta</string>
     <string name="compact_folder_view_desc">Mostra le cartelle in uno stile elenco più compatto</string>

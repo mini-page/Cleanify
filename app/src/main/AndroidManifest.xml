@@ -69,6 +69,10 @@
     <!-- Kill background processes for cleaner -->
     <uses-permission android:name="android.permission.KILL_BACKGROUND_PROCESSES" />
 
+    <!-- Contact Cleaner permissions -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <uses-permission android:name="android.permission.WRITE_CONTACTS" />
+
 
     <!-- ===================================================================================== -->
     <!-- APPLICATION DEFINITION                                                              -->

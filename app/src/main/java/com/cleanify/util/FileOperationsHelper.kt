@@ -31,6 +31,7 @@ import com.cleanify.ui.screens.swiper.PendingChange
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.first
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -39,7 +40,9 @@ import javax.inject.Singleton
 
 @Singleton
 class FileOperationsHelper @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val recycleBinManager: RecycleBinManager,
+    private val preferencesRepository: com.cleanify.data.repository.PreferencesRepository
 ) {
 
     private val logTag ="FileOperationsHelper"
@@ -152,6 +155,32 @@ class FileOperationsHelper @Inject constructor(
         } catch (e: Exception) {
             Log.e(logTag, "Error moving contents from $sourcePath to $destinationPath", e)
             Result.failure(e)
+        }
+    }
+
+    /**
+     * Moves a file to the Recycle Bin instead of permanent deletion.
+     * If the Recycle Bin is disabled in settings, permanently deletes the file.
+     * @param filePath Absolute path of the file to move to trash.
+     * @param sourceTool Identifier for the feature that initiated the deletion (e.g., "swiper", "junk_cleaner").
+     * @return true if the file was moved to trash or deleted successfully, false on failure.
+     */
+    suspend fun moveToTrash(filePath: String, sourceTool: String): Boolean = withContext(Dispatchers.IO) {
+        val file = File(filePath)
+        if (!file.exists()) return@withContext true
+
+        val recycleBinEnabled = preferencesRepository.recycleBinEnabledFlow.first()
+        val skipTrashJunk = preferencesRepository.recycleBinSkipTrashJunkFlow.first()
+
+        val skipTrash = when (sourceTool) {
+            "junk_cleaner" -> skipTrashJunk
+            else -> false
+        }
+
+        if (skipTrash || !recycleBinEnabled) {
+            file.delete()
+        } else {
+            recycleBinManager.moveToTrash(filePath, sourceTool) != null
         }
     }
 

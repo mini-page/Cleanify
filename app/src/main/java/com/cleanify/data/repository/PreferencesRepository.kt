@@ -24,6 +24,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.cleanify.ui.theme.AppTheme
@@ -69,7 +70,6 @@ enum class SwipeSensitivity {
 
 enum class FolderNameLayout {
     ABOVE,
-    BELOW,
     HIDDEN
 }
 
@@ -92,6 +92,17 @@ enum class SwipeDownAction {
     ADD_TARGET_FOLDER,
     SHARE,
     OPEN_WITH
+}
+
+enum class TapAction {
+    PLAY_PAUSE,
+    NONE
+}
+
+enum class DoubleTapAction {
+    FAVORITE,
+    FULLSCREEN,
+    NONE
 }
 
 enum class UnselectScanScope {
@@ -156,6 +167,9 @@ class PreferencesRepository @Inject constructor(
         val DUPLICATE_SCAN_INCLUDE_LIST = stringPreferencesKey("duplicate_scan_include_list")
         val DUPLICATE_SCAN_EXCLUDE_LIST = stringPreferencesKey("duplicate_scan_exclude_list")
         val SWIPE_DOWN_ACTION = stringPreferencesKey("swipe_down_action")
+        val FAVORITE_MEDIA_ITEMS = stringPreferencesKey("favorite_media_items")
+        val TAP_ACTION = stringPreferencesKey("tap_action")
+        val DOUBLE_TAP_ACTION = stringPreferencesKey("double_tap_action")
 
         val DEFAULT_VIDEO_SPEED = floatPreferencesKey("default_video_speed")
 
@@ -169,6 +183,10 @@ class PreferencesRepository @Inject constructor(
         val UNSELECT_ALL_IN_SEARCH_SCOPE = stringPreferencesKey("unselect_all_in_search_scope")
         val SCAN_AUDIO_ENABLED = booleanPreferencesKey("scan_audio_enabled")
         val SCAN_DOCUMENT_ENABLED = booleanPreferencesKey("scan_document_enabled")
+        val RECYCLE_BIN_ENABLED = booleanPreferencesKey("recycle_bin_enabled")
+        val RECYCLE_BIN_RETENTION_DAYS = intPreferencesKey("recycle_bin_retention_days")
+        val RECYCLE_BIN_STORAGE_LOCATION = stringPreferencesKey("recycle_bin_storage_location")
+        val RECYCLE_BIN_SKIP_TRASH_JUNK = booleanPreferencesKey("recycle_bin_skip_trash_junk")
     }
 
     val themeFlow: Flow<AppTheme> = context.dataStore.data
@@ -307,6 +325,16 @@ class PreferencesRepository @Inject constructor(
             }
         }
 
+    val favoriteMediaItemsFlow: Flow<Set<String>> = context.dataStore.data
+        .map { preferences ->
+            val string = preferences[PreferencesKeys.FAVORITE_MEDIA_ITEMS] ?: ""
+            if (string.isEmpty()) {
+                emptySet()
+            } else {
+                string.split(",").filter { it.isNotBlank() }.toSet()
+            }
+        }
+
     val hasRunDuplicateScanOnceFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.HAS_RUN_DUPLICATE_SCAN_ONCE] ?: false
@@ -373,7 +401,7 @@ class PreferencesRepository @Inject constructor(
             val layoutName =
                 preferences[PreferencesKeys.FOLDER_NAME_LAYOUT] ?: FolderNameLayout.ABOVE.name
             try {
-                FolderNameLayout.valueOf(layoutName)
+                if (layoutName == "BELOW") FolderNameLayout.HIDDEN else FolderNameLayout.valueOf(layoutName)
             } catch (e: IllegalArgumentException) {
                 FolderNameLayout.ABOVE
             }
@@ -411,6 +439,26 @@ class PreferencesRepository @Inject constructor(
                 SwipeDownAction.valueOf(actionName)
             } catch (e: IllegalArgumentException) {
                 SwipeDownAction.NONE
+            }
+        }
+
+    val tapActionFlow: Flow<TapAction> = context.dataStore.data
+        .map { preferences ->
+            val actionName = preferences[PreferencesKeys.TAP_ACTION] ?: TapAction.PLAY_PAUSE.name
+            try {
+                TapAction.valueOf(actionName)
+            } catch (e: IllegalArgumentException) {
+                TapAction.PLAY_PAUSE
+            }
+        }
+
+    val doubleTapActionFlow: Flow<DoubleTapAction> = context.dataStore.data
+        .map { preferences ->
+            val actionName = preferences[PreferencesKeys.DOUBLE_TAP_ACTION] ?: DoubleTapAction.FAVORITE.name
+            try {
+                DoubleTapAction.valueOf(actionName)
+            } catch (e: IllegalArgumentException) {
+                DoubleTapAction.FAVORITE
             }
         }
 
@@ -697,6 +745,28 @@ class PreferencesRepository @Inject constructor(
         }
     }
 
+    suspend fun addFavoriteMediaItem(id: String) {
+        context.dataStore.edit { preferences ->
+            val current = preferences[PreferencesKeys.FAVORITE_MEDIA_ITEMS] ?: ""
+            val set = if (current.isEmpty()) {
+                setOf(id)
+            } else {
+                current.split(",").filter { it.isNotBlank() }.toMutableSet().apply { add(id) }
+            }
+            preferences[PreferencesKeys.FAVORITE_MEDIA_ITEMS] = set.joinToString(",")
+        }
+    }
+
+    suspend fun removeFavoriteMediaItem(id: String) {
+        context.dataStore.edit { preferences ->
+            val current = preferences[PreferencesKeys.FAVORITE_MEDIA_ITEMS] ?: ""
+            if (current.isNotEmpty()) {
+                val set = current.split(",").filter { it.isNotBlank() && it != id }.toSet()
+                preferences[PreferencesKeys.FAVORITE_MEDIA_ITEMS] = set.joinToString(",")
+            }
+        }
+    }
+
     suspend fun clearAllSourceFavorites() {
         context.dataStore.edit { preferences ->
             preferences.remove(PreferencesKeys.SOURCE_FAVORITE_FOLDERS)
@@ -772,6 +842,18 @@ class PreferencesRepository @Inject constructor(
     suspend fun setSwipeDownAction(action: SwipeDownAction) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.SWIPE_DOWN_ACTION] = action.name
+        }
+    }
+
+    suspend fun setTapAction(action: TapAction) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.TAP_ACTION] = action.name
+        }
+    }
+
+    suspend fun setDoubleTapAction(action: DoubleTapAction) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.DOUBLE_TAP_ACTION] = action.name
         }
     }
 
@@ -942,6 +1024,42 @@ class PreferencesRepository @Inject constructor(
     suspend fun setScanDocumentEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.SCAN_DOCUMENT_ENABLED] = enabled
+        }
+    }
+
+    val recycleBinEnabledFlow: Flow<Boolean> = context.dataStore.data
+        .map { preferences -> preferences[PreferencesKeys.RECYCLE_BIN_ENABLED] ?: true }
+
+    val recycleBinRetentionDaysFlow: Flow<Int> = context.dataStore.data
+        .map { preferences -> preferences[PreferencesKeys.RECYCLE_BIN_RETENTION_DAYS] ?: 30 }
+
+    val recycleBinStorageLocationFlow: Flow<String> = context.dataStore.data
+        .map { preferences -> preferences[PreferencesKeys.RECYCLE_BIN_STORAGE_LOCATION] ?: "external" }
+
+    val recycleBinSkipTrashJunkFlow: Flow<Boolean> = context.dataStore.data
+        .map { preferences -> preferences[PreferencesKeys.RECYCLE_BIN_SKIP_TRASH_JUNK] ?: false }
+
+    suspend fun setRecycleBinEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.RECYCLE_BIN_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setRecycleBinRetentionDays(days: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.RECYCLE_BIN_RETENTION_DAYS] = days.coerceIn(1, 30)
+        }
+    }
+
+    suspend fun setRecycleBinStorageLocation(location: String) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.RECYCLE_BIN_STORAGE_LOCATION] = location
+        }
+    }
+
+    suspend fun setRecycleBinSkipTrashJunk(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.RECYCLE_BIN_SKIP_TRASH_JUNK] = enabled
         }
     }
 }
