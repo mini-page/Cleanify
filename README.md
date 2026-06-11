@@ -473,7 +473,7 @@ Cleanify is designed from the ground up with privacy as a non-negotiable require
 
 | Property | Value |
 |----------|-------|
-| Current Version | 2.6.0 |
+| Current Version | 2.7.0 |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 |
 | Compile SDK | 36 |
