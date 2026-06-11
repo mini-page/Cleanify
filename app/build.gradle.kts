@@ -1,5 +1,7 @@
 // build.gradle.kts (app)
 
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -25,7 +27,7 @@ android {
         create("release") {
             val keystorePropsFile = rootProject.file("keystore.properties")
             val keystoreProps = if (keystorePropsFile.exists()) {
-                java.util.Properties().apply { load(keystorePropsFile.inputStream()) }
+                Properties().apply { load(keystorePropsFile.inputStream()) }
             } else null
 
             val storeFileProp = keystoreProps?.getProperty("storeFile")

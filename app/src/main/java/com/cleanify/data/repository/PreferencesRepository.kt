@@ -248,7 +248,7 @@ class PreferencesRepository @Inject constructor(
 
     val hideFromGalleryFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
-            preferences[PreferencesKeys.HIDE_FROM_GALLERY] ?: false
+            preferences[PreferencesKeys.HIDE_FROM_GALLERY] ?: true
         }
 
     val fullScreenSwipeFlow: Flow<Boolean> = context.dataStore.data

@@ -127,6 +127,7 @@ import com.cleanify.ui.components.AppDropdownMenu
 import com.cleanify.ui.components.AppMenuDivider
 import com.cleanify.ui.components.FolderSearchDialog
 import com.cleanify.ui.components.BackNavigationIcon
+import com.cleanify.ui.components.MediaPreviewDialog
 import com.cleanify.ui.components.RenameFolderDialog
 import com.cleanify.ui.theme.AppTheme
 import com.cleanify.ui.theme.LocalReducedAnimations
@@ -184,6 +185,18 @@ fun SwiperScreen(
     val folderSearchState by viewModel.folderSearchManager.state.collectAsState()
     val focusRequester = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
+
+    var previewItem by remember { mutableStateOf<MediaItem?>(null) }
+    previewItem?.let { item ->
+        MediaPreviewDialog(
+            uri = item.uri,
+            displayName = item.displayName,
+            fileSize = item.size,
+            dateModified = item.dateModified,
+            mimeType = item.mimeType,
+            onDismiss = { previewItem = null }
+        )
+    }
 
     BackHandler {
         if (uiState.isSortingComplete && uiState.pendingChanges.isEmpty()) {
@@ -347,10 +360,8 @@ fun SwiperScreen(
                                     val hasAudio = exoPlayer.currentTracks.isTypeSupported(C.TRACK_TYPE_AUDIO)
                                     viewModel.toggleMute(hasAudio)
                                 },
-                                onTap = {
-                                    if (it.isVideo) {
-                                        if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
-                                    }
+                                onTap = { item ->
+                                    previewItem = item
                                 },
                                 isPendingConversion = uiState.isCurrentItemPendingConversion,
                                 screenshotDeletesVideo = screenshotDeletesVideo,
@@ -407,10 +418,8 @@ fun SwiperScreen(
                                     val hasAudio = exoPlayer.currentTracks.isTypeSupported(C.TRACK_TYPE_AUDIO)
                                     viewModel.toggleMute(hasAudio)
                                 },
-                                onTap = {
-                                    if (it.isVideo) {
-                                        if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
-                                    }
+                                onTap = { item ->
+                                    previewItem = item
                                 },
                                 isPendingConversion = uiState.isCurrentItemPendingConversion,
                                 screenshotDeletesVideo = screenshotDeletesVideo,

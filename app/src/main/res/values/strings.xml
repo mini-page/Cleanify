@@ -661,7 +661,7 @@
     <string name="reduce_animations_title">Reduce Animations</string>
     <string name="reduce_animations_desc">Minimize motion throughout the app</string>
     <string name="hide_from_gallery_title">Hide from Gallery</string>
-    <string name="hide_from_gallery_desc">Add .nomedia files to app folders</string>
+    <string name="hide_from_gallery_desc">Prevents trashed photos and videos from appearing in gallery, music player, or other media apps (recommended)</string>
     <string name="widget_description">Quick actions for Cleanify</string>
     <string name="widget_quick_clean">Quick Clean</string>
     <string name="widget_duplicates">Duplicates</string>

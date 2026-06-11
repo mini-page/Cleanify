@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Environment
 import android.os.storage.StorageManager
+import android.os.storage.StorageVolume
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.cleanify.data.cleaner.CleanerPreferences
@@ -19,6 +20,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+
+data class StorageVolumeEntry(
+    val directory: File,
+    val description: String,
+    val isPrimary: Boolean
+)
 
 data class CleanerUiState(
     val isScanning: Boolean = false,
@@ -77,7 +84,11 @@ class CleanerViewModel(application: Application) : AndroidViewModel(application)
         prefs.cleanCorpse = enabled
     }
 
-    fun startScan() {
+    val storageVolumes: List<StorageVolumeEntry> by lazy(LazyThreadSafetyMode.NONE) {
+        buildVolumeList()
+    }
+
+    fun startScan(volumeIndex: Int = -1) {
         if (_uiState.value.isScanning) return
         val state = _uiState.value
         _uiState.value = state.copy(
@@ -95,7 +106,7 @@ class CleanerViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 var totalBytes = 0L
-                val roots = getScanRoots()
+                val roots = getRootsForIndex(volumeIndex)
                 roots.forEachIndexed { index, root ->
                     val scanner = FileScanner(root, getApplication())
                     scanner.delete = false
@@ -124,7 +135,7 @@ class CleanerViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun executeClean() {
+    fun executeClean(volumeIndex: Int = -1) {
         if (_uiState.value.isScanning) return
         val state = _uiState.value
         _uiState.value = state.copy(
@@ -140,7 +151,7 @@ class CleanerViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 var totalFailed = 0
-                val roots = getScanRoots()
+                val roots = getRootsForIndex(volumeIndex)
                 roots.forEachIndexed { index, root ->
                     val scanner = FileScanner(root, getApplication())
                     scanner.delete = true
@@ -181,7 +192,7 @@ class CleanerViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun quickClean() {
+    fun quickClean(volumeIndex: Int = -1) {
         val state = _uiState.value
         _uiState.value = state.copy(
             isScanning = true,
@@ -198,7 +209,7 @@ class CleanerViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 var totalFailed = 0
-                val roots = getScanRoots()
+                val roots = getRootsForIndex(volumeIndex)
                 roots.forEachIndexed { index, root ->
                     val scanner = FileScanner(root, getApplication())
                     scanner.delete = true
@@ -272,16 +283,36 @@ class CleanerViewModel(application: Application) : AndroidViewModel(application)
         return mi.availMem - beforeFree
     }
 
-    private fun getScanRoots(): List<File> {
-        val roots = mutableListOf(Environment.getExternalStorageDirectory())
-        val storageManager = getApplication<Application>().getSystemService(Context.STORAGE_SERVICE) as StorageManager
-        for (sv in storageManager.storageVolumes) {
+    private fun getRootsForIndex(volumeIndex: Int): List<File> {
+        val allRoots = if (storageVolumes.isNotEmpty()) {
+            storageVolumes.map { it.directory }
+        } else {
+            listOf(Environment.getExternalStorageDirectory())
+        }
+        return if (volumeIndex in allRoots.indices) {
+            listOf(allRoots[volumeIndex])
+        } else {
+            allRoots
+        }
+    }
+
+    private fun buildVolumeList(): List<StorageVolumeEntry> {
+        val app = getApplication<Application>()
+        val volumes = mutableListOf<StorageVolumeEntry>()
+        val storageManager = app.getSystemService(Context.STORAGE_SERVICE) as StorageManager
+        for (sv: StorageVolume in storageManager.storageVolumes) {
             val dir = sv.directory ?: continue
-            if (dir.isDirectory && dir.canRead() && dir !in roots) {
-                roots.add(dir)
+            if (dir.isDirectory && dir.canRead()) {
+                volumes.add(StorageVolumeEntry(dir, sv.getDescription(app), sv.isPrimary))
             }
         }
-        return roots
+        if (volumes.none { it.isPrimary }) {
+            val primary = Environment.getExternalStorageDirectory()
+            if (primary.isDirectory && primary.canRead()) {
+                volumes.add(0, StorageVolumeEntry(primary, "Internal storage", true))
+            }
+        }
+        return volumes
     }
 
     fun reset() {

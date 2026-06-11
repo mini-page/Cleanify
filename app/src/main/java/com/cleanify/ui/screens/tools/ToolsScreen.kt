@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.ControlPointDuplicate
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Contacts
+import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -24,7 +25,8 @@ fun ToolsScreen(
     onNavigateToDuplicates: () -> Unit,
     onNavigateToEmptyCleaner: () -> Unit,
     onNavigateToRecycleBin: () -> Unit,
-    onNavigateToContactCleaner: () -> Unit = {}
+    onNavigateToContactCleaner: () -> Unit = {},
+    onNavigateToStorageAnalysis: () -> Unit = {}
 ) {
     Scaffold(
         topBar = {
@@ -64,6 +66,12 @@ fun ToolsScreen(
                 title = "Contact Cleaner",
                 description = "Manage contacts, merge duplicates, and fix contact issues",
                 onClick = onNavigateToContactCleaner
+            )
+            ToolCard(
+                icon = { Icon(Icons.Outlined.Storage, contentDescription = null, modifier = Modifier.size(32.dp)) },
+                title = "Storage Analysis",
+                description = "View device storage usage and find the largest files",
+                onClick = onNavigateToStorageAnalysis
             )
         }
     }

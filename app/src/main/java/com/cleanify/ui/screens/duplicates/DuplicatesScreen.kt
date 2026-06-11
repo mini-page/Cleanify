@@ -85,6 +85,7 @@ import com.cleanify.domain.model.ScanResultGroup
 import com.cleanify.domain.model.SimilarGroup
 import com.cleanify.ui.components.BackNavigationIcon
 import com.cleanify.ui.components.FastScrollbar
+import com.cleanify.ui.components.MediaPreviewDialog
 import com.cleanify.util.rememberIsUsingGestureNavigation
 import kotlinx.coroutines.launch
 import java.io.File
@@ -112,6 +113,7 @@ fun DuplicatesScreen(
     val context = LocalContext.current
     var showConfirmDeleteDialog by remember { mutableStateOf(false) }
     var showConfirmDeleteAllExactDialog by remember { mutableStateOf(false) }
+    var previewItem by remember { mutableStateOf<MediaItem?>(null) }
     val displayedUnscannableFiles by viewModel.displayedUnscannableFiles.collectAsState()
     val permissionRequiredMessage = stringResource(R.string.notification_permission_required)
 
@@ -217,6 +219,21 @@ fun DuplicatesScreen(
                     Text(stringResource(R.string.cancel))
                 }
             }
+        )
+    }
+
+    previewItem?.let { item ->
+        MediaPreviewDialog(
+            uri = item.uri,
+            displayName = item.displayName,
+            fileSize = item.size,
+            dateModified = item.dateModified,
+            mimeType = item.mimeType,
+            onDelete = {
+                viewModel.toggleSelection(item)
+                previewItem = null
+            },
+            onDismiss = { previewItem = null }
         )
     }
 
@@ -351,7 +368,8 @@ fun DuplicatesScreen(
                             uiState = uiState,
                             viewModel = viewModel,
                             onViewGroup = { onNavigateToGroup(it.uniqueId) },
-                            startScanWithPermissionCheck = startScanWithPermissionCheck
+                            startScanWithPermissionCheck = startScanWithPermissionCheck,
+                            onPreview = { previewItem = it }
                         )
                     } else {
                         // Initial scan view
@@ -366,7 +384,8 @@ fun DuplicatesScreen(
                     uiState = uiState,
                     viewModel = viewModel,
                     onViewGroup = { onNavigateToGroup(it.uniqueId) },
-                    startScanWithPermissionCheck = startScanWithPermissionCheck
+                    startScanWithPermissionCheck = startScanWithPermissionCheck,
+                    onPreview = { previewItem = it }
                 )
             }
         }
@@ -380,12 +399,16 @@ fun DuplicatesScreen(
 fun GroupDetailsScreen(
     viewModel: DuplicatesViewModel,
     groupId: String,
-    onNavigateUp: () -> Unit
+    onNavigateUp: () -> Unit,
+    onPreview: ((MediaItem) -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val group = uiState.detailedGroup
     val context = LocalContext.current
     val noAppToOpenMessage = stringResource(R.string.no_app_to_open)
+    val localPreviewItem = remember { mutableStateOf<MediaItem?>(null) }
+    val handlePreview: (MediaItem) -> Unit = onPreview ?: { localPreviewItem.value = it }
+    val currentPreviewItem = localPreviewItem.value
 
     LaunchedEffect(groupId) {
         viewModel.prepareForGroupDetailView(groupId)
@@ -573,6 +596,7 @@ fun GroupDetailsScreen(
                                 item = item,
                                 isSelected = item.id in uiState.selectedForDeletion,
                                 onToggleSelection = { viewModel.toggleSelection(item) },
+                                onPreview = { handlePreview(item) },
                                 onOpenFile = {
                                     val intent = viewModel.getOpenFileIntent(item)
                                     try {
@@ -599,6 +623,17 @@ fun GroupDetailsScreen(
                 )
             }
         }
+    }
+
+    currentPreviewItem?.let { item ->
+        MediaPreviewDialog(
+            uri = item.uri,
+            displayName = item.displayName,
+            fileSize = item.size,
+            dateModified = item.dateModified,
+            mimeType = item.mimeType,
+            onDismiss = { localPreviewItem.value = null }
+        )
     }
 }
 
@@ -880,7 +915,8 @@ private fun ResultsView(
     uiState: DuplicatesUiState,
     viewModel: DuplicatesViewModel,
     onViewGroup: (ScanResultGroup) -> Unit,
-    startScanWithPermissionCheck: () -> Unit
+    startScanWithPermissionCheck: () -> Unit,
+    onPreview: (MediaItem) -> Unit
 ) {
     val context = LocalContext.current
     val noAppToOpenMessage = stringResource(R.string.no_app_to_open)
@@ -915,6 +951,7 @@ private fun ResultsView(
                     onSelectAllButNewest = viewModel::selectAllButNewest,
                     onHideGroup = viewModel::hideGroup,
                     onFlagAsIncorrect = viewModel::flagAsIncorrect,
+                    onPreview = onPreview,
                     onOpenFile = { mediaItem ->
                         val intent = viewModel.getOpenFileIntent(mediaItem)
                         try {
@@ -1157,6 +1194,7 @@ private fun ListView(
     onSelectAllButNewest: (ScanResultGroup) -> Unit,
     onHideGroup: (ScanResultGroup) -> Unit,
     onFlagAsIncorrect: (ScanResultGroup) -> Unit,
+    onPreview: (MediaItem) -> Unit,
     onOpenFile: (MediaItem) -> Unit,
     onShowUnscannableFiles: () -> Unit,
     onDismissUnscannableSummary: () -> Unit,
@@ -1197,8 +1235,8 @@ private fun ListView(
             items(uiState.resultGroups, key = { it.uniqueId }) { group ->
                 Box(modifier = Modifier.padding(horizontal = 16.dp)) {
                     when (group) {
-                        is DuplicateGroup -> DuplicateGroupCard(group, uiState.selectedForDeletion, onToggleSelection, onToggleSelectAll, onSelectAllButOldest, onSelectAllButNewest, onHideGroup, onOpenFile)
-                        is SimilarGroup -> SimilarMediaGroupCard(group, uiState.selectedForDeletion, onToggleSelection, onToggleSelectAll, onSelectAllButOldest, onSelectAllButNewest, onHideGroup, onFlagAsIncorrect, onOpenFile)
+                        is DuplicateGroup -> DuplicateGroupCard(group, uiState.selectedForDeletion, onToggleSelection, onToggleSelectAll, onSelectAllButOldest, onSelectAllButNewest, onHideGroup, onPreview, onOpenFile)
+                        is SimilarGroup -> SimilarMediaGroupCard(group, uiState.selectedForDeletion, onToggleSelection, onToggleSelectAll, onSelectAllButOldest, onSelectAllButNewest, onHideGroup, onFlagAsIncorrect, onPreview, onOpenFile)
                     }
                 }
             }
@@ -1508,6 +1546,7 @@ private fun DuplicateGroupCard(
     onSelectAllButOldest: (ScanResultGroup) -> Unit,
     onSelectAllButNewest: (ScanResultGroup) -> Unit,
     onHideGroup: (ScanResultGroup) -> Unit,
+    onPreview: (MediaItem) -> Unit,
     onOpenFile: (MediaItem) -> Unit
 ) {
     val context = LocalContext.current
@@ -1570,7 +1609,7 @@ private fun DuplicateGroupCard(
             Spacer(Modifier.height(8.dp))
             // File rows
             group.items.forEach { item ->
-                MediaItemRow(item, item.id in selectedIds, { onToggleSelection(item) }, onOpenFile = { onOpenFile(item) })
+                MediaItemRow(item, item.id in selectedIds, { onToggleSelection(item) }, onPreview = { onPreview(item) }, onOpenFile = { onOpenFile(item) })
                 if (item != group.items.last()) {
                     HorizontalDivider(Modifier.padding(vertical = 1.dp))
                 }
@@ -1605,6 +1644,7 @@ private fun SimilarMediaGroupCard(
     onSelectAllButNewest: (ScanResultGroup) -> Unit,
     onHideGroup: (ScanResultGroup) -> Unit,
     onFlagAsIncorrect: (ScanResultGroup) -> Unit,
+    onPreview: (MediaItem) -> Unit,
     onOpenFile: (MediaItem) -> Unit
 ) {
     val totalSize = remember(group.items) { group.items.sumOf { it.size } }
@@ -1670,7 +1710,7 @@ private fun SimilarMediaGroupCard(
             }
             Spacer(Modifier.height(8.dp))
             group.items.forEach { item ->
-                MediaItemRow(item, item.id in selectedIds, { onToggleSelection(item) }, showFileSize = true, onOpenFile = { onOpenFile(item) })
+                MediaItemRow(item, item.id in selectedIds, { onToggleSelection(item) }, showFileSize = true, onPreview = { onPreview(item) }, onOpenFile = { onOpenFile(item) })
                 if (item != group.items.last()) {
                     HorizontalDivider(Modifier.padding(vertical = 1.dp))
                 }
@@ -1703,12 +1743,12 @@ private fun MediaItemRow(
     isSelected: Boolean,
     onToggle: () -> Unit,
     showFileSize: Boolean = false,
+    onPreview: () -> Unit = onToggle,
     onOpenFile: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
-    // Compact path: show only last two path segments, front-truncated
     val compactPath = remember(item.id) {
         val file = File(item.id)
         val parent = file.parentFile?.name ?: ""
@@ -1721,7 +1761,7 @@ private fun MediaItemRow(
         modifier = Modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.small)
-            .clickable { onToggle() }
+            .clickable { onPreview() }
             .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -1863,6 +1903,7 @@ private fun DetailImageCard(
     item: MediaItem,
     isSelected: Boolean,
     onToggleSelection: () -> Unit,
+    onPreview: () -> Unit,
     onOpenFile: () -> Unit
 ) {
     val context = LocalContext.current
@@ -1874,7 +1915,7 @@ private fun DetailImageCard(
             .aspectRatio(1f)
             .pointerInput(item) {
                 detectTapGestures(
-                    onTap = { onToggleSelection() },
+                    onTap = { onPreview() },
                     onLongPress = { showMenu = true }
                 )
             },

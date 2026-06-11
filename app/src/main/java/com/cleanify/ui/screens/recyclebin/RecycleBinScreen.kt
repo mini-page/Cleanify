@@ -1,5 +1,6 @@
 package com.cleanify.ui.screens.recyclebin
 
+import android.net.Uri
 import android.text.format.Formatter
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -33,6 +34,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cleanify.data.db.entity.FileCategory
 import com.cleanify.data.db.entity.RecycleBinEntry
 import com.cleanify.ui.components.BackNavigationIcon
+import com.cleanify.ui.components.MediaPreviewDialog
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -364,39 +367,50 @@ private fun PreviewDialog(
     entry: RecycleBinEntry,
     onDismiss: () -> Unit
 ) {
-    val context = LocalContext.current
-    val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = {
-            Icon(
-                imageVector = categoryIcon(entry.fileCategory),
-                contentDescription = null,
-                modifier = Modifier.size(32.dp)
-            )
-        },
-        title = { Text(entry.fileName, maxLines = 2, overflow = TextOverflow.Ellipsis) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                DetailRow("Category", entry.fileCategory.displayName)
-                DetailRow("Size", Formatter.formatShortFileSize(context, entry.fileSize))
-                DetailRow("Deleted", dateFormat.format(Date(entry.deletedAt)))
-                DetailRow("Expires", dateFormat.format(Date(entry.expiresAt)))
-                HorizontalDivider()
-                Text(
-                    text = entry.originalPath,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+    val isMedia = entry.mimeType.startsWith("image/") || entry.mimeType.startsWith("video/")
+    if (isMedia) {
+        MediaPreviewDialog(
+            uri = Uri.fromFile(File(entry.recycledPath)),
+            displayName = entry.fileName,
+            fileSize = entry.fileSize,
+            dateModified = entry.deletedAt,
+            mimeType = entry.mimeType,
+            onDismiss = onDismiss
+        )
+    } else {
+        val context = LocalContext.current
+        val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()) }
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            icon = {
+                Icon(
+                    imageVector = categoryIcon(entry.fileCategory),
+                    contentDescription = null,
+                    modifier = Modifier.size(32.dp)
                 )
+            },
+            title = { Text(entry.fileName, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    DetailRow("Category", entry.fileCategory.displayName)
+                    DetailRow("Size", Formatter.formatShortFileSize(context, entry.fileSize))
+                    DetailRow("Deleted", dateFormat.format(Date(entry.deletedAt)))
+                    DetailRow("Expires", dateFormat.format(Date(entry.expiresAt)))
+                    HorizontalDivider()
+                    Text(
+                        text = entry.originalPath,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = onDismiss) {
+                    Text("Close")
+                }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Close")
-            }
-        }
-    )
+        )
+    }
 }
 
 @Composable

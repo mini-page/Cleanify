@@ -10,12 +10,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Devices
+import androidx.compose.material.icons.filled.SdCard
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -36,6 +40,9 @@ fun EmptyCleanerScreen(
     viewModel: CleanerViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val volumes = viewModel.storageVolumes
+    var selectedVolumeIndex by remember { mutableIntStateOf(-1) }
+    val hasMultipleVolumes = volumes.size > 1
 
     Scaffold(
         topBar = {
@@ -69,8 +76,11 @@ fun EmptyCleanerScreen(
                     onToggleGeneric = { viewModel.updateGeneric(it) },
                     onToggleApk = { viewModel.updateApk(it) },
                     onToggleCorpse = { viewModel.updateCorpse(it) },
-                    onStartScan = { viewModel.startScan() },
-                    onQuickClean = { viewModel.quickClean() }
+                    volumes = if (hasMultipleVolumes) volumes else emptyList(),
+                    selectedVolumeIndex = selectedVolumeIndex,
+                    onSelectVolume = { selectedVolumeIndex = it },
+                    onStartScan = { viewModel.startScan(selectedVolumeIndex) },
+                    onQuickClean = { viewModel.quickClean(selectedVolumeIndex) }
                 )
             }
 
@@ -82,8 +92,8 @@ fun EmptyCleanerScreen(
                 ResultsSection(
                     foundFiles = uiState.foundFiles,
                     totalSize = uiState.totalSize,
-                    onClean = { viewModel.executeClean() },
-                    onRescan = { viewModel.startScan() }
+                    onClean = { viewModel.executeClean(selectedVolumeIndex) },
+                    onRescan = { viewModel.startScan(selectedVolumeIndex) }
                 )
             }
 
@@ -91,7 +101,7 @@ fun EmptyCleanerScreen(
                 DoneSection(
                     filesFailed = uiState.filesFailed,
                     ramFreed = uiState.ramFreed,
-                    onRescan = { viewModel.startScan() }
+                    onRescan = { viewModel.startScan(selectedVolumeIndex) }
                 )
             }
 
@@ -139,6 +149,9 @@ private fun OptionsSection(
     onToggleGeneric: (Boolean) -> Unit,
     onToggleApk: (Boolean) -> Unit,
     onToggleCorpse: (Boolean) -> Unit,
+    volumes: List<StorageVolumeEntry> = emptyList(),
+    selectedVolumeIndex: Int = -1,
+    onSelectVolume: (Int) -> Unit = {},
     onStartScan: () -> Unit,
     onQuickClean: () -> Unit
 ) {
@@ -206,23 +219,61 @@ private fun OptionsSection(
                 }
                 Switch(checked = scanCorpse, onCheckedChange = onToggleCorpse)
             }
+
+            if (volumes.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text("Storage", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Row(
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = selectedVolumeIndex == -1,
+                        onClick = { onSelectVolume(-1) },
+                        label = { Text("All") },
+                        leadingIcon = { Icon(Icons.Default.Storage, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                    )
+                    volumes.forEachIndexed { index, volume ->
+                        val icon: ImageVector = if (volume.isPrimary) Icons.Default.Devices else Icons.Default.SdCard
+                        FilterChip(
+                            selected = selectedVolumeIndex == index,
+                            onClick = { onSelectVolume(index) },
+                            label = { Text(volume.description) },
+                            leadingIcon = { Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                        )
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(8.dp))
+            val scanLabel = when {
+                volumes.isEmpty() -> "Scan Device"
+                selectedVolumeIndex == -1 -> "Scan All Storage"
+                selectedVolumeIndex in volumes.indices -> "Scan ${volumes[selectedVolumeIndex].description}"
+                else -> "Scan Device"
+            }
             Button(
                 onClick = onStartScan,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Scan Device")
+                Text(scanLabel)
             }
             Spacer(modifier = Modifier.height(4.dp))
+            val cleanLabel = when {
+                volumes.isEmpty() -> "Quick Clean"
+                selectedVolumeIndex == -1 -> "Quick Clean All"
+                selectedVolumeIndex in volumes.indices -> "Quick Clean ${volumes[selectedVolumeIndex].description}"
+                else -> "Quick Clean"
+            }
             OutlinedButton(
                 onClick = onQuickClean,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(Icons.Default.Bolt, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Quick Clean")
+                Text(cleanLabel)
             }
         }
     }

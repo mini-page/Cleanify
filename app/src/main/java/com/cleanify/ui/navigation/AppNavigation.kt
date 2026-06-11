@@ -47,6 +47,7 @@ import com.cleanify.ui.screens.recyclebin.RecycleBinScreen
 import com.cleanify.ui.screens.tools.BlacklistEditorScreen
 import com.cleanify.ui.screens.tools.CleanerSettingsScreen
 import com.cleanify.ui.screens.tools.EmptyCleanerScreen
+import com.cleanify.ui.screens.storage.StorageAnalysisScreen
 import com.cleanify.ui.screens.tools.ToolsScreen
 import com.cleanify.ui.screens.tools.WhitelistEditorScreen
 import java.net.URLDecoder
@@ -90,6 +91,7 @@ sealed class Screen(val route: String) {
     object CleanerWhitelist : Screen("cleaner_whitelist")
     object RecycleBin : Screen("recycle_bin")
     object ContactCleaner : Screen("contact_cleaner")
+    object StorageAnalysis : Screen("storage_analysis")
 
     // Routes for the duplicates feature, now part of a nested graph
     object Duplicates : Screen("duplicates_overview")
@@ -213,7 +215,14 @@ onNavigateToSettings = { navController.navigate(Screen.Settings.createRoute("sor
                 onNavigateToDuplicates = { navController.navigate(DUPLICATES_GRAPH_ROUTE) },
                 onNavigateToEmptyCleaner = { navController.navigate(Screen.EmptyCleaner.route) },
                 onNavigateToRecycleBin = { navController.navigate(Screen.RecycleBin.route) },
-                onNavigateToContactCleaner = { navController.navigate(Screen.ContactCleaner.route) }
+                onNavigateToContactCleaner = { navController.navigate(Screen.ContactCleaner.route) },
+                onNavigateToStorageAnalysis = { navController.navigate(Screen.StorageAnalysis.route) }
+            )
+        }
+
+        composable(Screen.StorageAnalysis.route) {
+            StorageAnalysisScreen(
+                onNavigateUp = { navController.navigateUp() }
             )
         }
 

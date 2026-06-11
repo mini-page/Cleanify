@@ -31,9 +31,13 @@ Cleanify is a powerful, privacy-first Android app for managing your photos, vide
   - [Swipe Sorter](#-swipe-sorter)
   - [Duplicate Finder](#-duplicate-finder)
   - [Empty Cleaner](#-empty-cleaner--junk-remover)
+  - [Recycle Bin](#-recycle-bin)
+  - [Storage Analysis](#-storage-analysis)
   - [Session Setup](#-session-setup)
   - [Appearance & Theming](#-appearance--theming)
   - [Customization & Settings](#-customization--settings)
+  - [Accessibility](#-accessibility)
+  - [App Shortcuts & Widgets](#-app-shortcuts--widgets)
 - [Supported File Types](#supported-file-types)
 - [Privacy](#privacy-first)
 - [Getting Started](#getting-started)
@@ -87,6 +91,7 @@ The core of Cleanify — a card-based sorting experience that makes managing tho
 - **Open With** — launch in any compatible app
 - **Rename** — rename the file inline
 - **Open Full Screen** — view the media at full resolution
+- **Media Preview** — tap any card to open an immersive full-screen viewer with pinch-to-zoom and double-tap reset; close and delete button overlays only
 
 #### Target Folder Bar
 - Add, remove, and reorder quick-move target folders per session
@@ -174,6 +179,7 @@ Choose how aggressively duplicates are matched:
 - Background scanning with foreground service notification and real-time progress
 - Unreadable / corrupt files dialog
 - Rescan button with filter active badge
+- **Media Preview** — tap any file to open in full-screen immersive viewer with pinch-to-zoom and double-tap reset
 
 ---
 
@@ -189,6 +195,11 @@ A dedicated cleaning tool that goes beyond media.
 | **Generic Junk** | `.tmp`, `.log` files and temp directories |
 | **APK Files** | `.apk`, `.apks`, `.apkm`, `.aab` installer packages |
 | **Corpse Files** | Orphaned `Android/data/` folders from uninstalled apps |
+
+#### Multi-Volume Support
+- Detects all available storage volumes (internal + SD card + USB OTG)
+- Dynamic volume selector: scan **All**, **Internal storage**, or **External storage** individually
+- Buttons update dynamically based on detected volumes
 
 #### Smart Automation
 - **Double-Checker** — repeat the scan 1–10x to catch files created during cleanup
@@ -209,6 +220,37 @@ Export and import your full cleaner configuration (filters, blacklist, whitelist
 - Total reclaimable size summary
 - Post-clean report: files failed, RAM freed
 - **Quick Clean** — skip the scan and apply all enabled filters instantly
+
+---
+
+### ♻️ Recycle Bin
+
+A safe space for trashed files — recover what you need before it's gone forever.
+
+#### Features
+- **Per-Category Filtering** — tabs for Images, Videos, Audio, Documents, Other; tabs always visible
+- **All Files View** — default view shows every trashed file
+- **Select All / Deselect All** — batch-select files in the top bar
+- **Restore** — moves files back to their original location (non-destructive, no confirmation needed)
+- **Delete Permanently** — removes files from device forever (requires confirmation dialog)
+- **Empty Recycle Bin** — one-tap clear with confirmation
+- **Media Preview** — tap media files to preview them in an immersive full-screen viewer
+- **File Details** — tap non-media files to inspect name, size, type, original path, and deletion date
+- **Hide from Gallery** — ` .nomedia` support prevents trashed media from appearing in gallery apps
+- **Category Counts** — each tab badge shows how many items are in that category
+
+---
+
+### 📊 Storage Analysis
+
+Visualize your device's storage landscape at a glance.
+
+#### Features
+- **Donut Chart** — used vs. free storage with percentage and color-coded status (green < 70%, orange 70–90%, red > 90%)
+- **Per-Volume Cards** — separate usage bars for internal storage, SD card, and USB OTG
+- **Category Breakdown** — colored bars for Images, Videos, Music, Documents, APK/Apps, Downloads, and Other with size and percentage
+- **Largest Files** — top 10 files ranked by size, tappable for details (name, path, size, last modified, type)
+- **50k File Scan** — bounded BFS traversal to find and categorize files without excessive wait time
 
 ---
 
@@ -293,6 +335,45 @@ Every detail of the experience is configurable. Settings are fully text-searchab
 - Reset all "Do not ask again" confirmation dialogs
 - Reset source folder favorites
 - Reset target folder favorites
+
+---
+
+### ♿ Accessibility
+
+Cleanify includes several accessibility features to make the app more usable for everyone.
+
+| Feature | Description |
+|---------|-------------|
+| **Reduce Animations** | Disables swipe card animations — files snap directly with no transition |
+| **Hide from Gallery** | Prevents trashed media from appearing in gallery apps via `.nomedia` files (on by default) |
+| **Haptic Feedback** | Vibration feedback on destructive actions (delete, empty bin) via `LongPress` |
+| **Content Descriptions** | Full TalkBack support with proper labels on all interactive elements, dropdown menus, and icons |
+| **AutoMirrored Icons** | Icons automatically flip for RTL locales |
+
+---
+
+### 🔗 App Shortcuts & Widgets
+
+Quick access to Cleanify's core tools without opening the app.
+
+#### App Shortcuts (Long-press icon)
+| Shortcut | Deep Link |
+|----------|-----------|
+| **Empty Cleaner** | `app://com.cleanify/empty_cleaner` |
+| **Contact Cleaner** | `app://com.cleanify/contact_cleaner` |
+| **Duplicates Graph** | `app://com.cleanify/duplicates_graph` |
+| **Recycle Bin** | `app://com.cleanify/recycle_bin` |
+
+#### Home Screen Widget
+- Rounded card design with purple-tinted action buttons
+- **Quick Clean** — runs the junk cleaner instantly
+- **Rescan** — re-scans for duplicate files
+- **Open Recycle Bin** — jump directly to trashed files
+- Emoji-based icons for at-a-glance readability
+
+#### Quick Settings Tile
+- One-tap access from the notification shade
+- Opens the app's main screen via `TileService`
 
 ---
 
@@ -392,6 +473,7 @@ Cleanify is designed from the ground up with privacy as a non-negotiable require
 
 | Property | Value |
 |----------|-------|
+| Current Version | 2.6.0 |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 |
 | Compile SDK | 36 |
@@ -402,14 +484,19 @@ Cleanify is designed from the ground up with privacy as a non-negotiable require
 
 ```
 Launch -> Splash -> Permission Check
-           |-- No Permission   -> PermissionRequiredScreen
-           |-- First Launch    -> Onboarding (6 pages) -> Session Setup
-           +-- Returning User  -> Session Setup
-                                   +-- Swiper Screen
-                                        |-- Summary Sheet -> Apply Changes
-                                        +-- Tools Hub
-                                             |-- Duplicate Finder -> Group Details
-                                             +-- Empty Cleaner -> Results
+            |-- No Permission   -> PermissionRequiredScreen
+            |-- First Launch    -> Onboarding (6 pages) -> Session Setup
+            +-- Returning User  -> Session Setup
+                                    +-- Swiper Screen
+                                    |    |-- Summary Sheet -> Apply Changes
+                                    |    +-- Media Preview (tap card)
+                                    +-- Tools Hub
+                                         |-- Duplicate Finder -> Group Details
+                                         |    +-- Media Preview (tap file)
+                                         |-- Empty Cleaner -> Results
+                                         |-- Recycle Bin -> Preview / Details
+                                         |    +-- Media Preview (tap media)
+                                         +-- Storage Analysis -> File Details
 ```
 
 ---
