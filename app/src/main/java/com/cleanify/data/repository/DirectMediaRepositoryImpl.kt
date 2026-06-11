@@ -1378,9 +1378,13 @@ class DirectMediaRepositoryImpl @Inject constructor(
     }
 
     private fun queueAllVolumeRoots(queue: Queue<File>) {
+        val seen = mutableSetOf<File>()
+        queue.add(Environment.getExternalStorageDirectory())
+        seen.add(Environment.getExternalStorageDirectory())
         storageVolumeProvider.getScanRoots().forEach { root ->
-            if (root.exists() && root.canRead()) {
+            if (root !in seen && root.exists() && root.canRead()) {
                 queue.add(root)
+                seen.add(root)
             }
         }
     }

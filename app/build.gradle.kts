@@ -23,10 +23,20 @@ android {
     }
     signingConfigs {
         create("release") {
-            val storeFileProp = project.properties["CLEANIFY_RELEASE_STORE_FILE"] as? String
-            val keyAliasProp = project.properties["CLEANIFY_RELEASE_KEY_ALIAS"] as? String
-            val storePasswordProp = project.properties["CLEANIFY_RELEASE_STORE_PASSWORD"] as? String
-            val keyPasswordProp = project.properties["CLEANIFY_RELEASE_KEY_PASSWORD"] as? String
+            val keystorePropsFile = rootProject.file("keystore.properties")
+            val keystoreProps = if (keystorePropsFile.exists()) {
+                java.util.Properties().apply { load(keystorePropsFile.inputStream()) }
+            } else null
+
+            val storeFileProp = keystoreProps?.getProperty("storeFile")
+                ?: project.properties["CLEANIFY_RELEASE_STORE_FILE"] as? String
+            val keyAliasProp = keystoreProps?.getProperty("keyAlias")
+                ?: project.properties["CLEANIFY_RELEASE_KEY_ALIAS"] as? String
+            val storePasswordProp = keystoreProps?.getProperty("storePassword")
+                ?: project.properties["CLEANIFY_RELEASE_STORE_PASSWORD"] as? String
+            val keyPasswordProp = keystoreProps?.getProperty("keyPassword")
+                ?: project.properties["CLEANIFY_RELEASE_KEY_PASSWORD"] as? String
+
             if (storeFileProp != null && keyAliasProp != null) {
                 storeFile = file(storeFileProp)
                 keyAlias = keyAliasProp

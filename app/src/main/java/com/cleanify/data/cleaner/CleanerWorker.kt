@@ -71,11 +71,15 @@ class CleanerWorker(
     }
 
     private fun getScanRoots(): List<File> {
+        val roots = mutableListOf(Environment.getExternalStorageDirectory())
         val storageManager = applicationContext.getSystemService(Context.STORAGE_SERVICE) as StorageManager
-        return storageManager.storageVolumes
-            .mapNotNull { it.directory }
-            .filter { it.exists() && it.canRead() }
-            .ifEmpty { listOf(Environment.getExternalStorageDirectory()) }
+        for (sv in storageManager.storageVolumes) {
+            val dir = sv.directory ?: continue
+            if (dir.isDirectory && dir.canRead() && dir !in roots) {
+                roots.add(dir)
+            }
+        }
+        return roots
     }
 
     companion object {
