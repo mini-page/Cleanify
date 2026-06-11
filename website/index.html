@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cleanify — Reclaim Your Space</title>
+<meta name="description" content="Cleanify is a powerful, privacy-first Android app for managing photos, videos, and files. Swipe to sort, find duplicates, and clean junk — 100% offline.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0d0d0d; --bg2: #141414; --surface: #1a1a1a; --card: #1e1e1e;
+    --border: #2a2a2a; --text: #e0e0e0; --text2: #a0a0a0; --accent: #7c5cfc;
+    --accent2: #5b3dc7; --green: #34d399; --red: #f87171; --radius: 12px;
+  }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+  /* Nav */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(13,13,13,0.85); backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border); padding: 0 24px;
+  }
+  nav .container { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+  nav .logo { font-weight: 700; font-size: 18px; color: #fff; text-decoration: none; display: flex; align-items: center; gap: 8px; }
+  nav .logo img { width: 28px; height: 28px; border-radius: 6px; }
+  nav a:not(.logo) { color: var(--text2); text-decoration: none; font-size: 14px; transition: color .2s; }
+  nav a:not(.logo):hover { color: #fff; }
+  nav .links { display: flex; gap: 24px; align-items: center; }
+  nav .dl-btn {
+    background: var(--accent); color: #fff !important; padding: 6px 16px;
+    border-radius: 8px; font-weight: 600; font-size: 13px !important;
+    transition: background .2s, transform .2s;
+  }
+  nav .dl-btn:hover { background: var(--accent2); transform: scale(1.04); }
+
+  /* Hero */
+  .hero {
+    padding: 140px 0 80px; text-align: center;
+    background: radial-gradient(ellipse at 50% 0%, rgba(124,92,252,0.08) 0%, transparent 60%);
+  }
+  .hero .logo-big { width: 80px; height: 80px; border-radius: 18px; margin-bottom: 24px; }
+  .hero h1 { font-size: clamp(36px, 6vw, 60px); font-weight: 800; letter-spacing: -1px; }
+  .hero h1 span { background: linear-gradient(135deg, var(--accent), #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .hero .tagline { font-size: 18px; color: var(--text2); margin-top: 12px; max-width: 540px; margin-inline: auto; }
+  .hero .badges { margin-top: 24px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .hero .badges img { height: 24px; border-radius: 4px; }
+  .hero .dl-buttons { margin-top: 40px; display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 10px; padding: 14px 32px;
+    border-radius: var(--radius); font-weight: 700; font-size: 16px;
+    text-decoration: none; transition: all .25s; cursor: pointer; border: none;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent2); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(124,92,252,0.3); }
+  .btn-secondary { background: var(--card); color: #fff; border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--surface); transform: translateY(-2px); }
+  .btn svg { width: 20px; height: 20px; flex-shrink: 0; }
+
+  .hero .privacy-note { margin-top: 32px; font-size: 14px; color: var(--text2); }
+  .hero .privacy-note strong { color: var(--green); }
+
+  /* Sections */
+  section { padding: 80px 0; }
+  section h2 {
+    font-size: clamp(28px, 4vw, 36px); font-weight: 700; text-align: center; margin-bottom: 12px;
+  }
+  section h2 .icon { margin-right: 8px; }
+  section > .subtitle { text-align: center; color: var(--text2); max-width: 600px; margin: 0 auto 48px; font-size: 16px; }
+  .alt-bg { background: var(--bg2); }
+
+  /* Screenshots */
+  .screenshots { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+  .screenshots img { width: 200px; max-width: 22%; border-radius: var(--radius); border: 1px solid var(--border); }
+
+  /* Features grid */
+  .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+  .feature-card {
+    background: var(--card); border-radius: var(--radius); padding: 28px; border: 1px solid var(--border);
+    transition: transform .2s, box-shadow .2s;
+  }
+  .feature-card:hover { transform: translateY(-3px); box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+  .feature-card .feat-icon { font-size: 28px; margin-bottom: 12px; display: block; }
+  .feature-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+  .feature-card p { font-size: 14px; color: var(--text2); line-height: 1.7; }
+  .feature-card ul { margin-top: 12px; padding-left: 18px; font-size: 13px; color: var(--text2); line-height: 1.9; }
+  .feature-card ul li::marker { color: var(--accent); }
+
+  /* Changelog */
+  .changelog-list { max-width: 700px; margin: 0 auto; }
+  .changelog-item {
+    background: var(--card); border-radius: var(--radius); padding: 24px; margin-bottom: 16px;
+    border: 1px solid var(--border);
+  }
+  .changelog-item .version { font-weight: 700; font-size: 18px; color: var(--accent); }
+  .changelog-item .date { font-size: 13px; color: var(--text2); margin-left: 12px; }
+  .changelog-item .changes { margin-top: 12px; }
+  .changelog-item .change-cat { font-weight: 600; font-size: 14px; margin-top: 12px; color: var(--green); }
+  .changelog-item .change-cat:first-child { margin-top: 0; }
+  .changelog-item ul { padding-left: 18px; font-size: 14px; color: var(--text2); line-height: 1.9; }
+  .changelog-item ul li::marker { color: var(--accent); }
+
+  /* Privacy */
+  .privacy-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+  .privacy-item {
+    background: var(--card); border-radius: var(--radius); padding: 20px; text-align: center;
+    border: 1px solid var(--border);
+  }
+  .privacy-item .icon { font-size: 28px; margin-bottom: 8px; display: block; }
+  .privacy-item h4 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .privacy-item p { font-size: 13px; color: var(--text2); }
+
+  /* Supported file types */
+  .ft-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .ft-item {
+    background: var(--card); border-radius: 8px; padding: 16px; border: 1px solid var(--border);
+    text-align: center;
+  }
+  .ft-item .cat { font-weight: 600; font-size: 14px; }
+  .ft-item .formats { font-size: 12px; color: var(--text2); margin-top: 4px; }
+
+  /* Tech stack */
+  .tech-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+  .tech-item {
+    background: var(--card); border-radius: 8px; padding: 16px; border: 1px solid var(--border); text-align: center;
+  }
+  .tech-item .layer { font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+  .tech-item .name { font-size: 15px; font-weight: 600; margin-top: 4px; }
+
+  /* Footer */
+  footer {
+    border-top: 1px solid var(--border); padding: 40px 0; text-align: center; font-size: 13px; color: var(--text2);
+  }
+  footer .links { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin-bottom: 16px; }
+  footer a { color: var(--text2); text-decoration: none; transition: color .2s; }
+  footer a:hover { color: #fff; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .hero { padding: 110px 0 60px; }
+    nav .links a:not(.dl-btn):not(.logo) { display: none; }
+    .features-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <div class="container">
+    <a href="#" class="logo">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="6" fill="#7c5cfc"/><path d="M7 14l5 5 9-9" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Cleanify
+    </a>
+    <div class="links">
+      <a href="#features">Features</a>
+      <a href="#changelog">Changelog</a>
+      <a href="#privacy">Privacy</a>
+      <a href="#tech">Tech</a>
+      <a href="https://github.com/mini-page/Cleanify" target="_blank">GitHub</a>
+      <a href="https://github.com/mini-page/Cleanify/releases/latest" class="dl-btn">Download APK</a>
+    </div>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="container">
+    <img src="../docs/images/logo.webp" alt="Cleanify" class="logo-big" onerror="this.style.display='none'">
+    <h1><span>Cleanify</span></h1>
+    <p class="tagline">Swipe. Sort. Reclaim your space. 100% offline &mdash; your files never leave your device.</p>
+    <div class="badges">
+      <img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="GPL v3">
+      <img src="https://img.shields.io/github/v/release/mini-page/Cleanify" alt="Release">
+      <img src="https://img.shields.io/badge/Android-10%2B-green.svg" alt="Android 10+">
+      <img src="https://img.shields.io/badge/Kotlin-2.2-purple.svg" alt="Kotlin">
+    </div>
+    <div class="dl-buttons">
+      <a href="https://github.com/mini-page/Cleanify/releases/latest" class="btn btn-primary">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        Download Latest APK
+      </a>
+      <a href="https://github.com/mini-page/Cleanify" class="btn btn-secondary">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+        View Source
+      </a>
+    </div>
+    <p class="privacy-note"><strong>&#10003; No tracking</strong> &middot; <strong>&#10003; No account</strong> &middot; <strong>&#10003; Fully offline</strong></p>
+  </div>
+</section>
+
+<!-- Screenshots -->
+<section>
+  <div class="container">
+    <h2>Screenshots</h2>
+    <p class="subtitle">A quick look at the Cleanify experience.</p>
+    <div class="screenshots">
+      <img src="../docs/images/01.png" alt="Session Setup" onerror="this.style.display='none'">
+      <img src="../docs/images/02.png" alt="Swipe to Sort" onerror="this.style.display='none'">
+      <img src="../docs/images/03.png" alt="Duplicate Finder" onerror="this.style.display='none'">
+      <img src="../docs/images/04.png" alt="Quick Organize" onerror="this.style.display='none'">
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section id="features" class="alt-bg">
+  <div class="container">
+    <h2>Features</h2>
+    <p class="subtitle">Everything you need to take control of your files.</p>
+
+    <div class="features-grid">
+
+      <div class="feature-card">
+        <span class="feat-icon">&#x1F0CF;</span>
+        <h3>Swipe Sorter</h3>
+        <p>Sort thousands of files with a fun Tinder-style card interface. Keep, delete, move, or skip with a single gesture.</p>
+        <ul>
+          <li>Swipe right to keep &middot; left to delete</li>
+          <li>Target folder bar for quick moves</li>
+          <li>Inline video player with speed control</li>
+          <li>Undo any action at any time</li>
+          <li>Summary sheet to review before applying</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <span class="feat-icon">&#x1F50D;</span>
+        <h3>Duplicate Finder</h3>
+        <p>Free up gigabytes by eliminating exact copies and visually similar media.</p>
+        <ul>
+          <li>Hybrid hashing &mdash; size filter + pixel / content hash</li>
+          <li>Visual similarity via dHash &amp; color histograms</li>
+          <li>Configurable strict / balanced / loose thresholds</li>
+          <li>Similarity denial to suppress false positives</li>
+          <li>Background scanning with progress notifications</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <span class="feat-icon">&#x1F9F9;</span>
+        <h3>Junk Remover</h3>
+        <p>Beyond media &mdash; clean empty files, folders, APKs, temp files, and corpse folders.</p>
+        <ul>
+          <li>Double-Checker runs multiple passes</li>
+          <li>Auto-Whitelist protects backup paths</li>
+          <li>Clean on boot &amp; scheduled cleaning</li>
+          <li>Blacklist / Whitelist editors with regex</li>
+          <li>Quick Clean &mdash; skip scan, apply instantly</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <span class="feat-icon">&#x1F4C2;</span>
+        <h3>Session Setup</h3>
+        <p>Auto-discover media folders, browse by category, and configure every session your way.</p>
+        <ul>
+          <li>Auto-discovery with live scanning progress</li>
+          <li>Favorites, System, User folder categories</li>
+          <li>Multi-select &amp; recursive folder selection</li>
+          <li>Search, sort, and pull-to-refresh</li>
+          <li>Mark folders as sorted to hide them later</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <span class="feat-icon">&#x1F3A8;</span>
+        <h3>Theming</h3>
+        <p>Five theme modes including true-black AMOLED. Material You dynamic colors and accent picker.</p>
+        <ul>
+          <li>Light &middot; Dark &middot; Darker &middot; AMOLED</li>
+          <li>Material You wallpaper colors (Android 12+)</li>
+          <li>Curated accent color palette</li>
+          <li>Language: English &middot; Italiano</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <span class="feat-icon">&#x2699;&#xFE0F;</span>
+        <h3>Customization</h3>
+        <p>Every detail configurable &mdash; gestures, layout, folder behavior, video defaults, and more.</p>
+        <ul>
+          <li>Swipe sensitivity &amp; direction control</li>
+          <li>Configurable swipe-down action</li>
+          <li>Folder name position on cards</li>
+          <li>Export / Import settings &amp; favorites</li>
+          <li>Full-text searchable settings</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- Changelog -->
+<section id="changelog">
+  <div class="container">
+    <h2>Changelog</h2>
+    <p class="subtitle">What&rsquo;s new in recent releases.</p>
+    <div class="changelog-list">
+
+      <div class="changelog-item">
+        <span class="version">v2.6.0</span><span class="date">&mdash; 2026-06-11</span>
+        <div class="changes">
+          <div class="change-cat">Added</div>
+          <ul>
+            <li>Native xxHash64 hashing engine &mdash; SHA-256 replaced with xxHash64 via C/NDK for ~10x faster hash computation on bulk media scanning.</li>
+            <li>CMake + NDK integration &mdash; native code compiled for all target architectures.</li>
+            <li>NativeHasher fallback &mdash; pure-Kotlin hashBytes() fallback if native library fails to load.</li>
+            <li>Release keystore for signed release builds.</li>
+          </ul>
+          <div class="change-cat">Changed</div>
+          <ul>
+            <li>Duplicate scanning now uses native xxHash64 for full file hashes, partial video hashes, and pixel hashes.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="changelog-item">
+        <span class="version">v2.5.0</span><span class="date">&mdash; 2026-06-11</span>
+        <div class="changes">
+          <div class="change-cat">Added</div>
+          <ul>
+            <li>Haptic feedback on all destructive actions: swipe, delete, apply changes.</li>
+            <li>In-app update checker with download progress and package installer launch.</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+    <div style="text-align:center;margin-top:24px;">
+      <a href="https://github.com/mini-page/Cleanify/releases" class="btn btn-secondary">View All Releases</a>
+    </div>
+  </div>
+</section>
+
+<!-- Privacy -->
+<section id="privacy" class="alt-bg">
+  <div class="container">
+    <h2>Privacy First</h2>
+    <p class="subtitle">Cleanify is designed from the ground up with privacy as a non-negotiable requirement.</p>
+    <div class="privacy-grid">
+      <div class="privacy-item"><span class="icon">&#x1F510;</span><h4>Completely Offline</h4><p>Zero network requests, zero internet permission.</p></div>
+      <div class="privacy-item"><span class="icon">&#x1F6AB;</span><h4>No Tracking</h4><p>No SDKs, no telemetry, no crash reporting.</p></div>
+      <div class="privacy-item"><span class="icon">&#x1F4F5;</span><h4>No Account</h4><p>Open the app and start immediately.</p></div>
+      <div class="privacy-item"><span class="icon">&#x1F3E0;</span><h4>All On-Device</h4><p>Your files never leave your phone.</p></div>
+      <div class="privacy-item"><span class="icon">&#x1F4D6;</span><h4>Open Source</h4><p>Full source under GPL-3.0. Audit it yourself.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- Supported File Types -->
+<section>
+  <div class="container">
+    <h2>Supported File Types</h2>
+    <p class="subtitle">Cleanify works with a wide range of media and document formats.</p>
+    <div class="ft-grid">
+      <div class="ft-item"><div class="cat">&#x1F5BC;&#xFE0F; Images</div><div class="formats">JPEG, PNG, GIF, WEBP, HEIC, and more</div></div>
+      <div class="ft-item"><div class="cat">&#x1F3AC; Videos</div><div class="formats">MP4, MKV, AVI, MOV, and more</div></div>
+      <div class="ft-item"><div class="cat">&#x1F50A; Audio</div><div class="formats">MP3, WAV, FLAC, AAC, OGG, WMA</div></div>
+      <div class="ft-item"><div class="cat">&#x1F4C4; Documents</div><div class="formats">PDF, DOCX, XLSX, PPTX, TXT</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- Tech Stack -->
+<section id="tech" class="alt-bg">
+  <div class="container">
+    <h2>Tech Stack</h2>
+    <p class="subtitle">Built with modern Android technologies.</p>
+    <div class="tech-grid">
+      <div class="tech-item"><div class="layer">Language</div><div class="name">Kotlin 2.2</div></div>
+      <div class="tech-item"><div class="layer">UI</div><div class="name">Jetpack Compose + Material 3</div></div>
+      <div class="tech-item"><div class="layer">Architecture</div><div class="name">MVVM + Clean Architecture + UDF</div></div>
+      <div class="tech-item"><div class="layer">DI</div><div class="name">Hilt</div></div>
+      <div class="tech-item"><div class="layer">Database</div><div class="name">Room</div></div>
+      <div class="tech-item"><div class="layer">Images</div><div class="name">Coil</div></div>
+      <div class="tech-item"><div class="layer">Video</div><div class="name">ExoPlayer (Media3)</div></div>
+      <div class="tech-item"><div class="layer">Min SDK</div><div class="name">Android 10 (API 29)</div></div>
+    </div>
+    <div style="text-align:center;margin-top:32px;">
+      <a href="https://github.com/mini-page/Cleanify" class="btn btn-primary">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+        Explore the Code
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="container">
+    <div class="links">
+      <a href="https://github.com/mini-page/Cleanify">GitHub</a>
+      <a href="https://github.com/mini-page/Cleanify/releases">Releases</a>
+      <a href="https://github.com/mini-page/Cleanify/issues">Issues</a>
+      <a href="https://github.com/mini-page/Cleanify/blob/main/CONTRIBUTING.md">Contributing</a>
+      <a href="https://github.com/mini-page/Cleanify/blob/main/LICENSE">License</a>
+    </div>
+    <p>&copy; 2025 LoopOtto. Licensed under GPL-3.0. Built with &#x2665; for Android.</p>
+  </div>
+</footer>
+
+</body>
+</html>
