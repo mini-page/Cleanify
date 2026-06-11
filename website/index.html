@@ -64,14 +64,17 @@
       radial-gradient(ellipse at 80% 50%, rgba(244,114,182,0.04) 0%, transparent 50%),
       radial-gradient(ellipse at 50% 0%, rgba(45,212,191,0.03) 0%, transparent 50%);
   }
-  .hero .logo-wrap {
-    width: 88px; height: 88px; margin: 0 auto 28px; border-radius: 22px;
-    padding: 3px; background: linear-gradient(135deg, var(--accent), var(--pink), var(--teal));
+  .hero .hero-logo { margin: 0 auto 28px; width: 90px; height: 90px; }
+  .hero .logo-big {
+    width: 90px; height: 90px; border-radius: 22px; display: block; object-fit: cover;
+    padding: 3px;
+    background: linear-gradient(135deg, var(--accent), var(--pink), var(--teal));
     animation: logoPulse 3s ease-in-out infinite;
   }
-  @keyframes logoPulse { 0%,100% { box-shadow: 0 0 30px rgba(124,92,252,0.2); } 50% { box-shadow: 0 0 60px rgba(124,92,252,0.4); } }
-  .hero .logo-wrap img { width: 100%; height: 100%; border-radius: 20px; display: block; background: var(--bg); }
-  .hero .logo-big { display: none; }
+  @keyframes logoPulse {
+    0%,100% { box-shadow: 0 0 30px rgba(124,92,252,0.2); }
+    50% { box-shadow: 0 0 60px rgba(124,92,252,0.4); }
+  }
   .hero h1 { font-size: clamp(40px, 7vw, 64px); font-weight: 800; letter-spacing: -1.5px; line-height: 1.1; }
   .hero h1 span {
     background: linear-gradient(135deg, var(--accent) 0%, var(--pink) 40%, var(--teal) 100%);
@@ -221,11 +224,34 @@
   .fade-in.visible { opacity: 1; transform: translateY(0); }
 
   /* Responsive */
-  @media (max-width: 768px) {
-    .hero { padding: 120px 0 60px; }
+  @media (max-width: 900px) {
+    .screenshots img { max-width: 45%; width: 180px; }
+    .features-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 640px) {
+    .hero { padding: 100px 0 50px; }
+    .hero .hero-logo { width: 72px; height: 72px; margin-bottom: 20px; }
+    .hero .logo-big { width: 72px; height: 72px; }
+    .hero .tagline { font-size: 15px; }
+    .hero .dl-buttons { flex-direction: column; align-items: center; }
+    .btn { width: 100%; max-width: 320px; justify-content: center; }
     nav .links a:not(.dl-btn):not(.logo) { display: none; }
+    nav .links { gap: 12px; }
+    nav .container { height: 56px; }
     .features-grid { grid-template-columns: 1fr; }
-    section { padding: 60px 0; }
+    .screenshots img { max-width: 100%; width: 160px; }
+    section { padding: 50px 0; }
+    section h2 { font-size: 24px; }
+    .privacy-grid { grid-template-columns: repeat(2, 1fr); }
+    .ft-grid { grid-template-columns: repeat(2, 1fr); }
+    .tech-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 400px) {
+    nav .links { gap: 8px; }
+    nav .dl-btn { padding: 5px 12px; font-size: 11px !important; }
+    .privacy-grid { grid-template-columns: 1fr; }
+    .ft-grid { grid-template-columns: 1fr; }
+    .tech-grid { grid-template-columns: 1fr; }
   }
 </style>
 <script>
@@ -262,7 +288,9 @@
 <!-- Hero -->
 <section class="hero">
   <div class="container">
-    <img src="../docs/images/logo.webp" alt="Cleanify" class="logo-big" onerror="this.style.display='none'">
+    <div class="hero-logo">
+      <img src="images/logo.webp" alt="Cleanify" class="logo-big" onerror="this.parentElement.innerHTML='<svg width=\'90\' height=\'90\' viewBox=\'0 0 28 28\' fill=\'none\' style=\'border-radius:22px;background:linear-gradient(135deg,#7c5cfc,#f472b6,#2dd4bf);padding:6px\'><rect width=\'28\' height=\'28\' rx=\'6\' fill=\'#7c5cfc\'/><path d=\'M7 14l5 5 9-9\' stroke=\'#fff\' stroke-width=\'2.5\' stroke-linecap=\'round\' stroke-linejoin=\'round\'/></svg>'">
+    </div>
     <h1><span>Cleanify</span></h1>
     <p class="tagline">Swipe. Sort. Reclaim your space. 100% offline &mdash; your files never leave your device.</p>
     <div class="badges">
