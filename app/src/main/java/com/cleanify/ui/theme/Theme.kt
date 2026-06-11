@@ -153,6 +153,7 @@ private val AmoledColorScheme = darkColorScheme(
 )
 
 val LocalAppTheme = staticCompositionLocalOf { AppTheme.SYSTEM }
+val LocalReducedAnimations = staticCompositionLocalOf { false }
 
 val ExpressiveShapes = Shapes(
     extraSmall = RoundedCornerShape(4.dp),
@@ -167,6 +168,7 @@ fun CleanifyTheme(
     theme: AppTheme = AppTheme.SYSTEM,
     useDynamicColors: Boolean = true,
     accentColorKey: String = "DEFAULT_BLUE",
+    reduceAnimations: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val darkTheme = theme.isDark
@@ -234,7 +236,10 @@ fun CleanifyTheme(
         }
     }
 
-    CompositionLocalProvider(LocalAppTheme provides theme) {
+    CompositionLocalProvider(
+        LocalAppTheme provides theme,
+        LocalReducedAnimations provides reduceAnimations
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = AppTypography,

@@ -25,12 +25,12 @@ import com.cleanify.data.db.dao.FileSignatureDao
 import com.cleanify.data.db.entity.FileSignatureCache
 import com.cleanify.data.model.MediaItem
 import com.cleanify.domain.model.DuplicateGroup
+import com.cleanify.util.NativeHasher
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.nio.ByteBuffer
-import java.security.MessageDigest
 import javax.inject.Inject
 import kotlin.coroutines.coroutineContext
 
@@ -142,44 +142,20 @@ class DuplicateFinderUseCase @Inject constructor(
 
     private suspend fun generatePartialFileHash(mediaItem: MediaItem, bytesToRead: Int = 256 * 1024): String {
         return try {
-            val hash = context.contentResolver.openInputStream(mediaItem.uri)?.use { inputStream ->
-                val md = MessageDigest.getInstance("SHA-256")
-                val buffer = ByteArray(4096)
-                var totalRead = 0
-                var bytesRead: Int
-
-                while (totalRead < bytesToRead) {
-                    coroutineContext.ensureActive()
-                    val toRead = minOf(buffer.size, bytesToRead - totalRead)
-                    bytesRead = inputStream.read(buffer, 0, toRead)
-                    if (bytesRead == -1) break
-                    md.update(buffer, 0, bytesRead)
-                    totalRead += bytesRead
-                }
-                md.digest().joinToString("") { "%02x".format(it) }
-            } ?: ""
-            "video-partial-$hash"
+            val hash = NativeHasher.hashFilePartial(context, mediaItem.uri, bytesToRead)
+            if (!hash.isNullOrEmpty()) "video-partial-$hash" else ""
         } catch (e: Exception) {
-            Log.w(TAG, "DEBUG: Partial file hashing failed for ${mediaItem.id}. Message: ${e.message}")
+            Log.w(TAG, "Native partial hashing failed for ${mediaItem.id}: ${e.message}")
             ""
         }
     }
 
     private suspend fun generateFullFileHash(mediaItem: MediaItem): String {
         return try {
-            val hash = context.contentResolver.openInputStream(mediaItem.uri)?.use { inputStream ->
-                val md = MessageDigest.getInstance("SHA-256")
-                val buffer = ByteArray(8192)
-                var bytesRead: Int
-                while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-                    coroutineContext.ensureActive()
-                    md.update(buffer, 0, bytesRead)
-                }
-                md.digest().joinToString("") { "%02x".format(it) }
-            } ?: ""
-            "full-$hash"
+            val hash = NativeHasher.hashFile(context, mediaItem.uri)
+            if (!hash.isNullOrEmpty()) "full-$hash" else ""
         } catch (e: Exception) {
-            Log.w(TAG, "DEBUG: Full file hashing failed for ${mediaItem.id}. Message: ${e.message}")
+            Log.w(TAG, "Native full hashing failed for ${mediaItem.id}: ${e.message}")
             ""
         }
     }
@@ -207,11 +183,11 @@ class DuplicateFinderUseCase @Inject constructor(
             coroutineContext.ensureActive()
             buffer.flip()
 
-            val md = MessageDigest.getInstance("SHA-256")
-            md.update(buffer)
-            val pixelHash = md.digest().joinToString("") { "%02x".format(it) }
+            val pixels = ByteArray(buffer.remaining())
+            buffer.get(pixels)
+            val hash = NativeHasher.hashBytes(pixels)
 
-            if (pixelHash.isNotEmpty()) "image-pixel-$pixelHash" else ""
+            if (!hash.isNullOrEmpty()) "image-pixel-$hash" else ""
         } catch (e: Exception) {
             Log.w(TAG, "DEBUG: Pixel hashing failed for ${mediaItem.id}. Message: ${e.message}")
             ""

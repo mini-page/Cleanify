@@ -115,6 +115,9 @@
                     android:host="com.cleanify"
                     android:scheme="app" />
             </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity>
 
         <!--
@@ -145,6 +148,28 @@
         This is essential for features like "Share" or "Open with...", preventing direct
         file path exposure and working correctly with Scoped Storage principles.
         -->
+        <service
+            android:name=".service.QuickCleanTileService"
+            android:exported="true"
+            android:label="Quick Clean"
+            android:icon="@drawable/ic_quick_clean"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <receiver
+            android:name=".service.CleanifyWidget"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_cleanify_info" />
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"

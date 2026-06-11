@@ -42,6 +42,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateOffsetAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -90,8 +91,10 @@ import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -126,6 +129,7 @@ import com.cleanify.ui.components.FolderSearchDialog
 import com.cleanify.ui.components.BackNavigationIcon
 import com.cleanify.ui.components.RenameFolderDialog
 import com.cleanify.ui.theme.AppTheme
+import com.cleanify.ui.theme.LocalReducedAnimations
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -141,6 +145,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
+import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -753,7 +758,7 @@ private fun SwiperTopBar(
                     DropdownMenuItem(
                         text = { Text("Settings") },
                         onClick = { onNavigateToSettings(); showOverflow = false },
-                        leadingIcon = { Icon(Icons.Default.Settings, null) }
+                        leadingIcon = { Icon(Icons.Default.Settings, contentDescription = "Settings") }
                     )
                 }
             }
@@ -811,7 +816,7 @@ private fun ThumbnailStrip(
                         item.mimeType.contains("text") || item.extension in setOf("txt", "rtf") -> Icons.Default.Description
                         item.mimeType.contains("spreadsheet") || item.extension in setOf("xls", "xlsx") -> Icons.Default.TableChart
                         item.mimeType.contains("presentation") || item.extension in setOf("ppt", "pptx") -> Icons.Default.Slideshow
-                        else -> Icons.Default.InsertDriveFile
+                        else -> Icons.AutoMirrored.Filled.InsertDriveFile
                     }
                     Box(
                         modifier = Modifier
@@ -1215,7 +1220,7 @@ private fun FolderContextMenu(
                     onRename(folderMenuState.folderPath)
                     onDismiss()
                 },
-                leadingIcon = { Icon(Icons.Default.Edit, null) }
+                leadingIcon = { Icon(Icons.Default.Edit, contentDescription = "Edit") }
             )
             DropdownMenuItem(
                 text = { Text(if (isFavorite) stringResource(R.string.unfavorite) else stringResource(R.string.favorite)) },
@@ -1223,7 +1228,7 @@ private fun FolderContextMenu(
                     onToggleFavorite(folderMenuState.folderPath)
                     onDismiss()
                 },
-                leadingIcon = { Icon(Icons.Default.Star, null) }
+                leadingIcon = { Icon(Icons.Default.Star, contentDescription = "Star") }
             )
             AppMenuDivider()
             DropdownMenuItem(
@@ -1232,7 +1237,7 @@ private fun FolderContextMenu(
                     onRemove(folderMenuState.folderPath)
                     onDismiss()
                 },
-                leadingIcon = { Icon(Icons.Default.DeleteOutline, null, tint = MaterialTheme.colorScheme.error) }
+                leadingIcon = { Icon(Icons.Default.DeleteOutline, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error) }
             )
         }
     }
@@ -1313,13 +1318,13 @@ private fun MediaItemContextMenu(
                     // ── Actions Section ──
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.move_to_to_edit)) },
-                        leadingIcon = { Icon(Icons.Default.Edit, null) },
+                        leadingIcon = { Icon(Icons.Default.Edit, contentDescription = "Edit") },
                         onClick = onMoveToEdit
                     )
                     if (currentItem.isVideo) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.screenshot)) },
-                            leadingIcon = { Icon(Icons.Default.Image, null) },
+                            leadingIcon = { Icon(Icons.Default.Image, contentDescription = "Image") },
                             onClick = {
                                 val timestampMicros = exoPlayer.currentPosition * 1000
                                 onScreenshot(timestampMicros)
@@ -1330,12 +1335,12 @@ private fun MediaItemContextMenu(
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.share)) },
                         onClick = onShare,
-                        leadingIcon = { Icon(Icons.Default.Share, null) }
+                        leadingIcon = { Icon(Icons.Default.Share, contentDescription = "Share") }
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.open_with)) },
                         onClick = onOpen,
-                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.OpenInNew, null) }
+                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = "Open in new tab") }
                     )
                 }
             }
@@ -1727,6 +1732,8 @@ private fun MediaItemCard(
     var showVideoControls by remember { mutableStateOf(true) }
     val videoControlsScope = rememberCoroutineScope()
 
+    val haptic = LocalHapticFeedback.current
+
     val swipeThreshold = when (sensitivity) {
         SwipeSensitivity.LOW -> with(density) { 60.dp.toPx() }
         SwipeSensitivity.MEDIUM -> with(density) { 80.dp.toPx() }
@@ -1735,9 +1742,11 @@ private fun MediaItemCard(
     // Make swipe down slightly easier to trigger than horizontal swipes
     val swipeDownThreshold = swipeThreshold * 0.8f
 
+    val reduceAnimations = LocalReducedAnimations.current
+    val animSpec = if (reduceAnimations) snap<Float>() else tween<Float>(durationMillis = 150)
     val rotation = (swipeOffsetX / 30).coerceIn(-6f, 6f)
-    val animatedOffsetX by animateFloatAsState(targetValue = swipeOffsetX, label = "offsetX", animationSpec = tween(durationMillis = 150))
-    val animatedOffsetY by animateFloatAsState(targetValue = swipeOffsetY, label = "offsetY", animationSpec = tween(durationMillis = 150))
+    val animatedOffsetX by animateFloatAsState(targetValue = swipeOffsetX, label = "offsetX", animationSpec = animSpec)
+    val animatedOffsetY by animateFloatAsState(targetValue = swipeOffsetY, label = "offsetY", animationSpec = animSpec)
     val animatedScale by animateFloatAsState(targetValue = scale, label = "scale")
     val animatedPanOffset by animateOffsetAsState(targetValue = panOffset, label = "panOffset")
 
@@ -1843,9 +1852,16 @@ private fun MediaItemCard(
 
                         if (wasDragging) {
                             when {
-                                swipeOffsetX < -swipeThreshold -> onSwipeLeft()
-                                swipeOffsetX > swipeThreshold -> onSwipeRight()
+                                swipeOffsetX < -swipeThreshold -> {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onSwipeLeft()
+                                }
+                                swipeOffsetX > swipeThreshold -> {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onSwipeRight()
+                                }
                                 swipeOffsetY > swipeDownThreshold -> {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     onSwipeDown()
                                     swipeOffsetY = 0f
                                 }
@@ -2264,7 +2280,7 @@ private fun FileInfoCard(
         mediaItem.mimeType.contains("text") || mediaItem.extension in setOf("txt", "rtf") -> Icons.Default.Description
         mediaItem.mimeType.contains("spreadsheet") || mediaItem.extension in setOf("xls", "xlsx") -> Icons.Default.TableChart
         mediaItem.mimeType.contains("presentation") || mediaItem.extension in setOf("ppt", "pptx") -> Icons.Default.Slideshow
-        else -> Icons.Default.InsertDriveFile
+        else -> Icons.AutoMirrored.Filled.InsertDriveFile
     }
 
     Box(
@@ -2932,7 +2948,7 @@ private fun mediaTypeInfo(category: FileCategory, mimeType: String): Pair<androi
         FileCategory.Video -> Icons.Default.VideoFile
         FileCategory.Audio -> Icons.Default.AudioFile
         FileCategory.Document -> Icons.Default.Description
-        FileCategory.Other -> Icons.Default.InsertDriveFile
+        FileCategory.Other -> Icons.AutoMirrored.Filled.InsertDriveFile
     }
     val ext = when {
         mimeType.contains("/") -> mimeType.substringAfter("/").uppercase()

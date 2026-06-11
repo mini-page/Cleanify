@@ -43,6 +43,7 @@ import com.cleanify.domain.repository.DuplicatesRepository
 import com.cleanify.domain.repository.MediaRepository
 import com.cleanify.domain.usecase.SimilarFinderUseCase
 import com.cleanify.util.HiddenFileFilter
+import com.cleanify.util.NomediaManager
 import com.cleanify.ui.components.FolderSearchManager
 import com.cleanify.ui.theme.AppTheme
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -104,7 +105,8 @@ class SettingsViewModel @Inject constructor(
     private val similarFinderUseCase: SimilarFinderUseCase,
     private val appLifecycleEventBus: AppLifecycleEventBus,
     private val folderUpdateEventBus: FolderUpdateEventBus,
-    val folderSearchManager: FolderSearchManager
+    val folderSearchManager: FolderSearchManager,
+    private val nomediaManager: NomediaManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -173,7 +175,21 @@ class SettingsViewModel @Inject constructor(
             initialValue = false
         )
 
+    val reduceAnimations: StateFlow<Boolean> = preferencesRepository.reduceAnimationsFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = false
+        )
+
     val fullScreenSwipe: StateFlow<Boolean> = preferencesRepository.fullScreenSwipeFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = false
+        )
+
+    val hideFromGallery: StateFlow<Boolean> = preferencesRepository.hideFromGalleryFlow
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -638,6 +654,19 @@ class SettingsViewModel @Inject constructor(
     fun setInvertSwipe(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.setInvertSwipe(enabled)
+        }
+    }
+
+    fun setReduceAnimations(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.setReduceAnimations(enabled)
+        }
+    }
+
+    fun setHideFromGallery(enabled: Boolean) {
+        viewModelScope.launch {
+            nomediaManager.applySetting(enabled)
+            preferencesRepository.setHideFromGallery(enabled)
         }
     }
 

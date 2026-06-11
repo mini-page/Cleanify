@@ -102,12 +102,14 @@ class MainActivity : BaseActivity() {
             val currentTheme by mainViewModel.currentTheme.collectAsStateWithLifecycle()
             val useDynamicColors by mainViewModel.useDynamicColors.collectAsStateWithLifecycle()
             val accentColorKey by mainViewModel.accentColorKey.collectAsStateWithLifecycle()
+            val reduceAnimations by mainViewModel.reduceAnimations.collectAsStateWithLifecycle()
             val windowSizeClass = calculateWindowSizeClass(this)
 
             CleanifyTheme(
                 theme = currentTheme,
                 useDynamicColors = useDynamicColors,
-                accentColorKey = accentColorKey
+                accentColorKey = accentColorKey,
+                reduceAnimations = reduceAnimations
             ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),

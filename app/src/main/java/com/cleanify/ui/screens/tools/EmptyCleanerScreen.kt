@@ -16,6 +16,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -258,6 +260,7 @@ private fun ResultsSection(
     onClean: () -> Unit,
     onRescan: () -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
     val format = DecimalFormat("#.##")
     val kib: Long = 1024
     val mib: Long = 1048576
@@ -277,7 +280,7 @@ private fun ResultsSection(
             Text("Total size: $sizeStr")
             Spacer(modifier = Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Button(onClick = onClean, modifier = Modifier.weight(1f)) {
+                Button(onClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onClean() }, modifier = Modifier.weight(1f)) {
                     Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Delete All")

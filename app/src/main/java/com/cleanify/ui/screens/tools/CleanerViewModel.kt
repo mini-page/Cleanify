@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Environment
+import android.os.storage.StorageManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.cleanify.data.cleaner.CleanerPreferences
@@ -93,25 +94,27 @@ class CleanerViewModel(application: Application) : AndroidViewModel(application)
 
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                val scanner = FileScanner(
-                    Environment.getExternalStorageDirectory(),
-                    getApplication()
-                )
-                scanner.delete = false
-                scanner.emptyFile = state.scanEmptyFile
-                scanner.emptyDir = state.scanEmptyFolder
-                scanner.corpse = state.scanCorpse
-                scanner.updateProgress = { percent ->
-                    _uiState.value = _uiState.value.copy(progress = percent)
+                var totalBytes = 0L
+                val roots = getScanRoots()
+                roots.forEachIndexed { index, root ->
+                    val scanner = FileScanner(root, getApplication())
+                    scanner.delete = false
+                    scanner.emptyFile = state.scanEmptyFile
+                    scanner.emptyDir = state.scanEmptyFolder
+                    scanner.corpse = state.scanCorpse
+                    scanner.updateProgress = { percent ->
+                        val overall = (index * 100.0 + percent) / roots.size
+                        _uiState.value = _uiState.value.copy(progress = overall)
+                    }
+                    scanner.addText = { path, _ ->
+                        _uiState.value = _uiState.value.copy(
+                            foundFiles = _uiState.value.foundFiles + File(path),
+                            log = _uiState.value.log + path
+                        )
+                    }
+                    scanner.setFilters(generic = state.scanGeneric, apk = state.scanApk)
+                    totalBytes += scanner.start()
                 }
-                scanner.addText = { path, _ ->
-                    _uiState.value = _uiState.value.copy(
-                        foundFiles = _uiState.value.foundFiles + File(path),
-                        log = _uiState.value.log + path
-                    )
-                }
-                scanner.setFilters(generic = state.scanGeneric, apk = state.scanApk)
-                val totalBytes = scanner.start()
                 _uiState.value = _uiState.value.copy(
                     isScanning = false,
                     totalSize = totalBytes,
@@ -136,27 +139,28 @@ class CleanerViewModel(application: Application) : AndroidViewModel(application)
 
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                val scanner = FileScanner(
-                    Environment.getExternalStorageDirectory(),
-                    getApplication()
-                )
-                scanner.delete = true
-                scanner.emptyFile = state.scanEmptyFile
-                scanner.emptyDir = state.scanEmptyFolder
-                scanner.corpse = state.scanCorpse
-                scanner.updateProgress = { percent ->
-                    _uiState.value = _uiState.value.copy(progress = percent)
+                var totalFailed = 0
+                val roots = getScanRoots()
+                roots.forEachIndexed { index, root ->
+                    val scanner = FileScanner(root, getApplication())
+                    scanner.delete = true
+                    scanner.emptyFile = state.scanEmptyFile
+                    scanner.emptyDir = state.scanEmptyFolder
+                    scanner.corpse = state.scanCorpse
+                    scanner.updateProgress = { percent ->
+                        val overall = (index * 100.0 + percent) / roots.size
+                        _uiState.value = _uiState.value.copy(progress = overall)
+                    }
+                    scanner.addText = { path, _ ->
+                        _uiState.value = _uiState.value.copy(log = _uiState.value.log + "Deleted: $path")
+                    }
+                    scanner.addFailText = { path ->
+                        _uiState.value = _uiState.value.copy(log = _uiState.value.log + "Failed: $path")
+                    }
+                    scanner.setFilters(generic = state.scanGeneric, apk = state.scanApk)
+                    scanner.start()
+                    totalFailed += scanner.filesFailed
                 }
-                scanner.addText = { path, _ ->
-                    _uiState.value = _uiState.value.copy(log = _uiState.value.log + "Deleted: $path")
-                }
-                scanner.addFailText = { path ->
-                    _uiState.value = _uiState.value.copy(log = _uiState.value.log + "Failed: $path")
-                }
-                scanner.setFilters(generic = state.scanGeneric, apk = state.scanApk)
-                scanner.start()
-
-                val failed = scanner.filesFailed
 
                 var ramBytes = 0L
                 if (prefs.stopBackgroundApps) {
@@ -170,7 +174,7 @@ class CleanerViewModel(application: Application) : AndroidViewModel(application)
                 _uiState.value = _uiState.value.copy(
                     isScanning = false,
                     deleteComplete = true,
-                    filesFailed = failed,
+                    filesFailed = totalFailed,
                     ramFreed = ramBytes
                 )
             }
@@ -193,27 +197,28 @@ class CleanerViewModel(application: Application) : AndroidViewModel(application)
 
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                val scanner = FileScanner(
-                    Environment.getExternalStorageDirectory(),
-                    getApplication()
-                )
-                scanner.delete = true
-                scanner.emptyFile = state.scanEmptyFile
-                scanner.emptyDir = state.scanEmptyFolder
-                scanner.corpse = state.scanCorpse
-                scanner.updateProgress = { percent ->
-                    _uiState.value = _uiState.value.copy(progress = percent)
+                var totalFailed = 0
+                val roots = getScanRoots()
+                roots.forEachIndexed { index, root ->
+                    val scanner = FileScanner(root, getApplication())
+                    scanner.delete = true
+                    scanner.emptyFile = state.scanEmptyFile
+                    scanner.emptyDir = state.scanEmptyFolder
+                    scanner.corpse = state.scanCorpse
+                    scanner.updateProgress = { percent ->
+                        val overall = (index * 100.0 + percent) / roots.size
+                        _uiState.value = _uiState.value.copy(progress = overall)
+                    }
+                    scanner.addText = { path, _ ->
+                        _uiState.value = _uiState.value.copy(log = _uiState.value.log + "Deleted: $path")
+                    }
+                    scanner.addFailText = { path ->
+                        _uiState.value = _uiState.value.copy(log = _uiState.value.log + "Failed: $path")
+                    }
+                    scanner.setFilters(generic = state.scanGeneric, apk = state.scanApk)
+                    scanner.start()
+                    totalFailed += scanner.filesFailed
                 }
-                scanner.addText = { path, _ ->
-                    _uiState.value = _uiState.value.copy(log = _uiState.value.log + "Deleted: $path")
-                }
-                scanner.addFailText = { path ->
-                    _uiState.value = _uiState.value.copy(log = _uiState.value.log + "Failed: $path")
-                }
-                scanner.setFilters(generic = state.scanGeneric, apk = state.scanApk)
-                scanner.start()
-
-                val failed = scanner.filesFailed
 
                 var ramBytes = 0L
                 if (prefs.stopBackgroundApps) {
@@ -227,7 +232,7 @@ class CleanerViewModel(application: Application) : AndroidViewModel(application)
                 _uiState.value = _uiState.value.copy(
                     isScanning = false,
                     deleteComplete = true,
-                    filesFailed = failed,
+                    filesFailed = totalFailed,
                     ramFreed = ramBytes
                 )
             }
@@ -265,6 +270,14 @@ class CleanerViewModel(application: Application) : AndroidViewModel(application)
 
         am.getMemoryInfo(mi)
         return mi.availMem - beforeFree
+    }
+
+    private fun getScanRoots(): List<File> {
+        val storageManager = getApplication<Application>().getSystemService(Context.STORAGE_SERVICE) as StorageManager
+        return storageManager.storageVolumes
+            .mapNotNull { it.directory }
+            .filter { it.exists() && it.canRead() }
+            .ifEmpty { listOf(Environment.getExternalStorageDirectory()) }
     }
 
     fun reset() {

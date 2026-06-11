@@ -33,6 +33,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.filled.Palette
@@ -84,6 +85,9 @@ import com.cleanify.ui.components.BackNavigationIcon
 import com.cleanify.ui.components.FolderSearchDialog
 import com.cleanify.ui.theme.AppTheme
 import com.cleanify.ui.theme.predefinedAccentColors
+import com.cleanify.util.UpdateChecker
+import com.cleanify.util.UpdateCheckState
+import com.cleanify.util.UpdateInfo
 import com.cleanify.util.rememberIsUsingGestureNavigation
 import kotlinx.coroutines.launch
 import java.io.File
@@ -140,6 +144,8 @@ fun SettingsScreen(
     val searchAutofocusEnabled by viewModel.searchAutofocusEnabled.collectAsState()
     val skipPartialExpansion by viewModel.skipPartialExpansion.collectAsState()
     val useFullScreenSummarySheet by viewModel.useFullScreenSummarySheet.collectAsState()
+    val reduceAnimations by viewModel.reduceAnimations.collectAsState()
+    val hideFromGallery by viewModel.hideFromGallery.collectAsState()
     val folderBarLayout by viewModel.folderBarLayout.collectAsState()
     val folderNameLayout by viewModel.folderNameLayout.collectAsState()
     val useLegacyFolderIcons by viewModel.useLegacyFolderIcons.collectAsState()
@@ -294,7 +300,8 @@ fun SettingsScreen(
                     currentTheme, currentLocale, useDynamicColors, accentColorKey,
                     folderNameLayout, compactFolderView, useLegacyFolderIcons, hideFilename,
                     folderBarLayout, skipPartialExpansion, useFullScreenSummarySheet,
-                    supportsDynamicColors, isGestureMode, viewModel
+                    supportsDynamicColors, isGestureMode, reduceAnimations, hideFromGallery,
+                    viewModel
                 )
                 "sorting" -> SortingSubPage(
                     swipeSensitivity, swipeDownAction, fullScreenSwipe, invertSwipe,
@@ -567,7 +574,8 @@ private fun AppearanceSubPage(
     accentColorKey: String, folderNameLayout: FolderNameLayout, compactFolderView: Boolean,
     useLegacyFolderIcons: Boolean, hideFilename: Boolean, folderBarLayout: FolderBarLayout,
     skipPartialExpansion: Boolean, useFullScreenSummarySheet: Boolean,
-    supportsDynamicColors: Boolean, isGestureMode: Boolean, viewModel: SettingsViewModel
+    supportsDynamicColors: Boolean, isGestureMode: Boolean, reduceAnimations: Boolean,
+    hideFromGallery: Boolean, viewModel: SettingsViewModel
 ) {
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
@@ -582,6 +590,12 @@ private fun AppearanceSubPage(
         AnimatedVisibility(visible = !useDynamicColors || !supportsDynamicColors) {
             AccentColorSetting(currentAccentKey = accentColorKey, onClick = viewModel::showAccentColorDialog)
         }
+
+        HorizontalDivider(Modifier.padding(vertical = 4.dp))
+        SectionHeader(R.string.accessibility_section_header)
+
+        SettingSwitch(R.string.reduce_animations_title, R.string.reduce_animations_desc, reduceAnimations, { viewModel.setReduceAnimations(it) })
+        SettingSwitch(R.string.hide_from_gallery_title, R.string.hide_from_gallery_desc, hideFromGallery, { viewModel.setHideFromGallery(it) })
 
         HorizontalDivider(Modifier.padding(vertical = 4.dp))
         SectionHeader(R.string.layout_section_header)
@@ -788,6 +802,9 @@ private fun AboutSubPage(
     onShowFunding: () -> Unit
 ) {
     val uriHandler = LocalUriHandler.current
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var updateState by remember { mutableStateOf<UpdateCheckState>(UpdateCheckState.Idle) }
 
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
@@ -845,6 +862,60 @@ private fun AboutSubPage(
             }
         }
 
+        UpdateCard(
+            state = updateState,
+            appVersion = viewModel.appVersion,
+            onCheck = {
+                scope.launch {
+                    updateState = UpdateCheckState.Checking
+                    val result = UpdateChecker.checkForUpdate(viewModel.appVersion)
+                    updateState = if (result != null) {
+                        UpdateCheckState.Available(result)
+                    } else if (updateState is UpdateCheckState.Checking) {
+                        UpdateCheckState.UpToDate
+                    } else {
+                        updateState
+                    }
+                }
+            },
+            onDismiss = { updateState = UpdateCheckState.Idle }
+        )
+
+        when (val state = updateState) {
+            is UpdateCheckState.Available -> UpdateAvailableDialog(
+                info = state.info,
+                onDownload = {
+                    updateState = UpdateCheckState.Downloading(0f)
+                    scope.launch {
+                        try {
+                            UpdateChecker.downloadApk(
+                                context,
+                                state.info.downloadUrl,
+                                state.info.tagName
+                            ).collect { progress ->
+                                updateState = UpdateCheckState.Downloading(progress)
+                            }
+                            val file = java.io.File(context.cacheDir, "Cleanify-${state.info.tagName}.apk")
+                            updateState = UpdateCheckState.Downloaded(file)
+                        } catch (e: Exception) {
+                            updateState = UpdateCheckState.Error(e.message ?: "Download failed")
+                        }
+                    }
+                },
+                onDismiss = { updateState = UpdateCheckState.Idle }
+            )
+            is UpdateCheckState.Downloading -> DownloadProgressDialog(
+                progress = state.progress,
+                tagName = (updateState as? UpdateCheckState.Available)?.info?.tagName ?: "",
+                onDismiss = { updateState = UpdateCheckState.Idle }
+            )
+            is UpdateCheckState.Downloaded -> InstallDialog(
+                onInstall = { UpdateChecker.installApk(context, state.file) },
+                onDismiss = { updateState = UpdateCheckState.Idle }
+            )
+            else -> {}
+        }
+
         Text(stringResource(R.string.social_section_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
 
         val socialLinks = remember {
@@ -853,7 +924,7 @@ private fun AboutSubPage(
                 Triple(Icons.Default.Code, "GitHub", "https://github.com/mini-page/"),
                 Triple(Icons.Default.BusinessCenter, "LinkedIn", "https://www.linkedin.com/in/ug5711"),
                 Triple(Icons.Default.CameraAlt, "Instagram", "https://www.instagram.com/ug_5711"),
-                Triple(Icons.Default.Send, "Telegram", "https://t.me/ug_5711"),
+                Triple(Icons.AutoMirrored.Filled.Send, "Telegram", "https://t.me/ug_5711"),
                 Triple(Icons.Default.Mood, "Snapchat", "https://www.snapchat.com/add/rg_5711"),
                 Triple(Icons.Default.Email, "Email", "mailto:raghavans5711+Support@gmail.com")
             )
@@ -1563,6 +1634,160 @@ private fun ToolAboutCard(
             }
         }
     }
+}
+
+@Composable
+private fun UpdateCard(
+    state: UpdateCheckState,
+    appVersion: String,
+    onCheck: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier.size(36.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.SystemUpdate, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                }
+                Spacer(Modifier.width(12.dp))
+                Text("Updates", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            }
+            Spacer(Modifier.height(12.dp))
+            when (state) {
+                is UpdateCheckState.Idle -> {
+                    Text("Check for new versions of Cleanify.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(onClick = onCheck, modifier = Modifier.fillMaxWidth()) {
+                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Check for Updates")
+                    }
+                }
+                is UpdateCheckState.Checking -> {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(12.dp))
+                        Text("Checking for updates\u2026", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+                is UpdateCheckState.UpToDate -> {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(12.dp))
+                        Text("Cleanify v$appVersion is up to date.", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                        TextButton(onClick = onDismiss) { Text("Dismiss") }
+                    }
+                }
+                is UpdateCheckState.Error -> {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Update check failed", style = MaterialTheme.typography.bodyMedium)
+                            Text(state.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        TextButton(onClick = onDismiss) { Text("Dismiss") }
+                    }
+                }
+                else -> {}
+            }
+        }
+    }
+}
+
+@Composable
+private fun UpdateAvailableDialog(
+    info: UpdateInfo,
+    onDownload: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Default.SystemUpdate, contentDescription = null) },
+        title = { Text("Update Available") },
+        text = {
+            Column {
+                Text("v${info.versionName}", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(4.dp))
+                Text(info.tagName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (info.changelog.isNotBlank()) {
+                    Spacer(Modifier.height(12.dp))
+                    HorizontalDivider()
+                    Spacer(Modifier.height(12.dp))
+                    Text("What's new:", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(4.dp))
+                    Text(info.changelog, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = onDownload) {
+                Icon(Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Download")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Later") }
+        }
+    )
+}
+
+@Composable
+private fun DownloadProgressDialog(
+    progress: Float,
+    tagName: String,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = {},
+        title = { Text("Downloading Update") },
+        text = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("$tagName", style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.height(16.dp))
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier.fillMaxWidth().height(6.dp),
+                )
+                Spacer(Modifier.height(8.dp))
+                Text("${(progress * 100).toInt()}%", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
+}
+
+@Composable
+private fun InstallDialog(
+    onInstall: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+        title = { Text("Download Complete") },
+        text = { Text("The update has been downloaded. Install it now to get the latest features and fixes.") },
+        confirmButton = {
+            Button(onClick = onInstall) {
+                Icon(Icons.Default.SystemUpdate, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Install")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Later") }
+        }
+    )
 }
 
 @Composable

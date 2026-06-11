@@ -3,9 +3,11 @@ package com.cleanify.data.cleaner
 import android.app.ActivityManager
 import android.content.ClipData
 import android.content.Context
+import java.io.File
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Environment
+import android.os.storage.StorageManager
 import androidx.work.CoroutineWorker
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -20,16 +22,16 @@ class CleanerWorker(
 ) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         val prefs = CleanerPreferences(applicationContext)
-        val scanner = FileScanner(
-            Environment.getExternalStorageDirectory(),
-            applicationContext
-        )
-        scanner.delete = true
-        scanner.emptyFile = prefs.cleanEmptyFile
-        scanner.emptyDir = prefs.cleanEmptyFolder
-        scanner.corpse = prefs.cleanCorpse
-        scanner.setFilters(generic = prefs.cleanGeneric, apk = prefs.cleanApk)
-        scanner.start()
+        val roots = getScanRoots()
+        for (root in roots) {
+            val scanner = FileScanner(root, applicationContext)
+            scanner.delete = true
+            scanner.emptyFile = prefs.cleanEmptyFile
+            scanner.emptyDir = prefs.cleanEmptyFolder
+            scanner.corpse = prefs.cleanCorpse
+            scanner.setFilters(generic = prefs.cleanGeneric, apk = prefs.cleanApk)
+            scanner.start()
+        }
 
         if (prefs.cleanClipboard) {
             clearClipboard()
@@ -66,6 +68,14 @@ class CleanerWorker(
                 } catch (_: Exception) {}
             }
         }
+    }
+
+    private fun getScanRoots(): List<File> {
+        val storageManager = applicationContext.getSystemService(Context.STORAGE_SERVICE) as StorageManager
+        return storageManager.storageVolumes
+            .mapNotNull { it.directory }
+            .filter { it.exists() && it.canRead() }
+            .ifEmpty { listOf(Environment.getExternalStorageDirectory()) }
     }
 
     companion object {

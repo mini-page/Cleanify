@@ -74,6 +74,13 @@ class MainViewModel @Inject constructor(
             initialValue = true
         )
 
+    val reduceAnimations: StateFlow<Boolean> = preferencesRepository.reduceAnimationsFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = false
+        )
+
     val accentColorKey: StateFlow<String> = preferencesRepository.accentColorKeyFlow
         .stateIn(
             scope = viewModelScope,

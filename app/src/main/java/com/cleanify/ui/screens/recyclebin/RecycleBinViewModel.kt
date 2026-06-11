@@ -20,9 +20,8 @@ data class RecycleBinUiState(
     val entries: List<RecycleBinEntry> = emptyList(),
     val selectedIds: Set<String> = emptySet(),
     val selectedCategory: FileCategory? = null,
-    val totalSize: Long = 0,
-    val isRefreshing: Boolean = false,
-    val snackbarMessage: String? = null
+    val availableCategories: List<FileCategory> = emptyList(),
+    val totalSize: Long = 0
 )
 
 @HiltViewModel
@@ -36,37 +35,25 @@ class RecycleBinViewModel @Inject constructor(
 
     private val _selectedCategory = MutableStateFlow<FileCategory?>(null)
 
-    private val _isRefreshing = MutableStateFlow(false)
+    private val _previewEntry = MutableStateFlow<RecycleBinEntry?>(null)
+    val previewEntry: StateFlow<RecycleBinEntry?> = _previewEntry.asStateFlow()
 
-    private val _snackbarMessage = MutableStateFlow<String?>(null)
-    val snackbarMessage: StateFlow<String?> = _snackbarMessage.asStateFlow()
-
-    private val _restoredCount = MutableStateFlow(0)
-    val restoredCount: StateFlow<Int> = _restoredCount.asStateFlow()
-
-    private val _permaDeletedCount = MutableStateFlow(0)
-    val permaDeletedCount: StateFlow<Int> = _permaDeletedCount.asStateFlow()
-
-    private val entriesFlow = combine(
-        recycleBinDao.getAllEntries(),
-        _selectedCategory
-    ) { entries, category ->
-        if (category == null) entries else entries.filter { it.fileCategory == category }
-    }
+    private val allEntriesFlow = recycleBinDao.getAllEntries()
 
     val uiState: StateFlow<RecycleBinUiState> = combine(
-        entriesFlow,
-        _selectedIds,
+        allEntriesFlow,
         _selectedCategory,
-        recycleBinDao.observeTotalSize(),
-        _isRefreshing
-    ) { entries, selected, category, totalSize, refreshing ->
+        _selectedIds,
+        recycleBinDao.observeTotalSize()
+    ) { allEntries, category, selectedIds, totalSize ->
+        val filtered = if (category == null) allEntries else allEntries.filter { it.fileCategory == category }
+        val available = allEntries.map { it.fileCategory }.distinct().sortedBy { it.ordinal }
         RecycleBinUiState(
-            entries = entries,
-            selectedIds = selected,
+            entries = filtered,
+            selectedIds = selectedIds,
             selectedCategory = category,
-            totalSize = totalSize,
-            isRefreshing = refreshing
+            availableCategories = available,
+            totalSize = totalSize
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), RecycleBinUiState())
 
@@ -86,6 +73,14 @@ class RecycleBinViewModel @Inject constructor(
         _selectedIds.value = if (_selectedIds.value.size == current.size) emptySet() else current
     }
 
+    fun showPreview(entry: RecycleBinEntry) {
+        _previewEntry.value = entry
+    }
+
+    fun dismissPreview() {
+        _previewEntry.value = null
+    }
+
     fun restoreSelected() {
         viewModelScope.launch {
             val ids = _selectedIds.value.toList()
@@ -97,35 +92,24 @@ class RecycleBinViewModel @Inject constructor(
                 }
             }
             _selectedIds.value = emptySet()
-            _snackbarMessage.value = "$restored files restored"
-            _restoredCount.value = restored
         }
     }
 
-    fun permanentlyDeleteSelected() {
+    fun permanentlyDeleteEntries(ids: Set<String>) {
         viewModelScope.launch {
-            val ids = _selectedIds.value.toList()
-            var deleted = 0
             ids.forEach { id ->
                 val entry = recycleBinDao.getEntryById(id)
-                if (entry != null && recycleBinManager.permanentlyDeleteEntry(entry)) {
-                    deleted++
+                if (entry != null) {
+                    recycleBinManager.permanentlyDeleteEntry(entry)
                 }
             }
             _selectedIds.value = emptySet()
-            _snackbarMessage.value = "$deleted files permanently deleted"
-            _permaDeletedCount.value = deleted
         }
     }
 
     fun emptyBin() {
         viewModelScope.launch {
-            val count = recycleBinManager.emptyBin()
-            _snackbarMessage.value = "Recycle bin emptied ($count files)"
+            recycleBinManager.emptyBin()
         }
-    }
-
-    fun clearSnackbar() {
-        _snackbarMessage.value = null
     }
 }

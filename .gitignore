@@ -42,3 +42,10 @@ google-services.json
 
 # Backup Files
 *.bck
+
+# Tooling / editor config
+.claude/
+.gitnexus/
+.planning/
+AGENTS.md
+/.xml

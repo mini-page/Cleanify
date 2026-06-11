@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="quick_clean"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher_monochrome"
+        android:shortcutShortLabel="@string/shortcut_quick_clean"
+        android:shortcutLongLabel="@string/shortcut_quick_clean_long"
+        android:shortcutDisabledMessage="@string/shortcut_disabled">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.cleanify"
+            android:targetClass="com.cleanify.ui.MainActivity"
+            android:data="app://com.cleanify/empty_cleaner" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="find_duplicates"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher_monochrome"
+        android:shortcutShortLabel="@string/shortcut_find_duplicates"
+        android:shortcutLongLabel="@string/shortcut_find_duplicates_long"
+        android:shortcutDisabledMessage="@string/shortcut_disabled">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.cleanify"
+            android:targetClass="com.cleanify.ui.MainActivity"
+            android:data="app://com.cleanify/duplicates_graph" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="contact_cleaner"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher_monochrome"
+        android:shortcutShortLabel="@string/shortcut_contact_cleaner"
+        android:shortcutLongLabel="@string/shortcut_contact_cleaner_long"
+        android:shortcutDisabledMessage="@string/shortcut_disabled">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.cleanify"
+            android:targetClass="com.cleanify.ui.MainActivity"
+            android:data="app://com.cleanify/contact_cleaner" />
+    </shortcut>
+</shortcuts>

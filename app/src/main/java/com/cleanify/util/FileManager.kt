@@ -19,6 +19,7 @@ package com.cleanify.util
 
 import android.content.Context
 import android.net.Uri
+import android.os.Build
 import android.os.Environment
 import android.provider.DocumentsContract
 import java.io.File
@@ -36,19 +37,24 @@ object FileManager {
             if (!sourceFile.exists()) return null
 
             val destinationFolder = File(destinationFolderPath)
-            // Create the destination folder if it doesn't exist.
             destinationFolder.mkdirs()
 
             val destinationFile = File(destinationFolder, sourceFile.name)
 
-            // The magic happens here. This single line replaces all the old complexity.
             if (sourceFile.renameTo(destinationFile)) {
                 destinationFile
             } else {
-                null // Move failed for a standard reason (e.g., cross-device move)
+                // renameTo fails across mount points (e.g. SD card → internal).
+                // Fall back to copy + delete.
+                sourceFile.copyTo(destinationFile, overwrite = true)
+                if (destinationFile.exists()) {
+                    sourceFile.delete()
+                    destinationFile
+                } else {
+                    null
+                }
             }
         } catch (e: Exception) {
-            // Handle standard IOExceptions, SecurityExceptions (though less likely now)
             e.printStackTrace()
             null
         }
@@ -120,7 +126,6 @@ object FileManager {
         val treeDocumentId = try {
             DocumentsContract.getTreeDocumentId(treeUri)
         } catch (e: IllegalArgumentException) {
-            // This URI is not a tree URI, which can happen.
             return null
         }
 
@@ -131,24 +136,44 @@ object FileManager {
                 val type = split[0]
                 val path = split[1]
 
-                if ("primary".equals(type, ignoreCase = true)) {
-                    return "${Environment.getExternalStorageDirectory().absolutePath}/$path"
-                }
+                val resolved = resolveVolumePath(context, type, path)
+                if (resolved != null) return resolved
             }
         }
 
-        // Fallback for URIs that might not be document URIs but are tree URIs
         val split = treeDocumentId.split(":")
         if (split.size > 1) {
             val type = split[0]
             val path = split[1]
 
-            if ("primary".equals(type, ignoreCase = true)) {
-                return "${Environment.getExternalStorageDirectory().absolutePath}/$path"
+            val resolved = resolveVolumePath(context, type, path)
+            if (resolved != null) return resolved
+        }
+
+        return null
+    }
+
+    private fun resolveVolumePath(context: Context, volumeType: String, path: String): String? {
+        if ("primary".equals(volumeType, ignoreCase = true)) {
+            return "${Environment.getExternalStorageDirectory().absolutePath}/$path"
+        }
+
+        // Try to match secondary volumes (SD cards, USB OTG) by their UUID / volume type.
+        val storageManager = context.getSystemService(Context.STORAGE_SERVICE) as? android.os.storage.StorageManager
+        if (storageManager != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            for (sv in storageManager.storageVolumes) {
+                val dir = sv.directory ?: continue
+                @Suppress("DEPRECATION")
+                val uuid = sv.getUuid()
+                if (uuid != null && uuid.equals(volumeType, ignoreCase = true)) {
+                    return "${dir.absolutePath}/$path"
+                }
+                if (!sv.isPrimary && dir.name.equals(volumeType, ignoreCase = true)) {
+                    return "${dir.absolutePath}/$path"
+                }
             }
         }
 
-        // If we reach here, it's a non-primary storage (like an SD card) which we do not support for raw path conversion.
         return null
     }
 

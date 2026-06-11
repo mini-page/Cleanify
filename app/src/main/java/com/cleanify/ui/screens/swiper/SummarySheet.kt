@@ -35,7 +35,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -68,6 +70,7 @@ fun SummarySheet(
     isMaximized: Boolean = false,
     onDynamicHeightChange: (Boolean) -> Unit = {}
 ) {
+    val haptic = LocalHapticFeedback.current
     var showConfirmDialog by remember { mutableStateOf(false) }
 
     if (showConfirmDialog) {
@@ -77,6 +80,7 @@ fun SummarySheet(
             text = { Text(stringResource(R.string.confirm_changes_body)) },
             confirmButton = {
                 Button(onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     showConfirmDialog = false
                     onConfirm()
                 }) {
@@ -212,6 +216,7 @@ private fun SummarySheetContent(
     isMaximized: Boolean,
     onDynamicHeightChange: (Boolean) -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
     val configuration = LocalConfiguration.current
     val screenHeight = configuration.screenHeightDp.dp
     val isGestureMode = rememberIsUsingGestureNavigation()
@@ -436,7 +441,7 @@ private fun SummarySheetContent(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             OutlinedButton(onClick = { onResetChanges(); onDismiss() }, modifier = Modifier.weight(1f)) { Text(cancelChangesButtonLabel) }
-            Button(onClick = onConfirm, modifier = Modifier.weight(1f), enabled = !isApplyingChanges && pendingChanges.isNotEmpty()) {
+            Button(onClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onConfirm() }, modifier = Modifier.weight(1f), enabled = !isApplyingChanges && pendingChanges.isNotEmpty()) {
                 if (isApplyingChanges) {
                     CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
                     Spacer(modifier = Modifier.width(8.dp))

@@ -133,6 +133,8 @@ class PreferencesRepository @Inject constructor(
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
         val COMPACT_FOLDER_VIEW = booleanPreferencesKey("compact_folder_view")
         val HIDE_FILENAME = booleanPreferencesKey("hide_filename")
+        val REDUCE_ANIMATIONS = booleanPreferencesKey("reduce_animations")
+        val HIDE_FROM_GALLERY = booleanPreferencesKey("hide_from_gallery")
         val INVERT_SWIPE = booleanPreferencesKey("invert_swipe")
         val FULL_SCREEN_SWIPE = booleanPreferencesKey("full_screen_swipe")
         val FOLDER_SELECTION_MODE = stringPreferencesKey("folder_selection_mode")
@@ -237,6 +239,16 @@ class PreferencesRepository @Inject constructor(
     val invertSwipeFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.INVERT_SWIPE] ?: false
+        }
+
+    val reduceAnimationsFlow: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.REDUCE_ANIMATIONS] ?: false
+        }
+
+    val hideFromGalleryFlow: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.HIDE_FROM_GALLERY] ?: false
         }
 
     val fullScreenSwipeFlow: Flow<Boolean> = context.dataStore.data
@@ -589,6 +601,18 @@ class PreferencesRepository @Inject constructor(
     suspend fun setInvertSwipe(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.INVERT_SWIPE] = enabled
+        }
+    }
+
+    suspend fun setReduceAnimations(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.REDUCE_ANIMATIONS] = enabled
+        }
+    }
+
+    suspend fun setHideFromGallery(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.HIDE_FROM_GALLERY] = enabled
         }
     }
 

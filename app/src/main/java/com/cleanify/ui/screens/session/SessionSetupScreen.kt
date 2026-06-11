@@ -335,7 +335,7 @@ fun SessionSetupScreen(
                                 showSortMenu = false
                             },
                             leadingIcon = {
-                                if (uiState.currentSortOption == FolderSortOption.ALPHABETICAL_ASC) Icon(Icons.Default.Check, null)
+                                if (uiState.currentSortOption == FolderSortOption.ALPHABETICAL_ASC) Icon(Icons.Default.Check, contentDescription = "Check")
                             })
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.sort_name_za)) },
@@ -344,7 +344,7 @@ fun SessionSetupScreen(
                                 showSortMenu = false
                             },
                             leadingIcon = {
-                                if (uiState.currentSortOption == FolderSortOption.ALPHABETICAL_DESC) Icon(Icons.Default.Check, null)
+                                if (uiState.currentSortOption == FolderSortOption.ALPHABETICAL_DESC) Icon(Icons.Default.Check, contentDescription = "Check")
                             })
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.sort_size_largest)) },
@@ -353,7 +353,7 @@ fun SessionSetupScreen(
                                 showSortMenu = false
                             },
                             leadingIcon = {
-                                if (uiState.currentSortOption == FolderSortOption.SIZE_DESC) Icon(Icons.Default.Check, null)
+                                if (uiState.currentSortOption == FolderSortOption.SIZE_DESC) Icon(Icons.Default.Check, contentDescription = "Check")
                             })
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.sort_size_smallest)) },
@@ -362,7 +362,7 @@ fun SessionSetupScreen(
                                 showSortMenu = false
                             },
                             leadingIcon = {
-                                if (uiState.currentSortOption == FolderSortOption.SIZE_ASC) Icon(Icons.Default.Check, null)
+                                if (uiState.currentSortOption == FolderSortOption.SIZE_ASC) Icon(Icons.Default.Check, contentDescription = "Check")
                             })
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.sort_count_most)) },
@@ -371,7 +371,7 @@ fun SessionSetupScreen(
                                 showSortMenu = false
                             },
                             leadingIcon = {
-                                if (uiState.currentSortOption == FolderSortOption.ITEM_COUNT_DESC) Icon(Icons.Default.Check, null)
+                                if (uiState.currentSortOption == FolderSortOption.ITEM_COUNT_DESC) Icon(Icons.Default.Check, contentDescription = "Check")
                             })
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.sort_count_fewest)) },
@@ -380,7 +380,7 @@ fun SessionSetupScreen(
                                 showSortMenu = false
                             },
                             leadingIcon = {
-                                if (uiState.currentSortOption == FolderSortOption.ITEM_COUNT_ASC) Icon(Icons.Default.Check, null)
+                                if (uiState.currentSortOption == FolderSortOption.ITEM_COUNT_ASC) Icon(Icons.Default.Check, contentDescription = "Check")
                             })
                     }
                 }
@@ -858,7 +858,7 @@ private fun EnhancedFolderItem(
                                 onRename()
                                 showContextMenu = false
                             },
-                            leadingIcon = { Icon(Icons.Default.Edit, null) }
+                            leadingIcon = { Icon(Icons.Default.Edit, contentDescription = "Edit") }
                         )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.move_to_ellipsis)) },
@@ -866,7 +866,7 @@ private fun EnhancedFolderItem(
                                 onMove()
                                 showContextMenu = false
                             },
-                            leadingIcon = { Icon(Icons.AutoMirrored.Filled.DriveFileMove, null) }
+                            leadingIcon = { Icon(Icons.AutoMirrored.Filled.DriveFileMove, contentDescription = "Move") }
                         )
                         DropdownMenuItem(
                             text = {
@@ -880,7 +880,7 @@ private fun EnhancedFolderItem(
                                 }
                                 showContextMenu = false
                             },
-                            leadingIcon = { Icon(Icons.Default.AccountTree, null) }
+                            leadingIcon = { Icon(Icons.Default.AccountTree, contentDescription = "Select subfolders") }
                         )
                         if (!folder.isSystemFolder) {
                             DropdownMenuItem(
@@ -891,7 +891,7 @@ private fun EnhancedFolderItem(
                                 },
                                 leadingIcon = {
                                     val icon = if (isFavorite) Icons.Default.StarOutline else Icons.Default.Star
-                                    Icon(icon, null)
+                                    Icon(icon, contentDescription = "Favorite")
                                 }
                             )
                         }

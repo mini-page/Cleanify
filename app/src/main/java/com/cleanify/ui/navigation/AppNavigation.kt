@@ -184,13 +184,23 @@ onNavigateToSettings = { navController.navigate(Screen.Settings.createRoute("sor
             )
         }
 
-        composable(Screen.RecycleBin.route) {
+        composable(
+            route = Screen.RecycleBin.route,
+            deepLinks = listOf(
+                navDeepLink { uriPattern = "$DEEP_LINK_URI_BASE/recycle_bin" }
+            )
+        ) {
             RecycleBinScreen(
                 onNavigateUp = { navController.navigateUp() }
             )
         }
 
-        composable(Screen.ContactCleaner.route) {
+        composable(
+            route = Screen.ContactCleaner.route,
+            deepLinks = listOf(
+                navDeepLink { uriPattern = "$DEEP_LINK_URI_BASE/contact_cleaner" }
+            )
+        ) {
             ContactCleanerScreen(
                 onNavigateUp = { navController.navigateUp() },
                 onNavigateToSettings = { navController.navigate(Screen.Settings.createRoute("contact_cleaner")) }
@@ -207,7 +217,12 @@ onNavigateToSettings = { navController.navigate(Screen.Settings.createRoute("sor
             )
         }
 
-        composable(Screen.EmptyCleaner.route) {
+        composable(
+            route = Screen.EmptyCleaner.route,
+            deepLinks = listOf(
+                navDeepLink { uriPattern = "$DEEP_LINK_URI_BASE/empty_cleaner" }
+            )
+        ) {
             EmptyCleanerScreen(
                 onNavigateUp = { navController.navigateUp() },
                 onNavigateToSettings = { navController.navigate(Screen.CleanerSettings.route) }

@@ -43,6 +43,7 @@ import com.cleanify.domain.model.IndexingStatus
 import com.cleanify.domain.repository.MediaRepository
 import com.cleanify.util.FileManager
 import com.cleanify.util.FileOperationsHelper
+import com.cleanify.util.StorageVolumeProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -69,7 +70,8 @@ class DirectMediaRepositoryImpl @Inject constructor(
     @AppModule.ApplicationScope private val externalScope: CoroutineScope,
     private val fileOperationsHelper: FileOperationsHelper,
     private val folderUpdateEventBus: FolderUpdateEventBus,
-    private val appLifecycleEventBus: AppLifecycleEventBus
+    private val appLifecycleEventBus: AppLifecycleEventBus,
+    private val storageVolumeProvider: StorageVolumeProvider
 ) : MediaRepository {
 
     private val logTag ="DirectMediaRepo"
@@ -724,10 +726,7 @@ class DirectMediaRepositoryImpl @Inject constructor(
         val recentFolders = mutableMapOf<String, Long>()
         val queue: Queue<File> = ArrayDeque()
 
-        val root = Environment.getExternalStorageDirectory()
-        if (root != null && root.exists()) {
-            queue.add(root)
-        }
+        queueAllVolumeRoots(queue)
 
         while (queue.isNotEmpty()) {
             currentCoroutineContext().ensureActive()
@@ -919,18 +918,16 @@ class DirectMediaRepositoryImpl @Inject constructor(
         val targetFolders = mutableListOf<Pair<String, String>>()
         val queue: Queue<File> = ArrayDeque()
 
-        Environment.getExternalStorageDirectory()?.let { queue.add(it) }
+        queueAllVolumeRoots(queue)
 
         while (queue.isNotEmpty()) {
             currentCoroutineContext().ensureActive()
             val directory = queue.poll() ?: continue
 
-            // Basic safety and exclusion checks
             if (!directory.exists() || !directory.canRead() || directory.name.startsWith(".") || !isSafeDestination(directory.absolutePath)) {
                 continue
             }
 
-            // Exclude translated 'To Edit' folder
             if (directory.name == localizedToEditFolderName) {
                 continue
             }
@@ -970,7 +967,7 @@ class DirectMediaRepositoryImpl @Inject constructor(
         val allDiscoveredFiles = mutableListOf<File>()
         val queue: Queue<File> = ArrayDeque()
 
-        Environment.getExternalStorageDirectory()?.let { queue.add(it) }
+        queueAllVolumeRoots(queue)
 
         // Phase 1: Discover all files and categorize them by parent folder in a single traversal.
         while (queue.isNotEmpty()) {
@@ -1229,7 +1226,7 @@ class DirectMediaRepositoryImpl @Inject constructor(
     override suspend fun getAllMediaFilePaths(): Set<String> = withContext(Dispatchers.IO) {
         val fileSystemPaths = mutableSetOf<String>()
         val queue: Queue<File> = ArrayDeque()
-        Environment.getExternalStorageDirectory()?.let { queue.add(it) }
+        queueAllVolumeRoots(queue)
 
         while (queue.isNotEmpty()) {
             currentCoroutineContext().ensureActive()
@@ -1378,5 +1375,13 @@ class DirectMediaRepositoryImpl @Inject constructor(
         }
         Log.d(logTag, "Triggering full scan for ${unindexedPaths.size} items.")
         return@withContext scanPathsAndWait(unindexedPaths)
+    }
+
+    private fun queueAllVolumeRoots(queue: Queue<File>) {
+        storageVolumeProvider.getScanRoots().forEach { root ->
+            if (root.exists() && root.canRead()) {
+                queue.add(root)
+            }
+        }
     }
 }

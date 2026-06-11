@@ -24,8 +24,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -44,6 +46,7 @@ fun ContactCleanerScreen(
     viewModel: ContactCleanerViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -148,13 +151,13 @@ fun ContactCleanerScreen(
                     )
                     Spacer(Modifier.weight(1f))
                     TextButton(
-                        onClick = { viewModel.deleteSelected() },
+                        onClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.deleteSelected() },
                         enabled = !uiState.isOperating
                     ) {
                         if (uiState.isOperating) {
                             CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                         } else {
-                            Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.Delete, contentDescription = "Delete", modifier = Modifier.size(18.dp))
                         }
                         Spacer(Modifier.width(4.dp))
                         Text("Delete")
@@ -261,7 +264,7 @@ private fun PermissionPrompt(
             Spacer(Modifier.height(24.dp))
             if (permanentlyDenied) {
                 OutlinedButton(onClick = onOpenSettings) {
-                    Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Settings, contentDescription = "Open Settings", modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
                     Text("Open Settings")
                 }
@@ -357,7 +360,7 @@ private fun AllContactsTab(
             onValueChange = onSearchQueryChange,
             placeholder = { Text("Search by name or phone...") },
             singleLine = true,
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
             trailingIcon = {
                 if (searchQuery.isNotEmpty()) {
                     IconButton(onClick = { onSearchQueryChange("") }) {
@@ -504,6 +507,7 @@ private fun IssueCard(
     onToggle: (Long) -> Unit,
     onDelete: (Long) -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
     val issueLabel = when {
         contact.name.isBlank() -> "No name"
         contact.phoneNumbers.isEmpty() -> "No phone number"
@@ -548,7 +552,7 @@ private fun IssueCard(
                 }
             }
             IconButton(
-                onClick = { onDelete(contact.id) },
+                onClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onDelete(contact.id) },
                 enabled = !isOperating
             ) {
                 Icon(

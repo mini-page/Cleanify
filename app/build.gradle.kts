@@ -44,8 +44,8 @@ android {
         applicationId = "com.cleanify"
         minSdk = 29
         targetSdk = 36
-        versionCode = 9
-        versionName = "2.4.0"
+        versionCode = 11
+        versionName = "2.6.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -77,6 +77,15 @@ android {
         }
     }
 
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
+            isUniversalApk = true
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -85,6 +94,15 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    ndkVersion = "30.0.14904198"
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
     }
 
     packaging {
@@ -105,9 +123,12 @@ androidComponents {
             val customAbi: String? by project
             val abiSuffix = if (customAbi != null) "-$customAbi" else ""
 
-            (output as? com.android.build.api.variant.impl.VariantOutputImpl)?.outputFileName?.set(
-                "$appName-v$versionName$abiSuffix-$buildType.apk"
-            )
+            val baseName = "$appName-v$versionName$abiSuffix-$buildType"
+            val filters = output.filters
+            val abiFilter = filters.find { it.filterType.name.equals("ABI", ignoreCase = true) }?.identifier
+            val finalName = if (abiFilter != null) "$baseName-$abiFilter.apk" else "$baseName.apk"
+
+            (output as? com.android.build.api.variant.impl.VariantOutputImpl)?.outputFileName?.set(finalName)
         }
     }
 }

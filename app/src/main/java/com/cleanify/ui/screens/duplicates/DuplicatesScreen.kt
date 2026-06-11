@@ -63,8 +63,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -106,6 +108,7 @@ fun DuplicatesScreen(
     onNavigateToSettings: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
     var showConfirmDeleteDialog by remember { mutableStateOf(false) }
     var showConfirmDeleteAllExactDialog by remember { mutableStateOf(false) }
@@ -152,6 +155,7 @@ fun DuplicatesScreen(
             confirmButton = {
                 Button(
                     onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         viewModel.deleteSelectedFiles()
                         showConfirmDeleteDialog = false
                     },
@@ -196,6 +200,7 @@ fun DuplicatesScreen(
             confirmButton = {
                 Button(
                     onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         if (doNotAskAgain) {
                             viewModel.setShowConfirmDeleteAllExact(false)
                         }
@@ -269,6 +274,7 @@ fun DuplicatesScreen(
                         val hasExactDuplicates = uiState.resultGroups.any { it is DuplicateGroup }
                         if (hasExactDuplicates) {
                             IconButton(onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 if (uiState.showConfirmDeleteAllExact) {
                                     showConfirmDeleteAllExactDialog = true
                                 } else {
@@ -1484,13 +1490,13 @@ private fun GridGroupCard(
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.flag_as_incorrect)) },
                         onClick = { onFlagAsIncorrect(group); showMenu = false },
-                        leadingIcon = { Icon(Icons.Outlined.Flag, contentDescription = null) }
+                        leadingIcon = { Icon(Icons.Outlined.Flag, contentDescription = "Flag") }
                     )
                 }
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.hide_group)) },
                     onClick = { onHideGroup(group); showMenu = false },
-                    leadingIcon = { Icon(Icons.Outlined.VisibilityOff, contentDescription = null) }
+                    leadingIcon = { Icon(Icons.Outlined.VisibilityOff, contentDescription = "Hide") }
                 )
             }
         }
@@ -1560,7 +1566,7 @@ private fun DuplicateGroupCard(
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.hide_group)) },
                             onClick = { onHideGroup(group); showMenu = false },
-                            leadingIcon = { Icon(Icons.Outlined.VisibilityOff, contentDescription = null) }
+                            leadingIcon = { Icon(Icons.Outlined.VisibilityOff, contentDescription = "Hide") }
                         )
                     }
                 }
@@ -1656,12 +1662,12 @@ private fun SimilarMediaGroupCard(
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.flag_as_incorrect)) },
                             onClick = { onFlagAsIncorrect(group); showMenu = false },
-                            leadingIcon = { Icon(Icons.Outlined.Flag, contentDescription = null) }
+                        leadingIcon = { Icon(Icons.Outlined.Flag, contentDescription = "Flag") }
                         )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.hide_group)) },
                             onClick = { onHideGroup(group); showMenu = false },
-                            leadingIcon = { Icon(Icons.Outlined.VisibilityOff, contentDescription = null) }
+                            leadingIcon = { Icon(Icons.Outlined.VisibilityOff, contentDescription = "Hide") }
                         )
                     }
                 }
@@ -1795,7 +1801,7 @@ private fun MediaItemRow(
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.open)) },
                 onClick = { onOpenFile(); showMenu = false },
-                leadingIcon = { Icon(Icons.Outlined.OpenInFull, null) }
+                leadingIcon = { Icon(Icons.Outlined.OpenInFull, contentDescription = "Expand") }
             )
         }
     }
@@ -1810,6 +1816,7 @@ private fun BottomActionBar(
     actionButtonText: String = stringResource(R.string.delete),
     actionButtonIcon: ImageVector = Icons.Outlined.Delete
 ) {
+    val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -1835,7 +1842,7 @@ private fun BottomActionBar(
                 )
             }
             Button(
-                onClick = onDeleteClick,
+                onClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onDeleteClick() },
                 enabled = !isDeleting && (selectedCount > 0 || actionButtonText != stringResource(R.string.delete))
             ) {
                 if (isDeleting) {
@@ -1915,7 +1922,7 @@ private fun DetailImageCard(
                         onOpenFile()
                         showMenu = false
                     },
-                    leadingIcon = { Icon(Icons.Outlined.OpenInFull, contentDescription = null) }
+                    leadingIcon = { Icon(Icons.Outlined.OpenInFull, contentDescription = "Expand") }
                 )
             }
 

@@ -76,3 +76,9 @@
     public static **[] values();
     public static ** valueOf(java.lang.String);
 }
+
+# Native hasher JNI
+-keep class com.cleanify.util.NativeHasher { *; }
+
+# PDFBox references com.gemalto.jp2 optionally for JPX; not bundled in APK
+-dontwarn com.gemalto.jp2.**

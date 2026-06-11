@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="8dp"
+    android:gravity="center">
+
+    <TextView
+        android:id="@+id/widget_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/app_name"
+        android:textAppearance="@android:style/TextAppearance.Material.Medium"
+        android:textStyle="bold"
+        android:gravity="center" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:weightSum="3">
+
+        <Button
+            android:id="@+id/action_clean"
+            style="@android:style/Widget.Material.Button.Colored"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_margin="3dp"
+            android:text="@string/widget_quick_clean"
+            android:textSize="11sp"
+            android:gravity="center"
+            android:lines="2" />
+
+        <Button
+            android:id="@+id/action_duplicates"
+            style="@android:style/Widget.Material.Button.Colored"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_margin="3dp"
+            android:text="@string/widget_duplicates"
+            android:textSize="11sp"
+            android:gravity="center"
+            android:lines="2" />
+
+        <Button
+            android:id="@+id/action_recycle_bin"
+            style="@android:style/Widget.Material.Button.Colored"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_margin="3dp"
+            android:text="@string/widget_recycle_bin"
+            android:textSize="11sp"
+            android:gravity="center"
+            android:lines="2" />
+
+    </LinearLayout>
+
+</LinearLayout>
