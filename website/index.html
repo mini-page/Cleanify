@@ -374,10 +374,10 @@
         <p>Sort thousands of files with a fun Tinder-style card interface. Keep, delete, move, or skip with a single gesture.</p>
         <ul>
           <li>Swipe right to keep &middot; left to delete</li>
+          <li>Immersive full-screen media preview with pinch-to-zoom</li>
           <li>Target folder bar for quick moves</li>
           <li>Inline video player with speed control</li>
-          <li>Undo any action at any time</li>
-          <li>Summary sheet to review before applying</li>
+          <li>Undo any action &middot; Summary sheet review</li>
         </ul>
       </div>
 
@@ -399,11 +399,37 @@
         <h3>Junk Remover</h3>
         <p>Beyond media &mdash; clean empty files, folders, APKs, temp files, and corpse folders.</p>
         <ul>
+          <li>Multi-volume support &mdash; scan internal, SD, or USB OTG</li>
           <li>Double-Checker runs multiple passes</li>
           <li>Auto-Whitelist protects backup paths</li>
           <li>Clean on boot &amp; scheduled cleaning</li>
-          <li>Blacklist / Whitelist editors with regex</li>
           <li>Quick Clean &mdash; skip scan, apply instantly</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <span class="feat-icon">&#x267B;</span>
+        <h3>Recycle Bin</h3>
+        <p>A safe space for trashed files &mdash; recover what you need before it&rsquo;s gone forever.</p>
+        <ul>
+          <li>Per-category filtering with always-visible tabs</li>
+          <li>Select All / Deselect All batch operations</li>
+          <li>Restore files to their original location</li>
+          <li>Media preview for images and videos</li>
+          <li>Empty Recycle Bin with one tap</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <span class="feat-icon">&#x1F4CA;</span>
+        <h3>Storage Analysis</h3>
+        <p>Visualize your device&rsquo;s storage landscape at a glance with interactive charts.</p>
+        <ul>
+          <li>Donut chart &mdash; used vs. free with color-coded status</li>
+          <li>Per-volume cards for internal, SD, and USB OTG</li>
+          <li>Category breakdown bars with sizes &amp; percentages</li>
+          <li>Top 10 largest files, tappable for details</li>
+          <li>Bounded BFS scan for fast results</li>
         </ul>
       </div>
 
@@ -433,15 +459,15 @@
       </div>
 
       <div class="feature-card">
-        <span class="feat-icon">&#x2699;&#xFE0F;</span>
-        <h3>Customization</h3>
-        <p>Every detail configurable &mdash; gestures, layout, folder behavior, video defaults, and more.</p>
+        <span class="feat-icon">&#x1F9F0;</span>
+        <h3>Accessibility</h3>
+        <p>Designed for everyone &mdash; reduce animations, hide from gallery, full TalkBack support.</p>
         <ul>
-          <li>Swipe sensitivity &amp; direction control</li>
-          <li>Configurable swipe-down action</li>
-          <li>Folder name position on cards</li>
-          <li>Export / Import settings &amp; favorites</li>
-          <li>Full-text searchable settings</li>
+          <li>Reduce Animations toggle for sensitive users</li>
+          <li>Hide from Gallery (.nomedia) default-ON</li>
+          <li>Haptic feedback on destructive actions</li>
+          <li>Full TalkBack content descriptions</li>
+          <li>App shortcuts &amp; Quick Settings tile</li>
         </ul>
       </div>
 
@@ -463,14 +489,18 @@
         <div class="changes">
           <div class="change-cat">Added</div>
           <ul>
-            <li>Native xxHash64 hashing engine &mdash; SHA-256 replaced with xxHash64 via C/NDK for ~10x faster hash computation on bulk media scanning.</li>
-            <li>CMake + NDK integration &mdash; native code compiled for all target architectures.</li>
-            <li>NativeHasher fallback &mdash; pure-Kotlin hashBytes() fallback if native library fails to load.</li>
-            <li>Release keystore for signed release builds.</li>
+            <li>Immersive media preview &mdash; full-screen viewer with pinch-to-zoom and double-tap reset.</li>
+            <li>Storage analysis &mdash; donut chart, per-volume cards, category breakdown, largest files.</li>
+            <li>Recycle Bin &mdash; per-category filtering, select-all, media preview, batch restore.</li>
+            <li>Multi-volume empty cleaner &mdash; dynamic volume selector for internal, SD, USB OTG.</li>
+            <li>Accessibility &mdash; Reduce Animations, Hide from Gallery, full TalkBack support.</li>
+            <li>App shortcuts (deep links), Quick Settings tile, redesigned widget.</li>
+            <li>Native xxHash64 hashing engine &mdash; ~10x faster duplicate detection.</li>
           </ul>
           <div class="change-cat">Changed</div>
           <ul>
-            <li>Duplicate scanning now uses native xxHash64 for full file hashes, partial video hashes, and pixel hashes.</li>
+            <li>Duplicate scanning now uses native xxHash64 for all hash types.</li>
+            <li>Cross-volume file moves and multi-root scanning across all cleaner tools.</li>
           </ul>
         </div>
       </div>
