@@ -49,14 +49,14 @@ class DuplicateFinderUseCase @Inject constructor(
         allMediaItems: List<MediaItem>,
         onProgress: (itemsProcessed: Int) -> Unit
     ): DuplicateScanResult = withContext(Dispatchers.IO) {
-        Log.d(TAG, "DEBUG: Starting exact duplicate scan using hybrid hashing.")
+        Log.d(TAG, "Starting exact duplicate scan using hybrid hashing.")
 
         if (allMediaItems.isEmpty()) {
             onProgress(0)
             return@withContext DuplicateScanResult(emptyList(), emptyList())
         }
 
-        // --- Phase 1: Group by size ---
+        // Phase 1: Group by size
         val filesGroupedBySize = allMediaItems
             .filter { it.size > 0 }
             .groupBy { it.size }
@@ -66,9 +66,9 @@ class DuplicateFinderUseCase @Inject constructor(
         if (nonPotentialsCount > 0) {
             onProgress(nonPotentialsCount) // Report non-potential duplicates as "processed"
         }
-        Log.d(TAG, "DEBUG: Phase 1 (size check) complete. Found ${potentialDuplicates.size} potential duplicates.")
+        Log.d(TAG, "Phase 1 (size check) complete. Found ${potentialDuplicates.size} potential duplicates.")
 
-        // --- Phase 2: Hashing ---
+        // Phase 2: Hashing
         val cache = fileSignatureDao.getAllHashes().associateBy { it.filePath }
         val finalHashes = mutableMapOf<String, MutableList<MediaItem>>()
         val hashesToUpsert = mutableListOf<FileSignatureCache>()
@@ -76,7 +76,7 @@ class DuplicateFinderUseCase @Inject constructor(
         val skippedPaths = mutableListOf<String>()
 
         if (potentialDuplicates.isNotEmpty()) {
-            val CHUNK_SIZE = 100 // Process in chunks to report progress periodically
+            val CHUNK_SIZE = 100
             potentialDuplicates.chunked(CHUNK_SIZE).forEach { chunk ->
                 coroutineContext.ensureActive()
                 chunk.forEach { mediaItem ->
@@ -98,7 +98,7 @@ class DuplicateFinderUseCase @Inject constructor(
                             }
                             newHash
                         } catch (e: Exception) {
-                            Log.e(TAG, "DEBUG: Error hashing file ${mediaItem.displayName}: ${e.message}")
+                            Log.e(TAG, "Error hashing file ${mediaItem.displayName}: ${e.message}")
                             skippedPaths.add(mediaItem.id)
                             "" // Skip file on error
                         }
@@ -107,16 +107,16 @@ class DuplicateFinderUseCase @Inject constructor(
                     if (hash.isNotEmpty()) {
                         finalHashes.getOrPut(hash) { mutableListOf() }.add(mediaItem)
                     } else if (cached == null) {
-                        // If hashing resulted in an empty string and it wasn't a cache hit, it means hashing failed.
+                        // Hashing failed, not a cache hit
                         skippedPaths.add(mediaItem.id)
                     }
                 }
                 onProgress(chunk.size) // Report progress after each chunk
             }
         }
-        Log.d(TAG, "DEBUG: Phase 2 (hybrid hashing) complete.")
+        Log.d(TAG, "Phase 2 (hybrid hashing) complete.")
 
-        // --- Phase 3: DB Cleanup & Finalizing ---
+        // Phase 3: DB Cleanup
         if (hashesToUpsert.isNotEmpty()) {
             fileSignatureDao.upsertHashes(hashesToUpsert)
         }
@@ -136,7 +136,7 @@ class DuplicateFinderUseCase @Inject constructor(
             }
             .sortedByDescending { it.items.size * it.sizePerFile }
 
-        Log.d(TAG, "DEBUG: Exact duplicate scan finished. Found ${resultGroups.size} groups, skipped ${skippedPaths.size} files.")
+        Log.d(TAG, "Exact duplicate scan finished. Found ${resultGroups.size} groups, skipped ${skippedPaths.size} files.")
         return@withContext DuplicateScanResult(resultGroups, skippedPaths)
     }
 
@@ -164,7 +164,7 @@ class DuplicateFinderUseCase @Inject constructor(
         return try {
             context.contentResolver.loadThumbnail(mediaItem.uri, Size(size, size), null)
         } catch (e: Exception) {
-            Log.w(TAG, "DEBUG: Thumbnail generation failed for ${mediaItem.id}. Message: ${e.message}")
+            Log.w(TAG, "Thumbnail generation failed for ${mediaItem.id}: ${e.message}")
             null
         }
     }
@@ -189,7 +189,7 @@ class DuplicateFinderUseCase @Inject constructor(
 
             if (!hash.isNullOrEmpty()) "image-pixel-$hash" else ""
         } catch (e: Exception) {
-            Log.w(TAG, "DEBUG: Pixel hashing failed for ${mediaItem.id}. Message: ${e.message}")
+            Log.w(TAG, "Pixel hashing failed for ${mediaItem.id}. Message: ${e.message}")
             ""
         }
     }

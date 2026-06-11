@@ -8,8 +8,7 @@ All notable changes to Cleanify are documented here.
 - **Native xxHash64 hashing engine** — SHA-256 replaced with xxHash64 via C/NDK
   for exact duplicate detection. Uses `mmap()` for zero-copy file access, delivering
   ~10x faster hash computation on bulk media scanning.
-- **CMake + NDK integration** — C code compiled for all 4 ABIs (arm64-v8a,
-  armeabi-v7a, x86_64, x86) and bundled into split APKs automatically.
+- **CMake + NDK integration** — native code compiled for all target architectures.
 - **`NativeHasher` fallback** — pure-Kotlin `hashBytes()` fallback if native
   library fails to load, ensuring no functionality regression.
 - **Release keystore** — generated at `app/release.jks` for signed release builds.
@@ -18,8 +17,6 @@ All notable changes to Cleanify are documented here.
 - **Duplicate scanning** — `DuplicateFinderUseCase` now calls native xxHash64
   for full file hashes, partial video hashes, and pixel hashes instead of
   `MessageDigest("SHA-256")`.
-- **ABI-split APKs** — `splits { abi { ... } }` configured to produce separate
-  APKs per architecture plus a universal fallback.
 
 ## [2.5.0] — 2026-06-11
 

@@ -133,20 +133,15 @@ androidComponents {
     }
 }
 
-// Configure Kotlin compiler to output more warnings
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
     compilerOptions {
-        // Enable reporting of unused code for optimization purposes
         freeCompilerArgs.add("-Xreport-unused-for-optimization")
-        // Enable all Kotlin compiler lint warnings
         freeCompilerArgs.add("-Xlint:all")
     }
 }
 
 
 
-// Minimal configuration for the AboutLibraries plugin.
-// This enables the plugin to scan dependencies and generate license data.
 aboutLibraries {
 
 }
@@ -156,7 +151,6 @@ dependencies {
     implementation(platform("androidx.compose:compose-bom:$composeBomVersion"))
     androidTestImplementation(platform("androidx.compose:compose-bom:$composeBomVersion"))
 
-    // Core Android dependencies
     implementation("androidx.core:core-ktx:1.17.0")
     implementation("androidx.appcompat:appcompat:1.7.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
@@ -165,14 +159,11 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-service:2.10.0")
     implementation("androidx.core:core-splashscreen:1.2.0")
 
-    // WorkManager
     val work_version = "2.11.1"
     implementation("androidx.work:work-runtime-ktx:$work_version")
 
-    // Hilt integration for WorkManager
     implementation("androidx.hilt:hilt-work:1.3.0")
 
-    // Compose
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
@@ -186,37 +177,28 @@ dependencies {
     ksp("com.google.dagger:hilt-compiler:2.59")
     implementation("androidx.hilt:hilt-navigation-compose:1.3.0")
 
-    // Room
     implementation("androidx.room:room-runtime:2.8.4")
     ksp("androidx.room:room-compiler:2.8.4")
     implementation("androidx.room:room-ktx:2.8.4")
 
-    // Coil
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("io.coil-kt:coil-video:2.7.0")
     implementation("io.coil-kt:coil-gif:2.7.0")
 
-    // ExoPlayer (Media3)
     implementation("androidx.media3:media3-exoplayer:1.9.2")
     implementation("androidx.media3:media3-ui:1.9.2")
     implementation("androidx.media3:media3-common:1.9.2")
 
-    // Permissions handling
     implementation("com.google.accompanist:accompanist-permissions:0.37.3")
 
-    // DataStore for preferences
     implementation("androidx.datastore:datastore-preferences:1.2.0")
 
-    // DocumentFile for folder/file operations
     implementation("androidx.documentfile:documentfile:1.1.0")
 
-    // Licenses
     implementation("com.mikepenz:aboutlibraries-compose:12.2.4")
 
-    // PDFBox — renders PDFs the system PdfRenderer can't handle
     implementation("com.tom-roush:pdfbox-android:2.0.27.0")
 
-    // Testing
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit-ktx:1.3.0")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")

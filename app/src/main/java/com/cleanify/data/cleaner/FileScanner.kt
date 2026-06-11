@@ -151,8 +151,9 @@ class FileScanner(private val path: File, private val context: Context) {
 
             if (foundFiles == null) foundFiles = getListFiles(path)
             guiScanProgressMax += foundFiles!!.size
+            val reversed = foundFiles!!.reversed()
 
-            for (file in foundFiles!!) {
+            for (file in reversed) {
                 if (filter(file)) {
                     addText?.invoke(file.absolutePath, 1)
                     kilobytesTotal += file.length()

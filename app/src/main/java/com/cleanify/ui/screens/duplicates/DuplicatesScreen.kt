@@ -232,7 +232,7 @@ fun DuplicatesScreen(
     Scaffold(
         topBar = {
             Column {
-                // ── Primary header: back · title · settings only ──────────────
+                // Primary header
                 TopAppBar(
                     title = {
                         Text(
@@ -255,7 +255,7 @@ fun DuplicatesScreen(
                         }
                     }
                 )
-                // ── Secondary sub-header: group count + contextual actions ────
+                // Secondary sub-header
                 if (uiState.scanState == ScanState.Complete && uiState.resultGroups.isNotEmpty()) {
                     HorizontalDivider()
                     Row(
@@ -373,9 +373,7 @@ fun DuplicatesScreen(
     }
 }
 
-// =====================================================================================
 // Group Details Screen
-// =====================================================================================
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -604,9 +602,7 @@ fun GroupDetailsScreen(
     }
 }
 
-// =====================================================================================
 // Common Private Composables
-// =====================================================================================
 
 @Composable
 private fun IdleView(
@@ -1527,7 +1523,7 @@ private fun DuplicateGroupCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(top = 12.dp, start = 16.dp, end = 8.dp, bottom = 12.dp)) {
-            // ── Group header row ─────────────────────────────────────────
+            // Group header row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -1572,7 +1568,7 @@ private fun DuplicateGroupCard(
                 }
             }
             Spacer(Modifier.height(8.dp))
-            // ── File rows ────────────────────────────────────────────────
+            // File rows
             group.items.forEach { item ->
                 MediaItemRow(item, item.id in selectedIds, { onToggleSelection(item) }, onOpenFile = { onOpenFile(item) })
                 if (item != group.items.last()) {
@@ -1580,7 +1576,7 @@ private fun DuplicateGroupCard(
                 }
             }
             Spacer(Modifier.height(10.dp))
-            // ── Keep Oldest | Keep Newest (no Select All here) ───────────
+            // Keep Oldest / Keep Newest
             Row(Modifier.fillMaxWidth().padding(end = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilledTonalButton(
                     onClick = { onSelectAllButOldest(group) },
@@ -1625,7 +1621,7 @@ private fun SimilarMediaGroupCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(top = 12.dp, start = 16.dp, end = 8.dp, bottom = 12.dp)) {
-            // ── Group header row ─────────────────────────────────────────
+            // Group header row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically

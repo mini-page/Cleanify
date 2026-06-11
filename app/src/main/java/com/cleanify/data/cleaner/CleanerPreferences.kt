@@ -30,7 +30,7 @@ class CleanerPreferences(ctx: Context) {
         get() = prefs.getBoolean("clean_generic", true)
         set(v) = prefs.edit().putBoolean("clean_generic", v).apply()
     var multiRun: Int
-        get() = prefs.getInt("multi_run", 1)
+        get() = prefs.getInt("multi_run", 2)
         set(v) = prefs.edit().putInt("multi_run", v).apply()
     var whitelist: Set<String>
         get() = prefs.getStringSet("whitelist", emptySet()) ?: emptySet()

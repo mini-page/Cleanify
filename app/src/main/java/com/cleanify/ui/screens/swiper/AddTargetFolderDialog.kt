@@ -179,7 +179,7 @@ fun AddTargetFolderDialog(
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 32.dp)
         ) {
-            // ── Header ──
+            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -208,7 +208,7 @@ fun AddTargetFolderDialog(
 
             Spacer(Modifier.height(16.dp))
 
-            // ── Search field ──
+            // Search field
             OutlinedTextField(
                 value = folderSearchState.searchQuery,
                 onValueChange = onSearchQueryChange,
@@ -232,7 +232,7 @@ fun AddTargetFolderDialog(
 
             Spacer(Modifier.height(8.dp))
 
-            // ── Folder results ──
+            // Folder results
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -314,7 +314,7 @@ fun AddTargetFolderDialog(
                 }
             }
 
-            // ── Selected path chip ──
+            // Selected path chip
             if (folderSearchState.browsePath != null && folderSearchState.searchQuery.isBlank()) {
                 Spacer(Modifier.height(8.dp))
                 Surface(
@@ -355,7 +355,7 @@ fun AddTargetFolderDialog(
 
             Spacer(Modifier.height(12.dp))
 
-            // ── New folder name ──
+            // New folder name
             OutlinedTextField(
                 value = newFolderName,
                 onValueChange = { newFolderName = it },
@@ -399,7 +399,7 @@ fun AddTargetFolderDialog(
 
             Spacer(Modifier.height(4.dp))
 
-            // ── Add to favorites checkbox ──
+            // Add to favorites
             val isSelectedFolderFavorite = folderSearchState.browsePath in targetFavorites
             val isFavoritesRowEnabled = folderSearchState.browsePath != null && !isSelectedFolderFavorite
 
@@ -432,7 +432,7 @@ fun AddTargetFolderDialog(
 
             Spacer(Modifier.height(16.dp))
 
-            // ── Action buttons ──
+            // Action buttons
             val isNewNameEntered = newFolderName.isNotBlank()
             val isLocationValid = folderSearchState.browsePath != null || (isNewNameEntered && folderSearchState.searchQuery.isNotBlank())
 

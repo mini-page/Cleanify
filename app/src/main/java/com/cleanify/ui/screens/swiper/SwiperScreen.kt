@@ -642,7 +642,7 @@ private fun SwiperTopBar(
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // ── Left: X close button ────────────────────────────────────────
+        // Left: X close button
         TooltipBox(
             positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
                 positioning = TooltipAnchorPosition.Above,
@@ -667,7 +667,7 @@ private fun SwiperTopBar(
             }
         }
 
-        // ── Center: bucket name pill (no dropdown) ──────────────────────
+        // Center: bucket name pill
         Surface(
             shape = MaterialTheme.shapes.extraLarge,
             color = MaterialTheme.colorScheme.surfaceVariant,
@@ -697,7 +697,7 @@ private fun SwiperTopBar(
             }
         }
 
-        // ── Right: Open with | ⋯ grouped pill ───────────────────────────
+        // Right: Open with / ⋯ grouped pill
         Card(
             shape = MaterialTheme.shapes.extraLarge,
             colors = CardDefaults.cardColors(
@@ -962,8 +962,7 @@ private fun MediaInfoBar(
 }
 
 /**
- * Bottom workflow toolbar — replaces the old icon-only ControlBar.
- * [📁 Folder]  [>]  [↩ Undo]  [Proceed →]
+ * Bottom workflow toolbar.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1074,7 +1073,7 @@ private fun MainContent(
         if (folderNameLayout == FolderNameLayout.ABOVE) {
             FolderNameHeader(currentItem.bucketName)
         }
-        // ── Thumbnail strip ────────────────────────────────────────────
+        // Thumbnail strip
         ThumbnailStrip(
             items = uiState.allMediaItems,
             currentIndex = uiState.currentIndex,
@@ -1082,7 +1081,7 @@ private fun MainContent(
             onTap = onNavigateToIndex,
             imageLoader = imageLoader
         )
-        // ── Info bar ───────────────────────────────────────────────────
+        // Info bar
         MediaInfoBar(
             currentIndex = uiState.currentIndex,
             totalCount = uiState.allMediaItems.size,
@@ -1090,7 +1089,7 @@ private fun MainContent(
             hideFilename = uiState.hideFilename,
             onInfoClick = onInfoClick
         )
-        // ── Media card + FAB overlay ───────────────────────────────────
+        // Media card + FABs
         Box(modifier = Modifier.weight(1f)) {
             key(currentItem.id) {
                 MediaItemCard(
@@ -1116,7 +1115,7 @@ private fun MainContent(
                     fullScreenSwipe = uiState.fullScreenSwipe
                 )
             }
-            // ── Delete (left) / Keep (right) FABs overlapping card bottom ──
+            // Delete / Keep FABs
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1280,7 +1279,7 @@ private fun MediaItemContextMenu(
                 tonalElevation = 4.dp
             ) {
                 Column {
-                    // ── Info Section (header) ──
+                    // Info Section
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1315,7 +1314,7 @@ private fun MediaItemContextMenu(
                         thickness = 0.5.dp,
                         color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
                     )
-                    // ── Actions Section ──
+                    // Actions
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.move_to_to_edit)) },
                         leadingIcon = { Icon(Icons.Default.Edit, contentDescription = "Edit") },
@@ -1968,7 +1967,7 @@ private fun MediaItemCard(
                         }
                         Box(modifier = Modifier.fillMaxSize()) {
                             if (item.category == FileCategory.Video) {
-                                // ── Mute button (top-left) ────────────────────
+                                // Mute button
                                 val muteDesc = if (isVideoMuted) stringResource(R.string.unmute_video) else stringResource(R.string.mute_video)
                                 Box(
                                     modifier = Modifier
@@ -1988,7 +1987,7 @@ private fun MediaItemCard(
                                         )
                                     }
                                 }
-                                // ── Speed button (top-right) ────────────────
+                                // Speed button
                                 Box(
                                     modifier = Modifier
                                         .align(Alignment.TopEnd)
@@ -2032,7 +2031,7 @@ private fun MediaItemCard(
                                         )
                                     }
                                 }
-                                // ── Video seek bar (bottom) — hidden until tap ──
+                                // Video seek bar
                                 Column(
                                     modifier = Modifier.align(Alignment.BottomCenter)
                                 ) {
@@ -2682,7 +2681,7 @@ private fun ItemInfoSheet(
             .padding(horizontal = 20.dp)
             .padding(top = 20.dp, bottom = 16.dp),
     ) {
-        // ── Main Metadata Card ─────────────────────────────────────────
+        // Main Metadata Card
         Card(
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -2691,7 +2690,7 @@ private fun ItemInfoSheet(
         ) {
             Column(modifier = Modifier.padding(14.dp)) {
 
-                // ── Filename Section ──
+                // Filename
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = item.displayName,
@@ -2729,7 +2728,7 @@ private fun ItemInfoSheet(
 
                 Spacer(Modifier.height(12.dp))
 
-                // ── File Path Section ──
+                // File Path
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.FolderOpen,
@@ -2782,7 +2781,7 @@ private fun ItemInfoSheet(
 
                 Spacer(Modifier.height(10.dp))
 
-                // ── Media Type Section ──
+                // Media Type
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     val (icon, label) = mediaTypeInfo(item.category, item.mimeType)
                     Icon(
@@ -2801,7 +2800,7 @@ private fun ItemInfoSheet(
 
                 Spacer(Modifier.height(10.dp))
 
-                // ── Technical Metadata Chips ──
+                // Technical Metadata
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Surface(
                         shape = MaterialTheme.shapes.extraLarge,
@@ -2844,7 +2843,7 @@ private fun ItemInfoSheet(
 
                 Spacer(Modifier.height(16.dp))
 
-                // ── Date Section (timeline style) ──
+                // Date Section
                 val datesMatch = item.dateAdded == item.dateModified
                 if (datesMatch) {
                     Text(
@@ -2888,7 +2887,7 @@ private fun ItemInfoSheet(
 
         Spacer(Modifier.height(16.dp))
 
-        // ── Action: Drop Metadata ──
+        // Drop Metadata
         Surface(
             onClick = onDropMetadata,
             shape = RoundedCornerShape(14.dp),
