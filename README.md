@@ -434,6 +434,15 @@ See the **[Funding Page](FUNDING.md)** for details. Cryptocurrency donations are
 
 ---
 
+## Credits
+
+Cleanify builds upon the work of existing open-source cleaners:
+
+- **[CleanSweep](https://github.com/loopotto/CleanSweep)** by [loopotto](https://github.com/loopotto/) — inspiration for the duplicate detection and sorting workflow.
+- **[LTECleanerFOSS](https://github.com/MDP43140/LTECleanerFOSS)** by [MDP43140](https://github.com/MDP43140) — reference for Android storage cleanup and file management utilities.
+
+---
+
 ## License
 
 Copyright © 2025 LoopOtto.
