@@ -113,12 +113,16 @@
   /* Section common */
   section { padding: 100px 0; position: relative; }
   section:first-of-type { padding-top: 0; }
-  section h2 {
-    font-size: clamp(28px, 4vw, 38px); font-weight: 700; text-align: center; margin-bottom: 10px;
+  .section-header { text-align: center; margin-bottom: 52px; }
+  .section-header h2 {
+    font-size: clamp(28px, 4vw, 38px); font-weight: 700; margin-bottom: 12px;
     background: linear-gradient(135deg, #fff 0%, var(--text2) 100%);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
   }
-  section > .subtitle { text-align: center; color: var(--text2); max-width: 600px; margin: 0 auto 48px; font-size: 16px; }
+  .section-header p {
+    color: var(--text2); max-width: 560px; margin: 0 auto;
+    font-size: 16px; line-height: 1.7;
+  }
   .alt-bg { background: var(--bg2); }
 
   /* Glow divider */
@@ -341,8 +345,10 @@
 <!-- Screenshots -->
 <section class="fade-in">
   <div class="container">
-    <h2>Screenshots</h2>
-    <p class="subtitle">A quick look at the Cleanify experience.</p>
+    <div class="section-header">
+      <h2>Screenshots</h2>
+      <p>A quick look at the Cleanify experience.</p>
+    </div>
     <div class="screenshots">
       <img src="../docs/images/01.png" alt="Session Setup" onerror="this.style.display='none'">
       <img src="../docs/images/02.png" alt="Swipe to Sort" onerror="this.style.display='none'">
@@ -355,8 +361,10 @@
 <!-- Features -->
 <section id="features" class="alt-bg fade-in">
   <div class="container">
-    <h2>Features</h2>
-    <p class="subtitle">Everything you need to take control of your files.</p>
+    <div class="section-header">
+      <h2>Features</h2>
+      <p>Everything you need to take control of your files.</p>
+    </div>
 
     <div class="features-grid">
 
@@ -444,8 +452,10 @@
 <!-- Changelog -->
 <section id="changelog" class="fade-in">
   <div class="container">
-    <h2>Changelog</h2>
-    <p class="subtitle">What&rsquo;s new in recent releases.</p>
+    <div class="section-header">
+      <h2>Changelog</h2>
+      <p>What&rsquo;s new in recent releases.</p>
+    </div>
     <div class="changelog-list">
 
       <div class="changelog-item">
@@ -486,8 +496,10 @@
 <!-- Privacy -->
 <section id="privacy" class="alt-bg fade-in">
   <div class="container">
-    <h2>Privacy First</h2>
-    <p class="subtitle">Cleanify is designed from the ground up with privacy as a non-negotiable requirement.</p>
+    <div class="section-header">
+      <h2>Privacy First</h2>
+      <p>Cleanify is designed from the ground up with privacy as a non-negotiable requirement.</p>
+    </div>
     <div class="privacy-grid">
       <div class="privacy-item"><span class="icon">&#x1F510;</span><h4>Completely Offline</h4><p>Zero network requests, zero internet permission.</p></div>
       <div class="privacy-item"><span class="icon">&#x1F6AB;</span><h4>No Tracking</h4><p>No SDKs, no telemetry, no crash reporting.</p></div>
@@ -501,8 +513,10 @@
 <!-- Supported File Types -->
 <section class="fade-in">
   <div class="container">
-    <h2>Supported File Types</h2>
-    <p class="subtitle">Cleanify works with a wide range of media and document formats.</p>
+    <div class="section-header">
+      <h2>Supported File Types</h2>
+      <p>Cleanify works with a wide range of media and document formats.</p>
+    </div>
     <div class="ft-grid">
       <div class="ft-item"><div class="cat">&#x1F5BC;&#xFE0F; Images</div><div class="formats">JPEG, PNG, GIF, WEBP, HEIC, and more</div></div>
       <div class="ft-item"><div class="cat">&#x1F3AC; Videos</div><div class="formats">MP4, MKV, AVI, MOV, and more</div></div>
@@ -515,8 +529,10 @@
 <!-- Tech Stack -->
 <section id="tech" class="alt-bg fade-in">
   <div class="container">
-    <h2>Tech Stack</h2>
-    <p class="subtitle">Built with modern Android technologies.</p>
+    <div class="section-header">
+      <h2>Tech Stack</h2>
+      <p>Built with modern Android technologies.</p>
+    </div>
     <div class="tech-grid">
       <div class="tech-item"><div class="layer">Language</div><div class="name">Kotlin 2.2</div></div>
       <div class="tech-item"><div class="layer">UI</div><div class="name">Jetpack Compose + Material 3</div></div>
