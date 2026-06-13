@@ -367,6 +367,7 @@
     <string name="duplicate_finder_section_desc">Similarity level, scan scope, and folder lists</string>
     <string name="media_storage_section_desc">Indexing, video playback, and search behavior</string>
     <string name="help_support_section_desc">Tutorial, backup, and manage preferences</string>
+    <string name="permission_manager_header">Permission Manager</string>
     <string name="about_section_desc">Version info, source code, and support development</string>
     <string name="features_title">Features</string>
     <string name="feature_swipe">Swipe-based media sorting with customizable gestures</string>

@@ -263,7 +263,7 @@ fun StorageAnalysisScreen(
                     Text(
                         "Storage by Volume",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
 
@@ -276,7 +276,7 @@ fun StorageAnalysisScreen(
                         Text(
                             "Category Breakdown",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.padding(top = 4.dp)
                         )
                     }
@@ -299,7 +299,7 @@ fun StorageAnalysisScreen(
                         Text(
                             "Largest Files",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.SemiBold
                         )
                         Text(
                             "${state.scannedFiles} files scanned",
@@ -357,7 +357,7 @@ private fun StorageDonutChart(
     val surfaceVariant = MaterialTheme.colorScheme.surfaceVariant
     val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
 
-    Card(modifier = modifier.fillMaxWidth()) {
+    Card(modifier = modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)) {
         Column(
             modifier = Modifier.padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -405,7 +405,7 @@ private fun StorageDonutChart(
                     Text(
                         "$usedPercent%",
                         style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.SemiBold,
                         color = donutColor
                     )
                     Text(
@@ -558,7 +558,8 @@ private fun LargeFileRow(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
     ) {
         Row(
             modifier = Modifier.padding(12.dp),

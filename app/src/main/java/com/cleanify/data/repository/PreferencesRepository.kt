@@ -31,7 +31,6 @@ import com.cleanify.ui.theme.AppTheme
 import com.cleanify.ui.theme.predefinedAccentColors
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import java.io.File
 import javax.inject.Inject
@@ -157,6 +156,7 @@ class PreferencesRepository @Inject constructor(
         val ADD_FAVORITE_TO_TARGET_BY_DEFAULT = booleanPreferencesKey("add_favorite_to_target_by_default")
         val HINT_ON_EXISTING_FOLDER_NAME = booleanPreferencesKey("hint_on_existing_folder_name")
         val USE_DYNAMIC_COLORS = booleanPreferencesKey("use_dynamic_colors")
+        val HIDE_PREVIEW_STRIP = booleanPreferencesKey("hide_preview_strip")
         val ACCENT_COLOR_KEY = stringPreferencesKey("accent_color_key")
         val BOTTOM_BAR_EXPANDED = booleanPreferencesKey("bottom_bar_expanded")
         val UNFAVORITE_REMOVES_FROM_BAR = booleanPreferencesKey("unfavorite_removes_from_bar")
@@ -191,79 +191,72 @@ class PreferencesRepository @Inject constructor(
         val RECYCLE_BIN_SKIP_TRASH_JUNK = booleanPreferencesKey("recycle_bin_skip_trash_junk")
     }
 
-    val themeFlow: Flow<AppTheme> = context.dataStore.data
-        .map { preferences ->
-            val themeName = preferences[PreferencesKeys.THEME] ?: AppTheme.SYSTEM.name
-            try {
-                AppTheme.valueOf(themeName)
-            } catch (e: IllegalArgumentException) {
-                AppTheme.SYSTEM
-            }
-        }
+    // ── Boolean Preference instances ─────────────────────────────────────────
+    // Each replaces ~10 lines of flow+setter boilerplate with 1 line.
 
-    val appLocaleFlow: Flow<AppLocale> = context.dataStore.data
-        .map { preferences ->
-            val localeName = preferences[PreferencesKeys.APP_LOCALE] ?: AppLocale.SYSTEM.name
-            try {
-                AppLocale.valueOf(localeName)
-            } catch (e: IllegalArgumentException) {
-                AppLocale.SYSTEM
-            }
-        }
+    private val useDynamicColorsPref = Preference(context.dataStore, PreferencesKeys.USE_DYNAMIC_COLORS, true)
+    private val isOnboardingCompletedPref = Preference(context.dataStore, PreferencesKeys.ONBOARDING_COMPLETED, false)
+    private val compactFolderViewPref = Preference(context.dataStore, PreferencesKeys.COMPACT_FOLDER_VIEW, false)
+    private val hideFilenamePref = Preference(context.dataStore, PreferencesKeys.HIDE_FILENAME, false)
+    private val invertSwipePref = Preference(context.dataStore, PreferencesKeys.INVERT_SWIPE, false)
+    private val reduceAnimationsPref = Preference(context.dataStore, PreferencesKeys.REDUCE_ANIMATIONS, false)
+    private val hideFromGalleryPref = Preference(context.dataStore, PreferencesKeys.HIDE_FROM_GALLERY, true)
+    private val fullScreenSwipePref = Preference(context.dataStore, PreferencesKeys.FULL_SCREEN_SWIPE, false)
+    private val rememberProcessedMediaPref = Preference(context.dataStore, PreferencesKeys.REMEMBER_PROCESSED_MEDIA, true)
+    private val unfavoriteRemovesFromBarPref = Preference(context.dataStore, PreferencesKeys.UNFAVORITE_REMOVES_FROM_BAR, false)
+    private val hideSkipButtonPref = Preference(context.dataStore, PreferencesKeys.HIDE_SWIPER_SKIP_BUTTON, false)
+    private val hidePreviewStripPref = Preference(context.dataStore, PreferencesKeys.HIDE_PREVIEW_STRIP, false)
+    private val hasRunDuplicateScanOncePref = Preference(context.dataStore, PreferencesKeys.HAS_RUN_DUPLICATE_SCAN_ONCE, false)
+    private val addFavoriteToTargetByDefaultPref = Preference(context.dataStore, PreferencesKeys.ADD_FAVORITE_TO_TARGET_BY_DEFAULT, false)
+    private val scanAudioEnabledPref = Preference(context.dataStore, PreferencesKeys.SCAN_AUDIO_ENABLED, true)
+    private val scanDocumentEnabledPref = Preference(context.dataStore, PreferencesKeys.SCAN_DOCUMENT_ENABLED, true)
+    private val hintOnExistingFolderNamePref = Preference(context.dataStore, PreferencesKeys.HINT_ON_EXISTING_FOLDER_NAME, true)
+    private val showFavoritesFirstInSetupPref = Preference(context.dataStore, PreferencesKeys.SHOW_FAVORITES_FIRST_IN_SETUP, true)
+    private val searchAutofocusEnabledPref = Preference(context.dataStore, PreferencesKeys.SEARCH_AUTOFOCUS_ENABLED, false)
+    private val skipPartialExpansionPref = Preference(context.dataStore, PreferencesKeys.SKIP_PARTIAL_EXPANSION, true)
+    private val useFullScreenSummarySheetPref = Preference(context.dataStore, PreferencesKeys.USE_FULL_SCREEN_SUMMARY_SHEET, false)
+    private val useLegacyFolderIconsPref = Preference(context.dataStore, PreferencesKeys.USE_LEGACY_FOLDER_ICONS, false)
+    private val bottomBarExpandedPref = Preference(context.dataStore, PreferencesKeys.BOTTOM_BAR_EXPANDED, false)
+    private val screenshotDeletesVideoPref = Preference(context.dataStore, PreferencesKeys.SCREENSHOT_DELETES_VIDEO, false)
+    private val showConfirmMarkAsSortedPref = Preference(context.dataStore, PreferencesKeys.SHOW_CONFIRM_MARK_AS_SORTED, true)
+    private val showConfirmResetAllHistoryPref = Preference(context.dataStore, PreferencesKeys.SHOW_CONFIRM_RESET_ALL_HISTORY, true)
+    private val showConfirmForgetFolderPref = Preference(context.dataStore, PreferencesKeys.SHOW_CONFIRM_FORGET_FOLDER, true)
+    private val showConfirmResetSourceFavsPref = Preference(context.dataStore, PreferencesKeys.SHOW_CONFIRM_RESET_SOURCE_FAVS, true)
+    private val showConfirmResetTargetFavsPref = Preference(context.dataStore, PreferencesKeys.SHOW_CONFIRM_RESET_TARGET_FAVS, true)
+    private val showConfirmDeleteAllExactPref = Preference(context.dataStore, PreferencesKeys.SHOW_CONFIRM_DELETE_ALL_EXACT, true)
+    private val recycleBinEnabledPref = Preference(context.dataStore, PreferencesKeys.RECYCLE_BIN_ENABLED, true)
+    private val recycleBinSkipTrashJunkPref = Preference(context.dataStore, PreferencesKeys.RECYCLE_BIN_SKIP_TRASH_JUNK, false)
 
-    val useDynamicColorsFlow: Flow<Boolean> = context.dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.USE_DYNAMIC_COLORS] ?: true
-        }
+    // ── Enum Preference instances ────────────────────────────────────────────
+    // Each replaces ~10 lines of flow+setter boilerplate with 1 line.
+
+    private val themePref = EnumPreference(context.dataStore, PreferencesKeys.THEME, AppTheme.SYSTEM, AppTheme::class.java)
+    private val appLocalePref = EnumPreference(context.dataStore, PreferencesKeys.APP_LOCALE, AppLocale.SYSTEM, AppLocale::class.java)
+    private val folderSelectionModePref = EnumPreference(context.dataStore, PreferencesKeys.FOLDER_SELECTION_MODE, FolderSelectionMode.REMEMBER, FolderSelectionMode::class.java)
+    private val summaryViewModePref = EnumPreference(context.dataStore, PreferencesKeys.SUMMARY_VIEW_MODE, SummaryViewMode.LIST, SummaryViewMode::class.java)
+    private val folderBarLayoutPref = EnumPreference(context.dataStore, PreferencesKeys.FOLDER_BAR_LAYOUT, FolderBarLayout.HORIZONTAL, FolderBarLayout::class.java)
+    private val folderNameLayoutPref = EnumPreference(context.dataStore, PreferencesKeys.FOLDER_NAME_LAYOUT, FolderNameLayout.ABOVE, FolderNameLayout::class.java)
+    private val addFolderFocusTargetPref = EnumPreference(context.dataStore, PreferencesKeys.ADD_FOLDER_FOCUS_TARGET, AddFolderFocusTarget.SEARCH_PATH, AddFolderFocusTarget::class.java)
+    private val swipeSensitivityPref = EnumPreference(context.dataStore, PreferencesKeys.SWIPE_SENSITIVITY, SwipeSensitivity.MEDIUM, SwipeSensitivity::class.java)
+    private val swipeDownActionPref = EnumPreference(context.dataStore, PreferencesKeys.SWIPE_DOWN_ACTION, SwipeDownAction.NONE, SwipeDownAction::class.java)
+    private val tapActionPref = EnumPreference(context.dataStore, PreferencesKeys.TAP_ACTION, TapAction.PLAY_PAUSE, TapAction::class.java)
+    private val doubleTapActionPref = EnumPreference(context.dataStore, PreferencesKeys.DOUBLE_TAP_ACTION, DoubleTapAction.FAVORITE, DoubleTapAction::class.java)
+    private val similarityThresholdLevelPref = EnumPreference(context.dataStore, PreferencesKeys.SIMILARITY_THRESHOLD_LEVEL, SimilarityThresholdLevel.BALANCED, SimilarityThresholdLevel::class.java)
+    private val duplicateScanScopePref = EnumPreference(context.dataStore, PreferencesKeys.DUPLICATE_SCAN_SCOPE, DuplicateScanScope.ALL_FILES, DuplicateScanScope::class.java)
+    private val unselectAllInSearchScopePref = EnumPreference(context.dataStore, PreferencesKeys.UNSELECT_ALL_IN_SEARCH_SCOPE, UnselectScanScope.GLOBAL, UnselectScanScope::class.java)
+
+    // ── Non-boolean flows (unchanged) ────────────────────────────────────────
+
+    val themeFlow: Flow<AppTheme> = themePref.flow
+
+    val appLocaleFlow: Flow<AppLocale> = appLocalePref.flow
 
     val accentColorKeyFlow: Flow<String> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.ACCENT_COLOR_KEY] ?: predefinedAccentColors.first().key
         }
 
-    val isOnboardingCompletedFlow: Flow<Boolean> = context.dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.ONBOARDING_COMPLETED] ?: false
-        }
-
-    val compactFolderViewFlow: Flow<Boolean> = context.dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.COMPACT_FOLDER_VIEW] ?: false
-        }
-
-    val hideFilenameFlow: Flow<Boolean> = context.dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.HIDE_FILENAME] ?: false
-        }
-
-    val invertSwipeFlow: Flow<Boolean> = context.dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.INVERT_SWIPE] ?: false
-        }
-
-    val reduceAnimationsFlow: Flow<Boolean> = context.dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.REDUCE_ANIMATIONS] ?: false
-        }
-
-    val hideFromGalleryFlow: Flow<Boolean> = context.dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.HIDE_FROM_GALLERY] ?: true
-        }
-
-    val fullScreenSwipeFlow: Flow<Boolean> = context.dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.FULL_SCREEN_SWIPE] ?: false
-        }
-
-    val folderSelectionModeFlow: Flow<FolderSelectionMode> = context.dataStore.data
-        .map { preferences ->
-            val name = preferences[PreferencesKeys.FOLDER_SELECTION_MODE]
-                ?: FolderSelectionMode.REMEMBER.name
-            FolderSelectionMode.valueOf(name)
-        }.catch { _ ->
-            emit(FolderSelectionMode.REMEMBER)
-        }
+    val folderSelectionModeFlow: Flow<FolderSelectionMode> = folderSelectionModePref.flow
 
     val previouslySelectedBucketsFlow: Flow<List<String>> = context.dataStore.data
         .map { preferences ->
@@ -271,31 +264,7 @@ class PreferencesRepository @Inject constructor(
             if (bucketString.isEmpty()) emptyList() else bucketString.split(",")
         }
 
-    val summaryViewModeFlow: Flow<SummaryViewMode> = context.dataStore.data
-        .map { preferences ->
-            val modeName =
-                preferences[PreferencesKeys.SUMMARY_VIEW_MODE] ?: SummaryViewMode.LIST.name
-            try {
-                SummaryViewMode.valueOf(modeName)
-            } catch (e: IllegalArgumentException) {
-                SummaryViewMode.LIST
-            }
-        }
-
-    val rememberProcessedMediaFlow: Flow<Boolean> = context.dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.REMEMBER_PROCESSED_MEDIA] ?: true
-        }
-
-    val unfavoriteRemovesFromBarFlow: Flow<Boolean> = context.dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.UNFAVORITE_REMOVES_FROM_BAR] ?: false
-        }
-
-    val hideSkipButtonFlow: Flow<Boolean> = context.dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.HIDE_SWIPER_SKIP_BUTTON] ?: false
-        }
+    val summaryViewModeFlow: Flow<SummaryViewMode> = summaryViewModePref.flow
 
     val processedMediaPathsFlow: Flow<Set<String>> = context.dataStore.data
         .map { preferences ->
@@ -347,66 +316,12 @@ class PreferencesRepository @Inject constructor(
             }
         }
 
-    val hasRunDuplicateScanOnceFlow: Flow<Boolean> = context.dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.HAS_RUN_DUPLICATE_SCAN_ONCE] ?: false
-        }
-
-    val addFavoriteToTargetByDefaultFlow: Flow<Boolean> = context.dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.ADD_FAVORITE_TO_TARGET_BY_DEFAULT] ?: false
-        }
-
-    val scanAudioEnabledFlow: Flow<Boolean> = context.dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.SCAN_AUDIO_ENABLED] ?: true
-        }
-
-    val scanDocumentEnabledFlow: Flow<Boolean> = context.dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.SCAN_DOCUMENT_ENABLED] ?: true
-        }
-
-    val hintOnExistingFolderNameFlow: Flow<Boolean> = context.dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.HINT_ON_EXISTING_FOLDER_NAME] ?: true
-        }
-
-    val showFavoritesFirstInSetupFlow: Flow<Boolean> = context.dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.SHOW_FAVORITES_FIRST_IN_SETUP] ?: true
-        }
-
     val defaultAlbumCreationPathFlow: Flow<String> = context.dataStore.data
         .map { preferences ->
             preferences[KEY_DEFAULT_ALBUM_PATH] ?: DEFAULT_ALBUM_CREATION_PATH
         }
 
-    val searchAutofocusEnabledFlow: Flow<Boolean> = context.dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.SEARCH_AUTOFOCUS_ENABLED] ?: false
-        }
-
-    val skipPartialExpansionFlow: Flow<Boolean> = context.dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.SKIP_PARTIAL_EXPANSION] ?: true
-        }
-
-    val useFullScreenSummarySheetFlow: Flow<Boolean> = context.dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.USE_FULL_SCREEN_SUMMARY_SHEET] ?: false
-        }
-
-    val folderBarLayoutFlow: Flow<FolderBarLayout> = context.dataStore.data
-        .map { preferences ->
-            val layoutName =
-                preferences[PreferencesKeys.FOLDER_BAR_LAYOUT] ?: FolderBarLayout.HORIZONTAL.name
-            try {
-                FolderBarLayout.valueOf(layoutName)
-            } catch (e: IllegalArgumentException) {
-                FolderBarLayout.HORIZONTAL
-            }
-        }
+    val folderBarLayoutFlow: Flow<FolderBarLayout> = folderBarLayoutPref.flow
 
     val folderNameLayoutFlow: Flow<FolderNameLayout> = context.dataStore.data
         .map { preferences ->
@@ -419,74 +334,19 @@ class PreferencesRepository @Inject constructor(
             }
         }
 
-    val useLegacyFolderIconsFlow: Flow<Boolean> = context.dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.USE_LEGACY_FOLDER_ICONS] ?: false
-        }
+    val addFolderFocusTargetFlow: Flow<AddFolderFocusTarget> = addFolderFocusTargetPref.flow
 
-    val addFolderFocusTargetFlow: Flow<AddFolderFocusTarget> = context.dataStore.data
-        .map { preferences ->
-            val targetName = preferences[PreferencesKeys.ADD_FOLDER_FOCUS_TARGET] ?: AddFolderFocusTarget.SEARCH_PATH.name
-            try {
-                AddFolderFocusTarget.valueOf(targetName)
-            } catch (e: IllegalArgumentException) {
-                AddFolderFocusTarget.SEARCH_PATH
-            }
-        }
+    val swipeSensitivityFlow: Flow<SwipeSensitivity> = swipeSensitivityPref.flow
 
-    val swipeSensitivityFlow: Flow<SwipeSensitivity> = context.dataStore.data
-        .map { preferences ->
-            val sensitivityName = preferences[PreferencesKeys.SWIPE_SENSITIVITY] ?: SwipeSensitivity.MEDIUM.name
-            try {
-                SwipeSensitivity.valueOf(sensitivityName)
-            } catch (e: IllegalArgumentException) {
-                SwipeSensitivity.MEDIUM
-            }
-        }
+    val swipeDownActionFlow: Flow<SwipeDownAction> = swipeDownActionPref.flow
 
-    val swipeDownActionFlow: Flow<SwipeDownAction> = context.dataStore.data
-        .map { preferences ->
-            val actionName = preferences[PreferencesKeys.SWIPE_DOWN_ACTION] ?: SwipeDownAction.NONE.name
-            try {
-                SwipeDownAction.valueOf(actionName)
-            } catch (e: IllegalArgumentException) {
-                SwipeDownAction.NONE
-            }
-        }
+    val tapActionFlow: Flow<TapAction> = tapActionPref.flow
 
-    val tapActionFlow: Flow<TapAction> = context.dataStore.data
-        .map { preferences ->
-            val actionName = preferences[PreferencesKeys.TAP_ACTION] ?: TapAction.PLAY_PAUSE.name
-            try {
-                TapAction.valueOf(actionName)
-            } catch (e: IllegalArgumentException) {
-                TapAction.PLAY_PAUSE
-            }
-        }
-
-    val doubleTapActionFlow: Flow<DoubleTapAction> = context.dataStore.data
-        .map { preferences ->
-            val actionName = preferences[PreferencesKeys.DOUBLE_TAP_ACTION] ?: DoubleTapAction.FAVORITE.name
-            try {
-                DoubleTapAction.valueOf(actionName)
-            } catch (e: IllegalArgumentException) {
-                DoubleTapAction.FAVORITE
-            }
-        }
-
-    val bottomBarExpandedFlow: Flow<Boolean> = context.dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.BOTTOM_BAR_EXPANDED] ?: false
-        }
+    val doubleTapActionFlow: Flow<DoubleTapAction> = doubleTapActionPref.flow
 
     val defaultVideoSpeedFlow: Flow<Float> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.DEFAULT_VIDEO_SPEED] ?: 1.0f
-        }
-
-    val screenshotDeletesVideoFlow: Flow<Boolean> = context.dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.SCREENSHOT_DELETES_VIDEO] ?: false
         }
 
     val screenshotJpegQualityFlow: Flow<String> = context.dataStore.data
@@ -494,25 +354,9 @@ class PreferencesRepository @Inject constructor(
             preferences[PreferencesKeys.SCREENSHOT_JPEG_QUALITY] ?: "90"
         }
 
-    val similarityThresholdLevelFlow: Flow<SimilarityThresholdLevel> = context.dataStore.data
-        .map { preferences ->
-            val levelName = preferences[PreferencesKeys.SIMILARITY_THRESHOLD_LEVEL] ?: SimilarityThresholdLevel.BALANCED.name
-            try {
-                SimilarityThresholdLevel.valueOf(levelName)
-            } catch (e: IllegalArgumentException) {
-                SimilarityThresholdLevel.BALANCED
-            }
-        }
+    val similarityThresholdLevelFlow: Flow<SimilarityThresholdLevel> = similarityThresholdLevelPref.flow
 
-    val duplicateScanScopeFlow: Flow<DuplicateScanScope> = context.dataStore.data
-        .map { preferences ->
-            val scopeName = preferences[PreferencesKeys.DUPLICATE_SCAN_SCOPE] ?: DuplicateScanScope.ALL_FILES.name
-            try {
-                DuplicateScanScope.valueOf(scopeName)
-            } catch (e: IllegalArgumentException) {
-                DuplicateScanScope.ALL_FILES
-            }
-        }
+    val duplicateScanScopeFlow: Flow<DuplicateScanScope> = duplicateScanScopePref.flow
 
     val duplicateScanIncludeListFlow: Flow<Set<String>> = context.dataStore.data
         .map { preferences ->
@@ -526,53 +370,54 @@ class PreferencesRepository @Inject constructor(
             if (listString.isEmpty()) emptySet() else listString.split(",").filter { it.isNotBlank() }.toSet()
         }
 
+    val unselectAllInSearchScopeFlow: Flow<UnselectScanScope> = unselectAllInSearchScopePref.flow
 
-    // Dialog Confirmation Flows
-    val showConfirmMarkAsSortedFlow: Flow<Boolean> = context.dataStore.data
-        .map { preferences -> preferences[PreferencesKeys.SHOW_CONFIRM_MARK_AS_SORTED] ?: true }
+    val recycleBinRetentionDaysFlow: Flow<Int> = context.dataStore.data
+        .map { preferences -> preferences[PreferencesKeys.RECYCLE_BIN_RETENTION_DAYS] ?: 30 }
 
-    val showConfirmResetAllHistoryFlow: Flow<Boolean> = context.dataStore.data
-        .map { preferences -> preferences[PreferencesKeys.SHOW_CONFIRM_RESET_ALL_HISTORY] ?: true }
+    val recycleBinStorageLocationFlow: Flow<String> = context.dataStore.data
+        .map { preferences -> preferences[PreferencesKeys.RECYCLE_BIN_STORAGE_LOCATION] ?: "external" }
 
-    val showConfirmForgetFolderFlow: Flow<Boolean> = context.dataStore.data
-        .map { preferences -> preferences[PreferencesKeys.SHOW_CONFIRM_FORGET_FOLDER] ?: true }
+    // ── Boolean flows: delegated to Preference instances ──────────────────────
 
-    val showConfirmResetSourceFavsFlow: Flow<Boolean> = context.dataStore.data
-        .map { preferences -> preferences[PreferencesKeys.SHOW_CONFIRM_RESET_SOURCE_FAVS] ?: true }
+    val useDynamicColorsFlow: Flow<Boolean> = useDynamicColorsPref.flow
+    val isOnboardingCompletedFlow: Flow<Boolean?> = isOnboardingCompletedPref.flow
+    val compactFolderViewFlow: Flow<Boolean> = compactFolderViewPref.flow
+    val hideFilenameFlow: Flow<Boolean> = hideFilenamePref.flow
+    val invertSwipeFlow: Flow<Boolean> = invertSwipePref.flow
+    val reduceAnimationsFlow: Flow<Boolean> = reduceAnimationsPref.flow
+    val hideFromGalleryFlow: Flow<Boolean> = hideFromGalleryPref.flow
+    val fullScreenSwipeFlow: Flow<Boolean> = fullScreenSwipePref.flow
+    val rememberProcessedMediaFlow: Flow<Boolean> = rememberProcessedMediaPref.flow
+    val unfavoriteRemovesFromBarFlow: Flow<Boolean> = unfavoriteRemovesFromBarPref.flow
+    val hideSkipButtonFlow: Flow<Boolean> = hideSkipButtonPref.flow
+    val hidePreviewStripFlow: Flow<Boolean> = hidePreviewStripPref.flow
+    val hasRunDuplicateScanOnceFlow: Flow<Boolean> = hasRunDuplicateScanOncePref.flow
+    val addFavoriteToTargetByDefaultFlow: Flow<Boolean> = addFavoriteToTargetByDefaultPref.flow
+    val scanAudioEnabledFlow: Flow<Boolean> = scanAudioEnabledPref.flow
+    val scanDocumentEnabledFlow: Flow<Boolean> = scanDocumentEnabledPref.flow
+    val hintOnExistingFolderNameFlow: Flow<Boolean> = hintOnExistingFolderNamePref.flow
+    val showFavoritesFirstInSetupFlow: Flow<Boolean> = showFavoritesFirstInSetupPref.flow
+    val searchAutofocusEnabledFlow: Flow<Boolean> = searchAutofocusEnabledPref.flow
+    val skipPartialExpansionFlow: Flow<Boolean> = skipPartialExpansionPref.flow
+    val useFullScreenSummarySheetFlow: Flow<Boolean> = useFullScreenSummarySheetPref.flow
+    val useLegacyFolderIconsFlow: Flow<Boolean> = useLegacyFolderIconsPref.flow
+    val bottomBarExpandedFlow: Flow<Boolean> = bottomBarExpandedPref.flow
+    val screenshotDeletesVideoFlow: Flow<Boolean> = screenshotDeletesVideoPref.flow
+    val showConfirmMarkAsSortedFlow: Flow<Boolean> = showConfirmMarkAsSortedPref.flow
+    val showConfirmResetAllHistoryFlow: Flow<Boolean> = showConfirmResetAllHistoryPref.flow
+    val showConfirmForgetFolderFlow: Flow<Boolean> = showConfirmForgetFolderPref.flow
+    val showConfirmResetSourceFavsFlow: Flow<Boolean> = showConfirmResetSourceFavsPref.flow
+    val showConfirmResetTargetFavsFlow: Flow<Boolean> = showConfirmResetTargetFavsPref.flow
+    val showConfirmDeleteAllExactFlow: Flow<Boolean> = showConfirmDeleteAllExactPref.flow
+    val recycleBinEnabledFlow: Flow<Boolean> = recycleBinEnabledPref.flow
+    val recycleBinSkipTrashJunkFlow: Flow<Boolean> = recycleBinSkipTrashJunkPref.flow
 
-    val showConfirmResetTargetFavsFlow: Flow<Boolean> = context.dataStore.data
-        .map { preferences -> preferences[PreferencesKeys.SHOW_CONFIRM_RESET_TARGET_FAVS] ?: true }
+    // ── Non-boolean setters (unchanged) ──────────────────────────────────────
 
-    val showConfirmDeleteAllExactFlow: Flow<Boolean> = context.dataStore.data
-        .map { preferences -> preferences[PreferencesKeys.SHOW_CONFIRM_DELETE_ALL_EXACT] ?: true }
+    suspend fun setTheme(theme: AppTheme) = themePref.set(theme)
 
-    val unselectAllInSearchScopeFlow: Flow<UnselectScanScope> = context.dataStore.data
-        .map { preferences ->
-            val scopeName = preferences[PreferencesKeys.UNSELECT_ALL_IN_SEARCH_SCOPE] ?: UnselectScanScope.GLOBAL.name
-            try {
-                UnselectScanScope.valueOf(scopeName)
-            } catch (e: IllegalArgumentException) {
-                UnselectScanScope.GLOBAL
-            }
-        }
-
-    suspend fun setTheme(theme: AppTheme) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.THEME] = theme.name
-        }
-    }
-
-    suspend fun setAppLocale(locale: AppLocale) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.APP_LOCALE] = locale.name
-        }
-    }
-
-    suspend fun setUseDynamicColors(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.USE_DYNAMIC_COLORS] = enabled
-        }
-    }
+    suspend fun setAppLocale(locale: AppLocale) = appLocalePref.set(locale)
 
     suspend fun setAccentColorKey(key: String) {
         context.dataStore.edit { preferences ->
@@ -581,52 +426,10 @@ class PreferencesRepository @Inject constructor(
     }
 
     suspend fun setOnboardingCompleted() {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.ONBOARDING_COMPLETED] = true
-        }
+        isOnboardingCompletedPref.set(true)
     }
 
-    suspend fun setCompactFolderView(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.COMPACT_FOLDER_VIEW] = enabled
-        }
-    }
-
-    suspend fun setHideFilename(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.HIDE_FILENAME] = enabled
-        }
-    }
-
-    suspend fun setInvertSwipe(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.INVERT_SWIPE] = enabled
-        }
-    }
-
-    suspend fun setReduceAnimations(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.REDUCE_ANIMATIONS] = enabled
-        }
-    }
-
-    suspend fun setHideFromGallery(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.HIDE_FROM_GALLERY] = enabled
-        }
-    }
-
-    suspend fun setFullScreenSwipe(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.FULL_SCREEN_SWIPE] = enabled
-        }
-    }
-
-    suspend fun setFolderSelectionMode(mode: FolderSelectionMode) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.FOLDER_SELECTION_MODE] = mode.name
-        }
-    }
+    suspend fun setFolderSelectionMode(mode: FolderSelectionMode) = folderSelectionModePref.set(mode)
 
     suspend fun savePreviouslySelectedBuckets(bucketIds: List<String>) {
         context.dataStore.edit { preferences ->
@@ -634,29 +437,7 @@ class PreferencesRepository @Inject constructor(
         }
     }
 
-    suspend fun setSummaryViewMode(mode: SummaryViewMode) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.SUMMARY_VIEW_MODE] = mode.name
-        }
-    }
-
-    suspend fun setRememberProcessedMedia(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.REMEMBER_PROCESSED_MEDIA] = enabled
-        }
-    }
-
-    suspend fun setUnfavoriteRemovesFromBar(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.UNFAVORITE_REMOVES_FROM_BAR] = enabled
-        }
-    }
-
-    suspend fun setHideSkipButton(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.HIDE_SWIPER_SKIP_BUTTON] = enabled
-        }
-    }
+    suspend fun setSummaryViewMode(mode: SummaryViewMode) = summaryViewModePref.set(mode)
 
     suspend fun addProcessedMediaPaths(mediaPaths: Set<String>) {
         if (mediaPaths.isEmpty()) return
@@ -803,99 +584,29 @@ class PreferencesRepository @Inject constructor(
         }
     }
 
-    suspend fun setShowFavoritesFirstInSetup(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.SHOW_FAVORITES_FIRST_IN_SETUP] = enabled
-        }
-    }
-
     suspend fun setDefaultAlbumCreationPath(path: String) {
         context.dataStore.edit { preferences ->
             preferences[KEY_DEFAULT_ALBUM_PATH] = path
         }
     }
 
-    suspend fun setSearchAutofocusEnabled(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.SEARCH_AUTOFOCUS_ENABLED] = enabled
-        }
-    }
+    suspend fun setFolderBarLayout(layout: FolderBarLayout) = folderBarLayoutPref.set(layout)
 
-    suspend fun setSkipPartialExpansion(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.SKIP_PARTIAL_EXPANSION] = enabled
-        }
-    }
+    suspend fun setFolderNameLayout(layout: FolderNameLayout) = folderNameLayoutPref.set(layout)
 
-    suspend fun setUseFullScreenSummarySheet(useFullScreen: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.USE_FULL_SCREEN_SUMMARY_SHEET] = useFullScreen
-        }
-    }
+    suspend fun setAddFolderFocusTarget(target: AddFolderFocusTarget) = addFolderFocusTargetPref.set(target)
 
-    suspend fun setFolderBarLayout(layout: FolderBarLayout) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.FOLDER_BAR_LAYOUT] = layout.name
-        }
-    }
+    suspend fun setSwipeSensitivity(sensitivity: SwipeSensitivity) = swipeSensitivityPref.set(sensitivity)
 
-    suspend fun setFolderNameLayout(layout: FolderNameLayout) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.FOLDER_NAME_LAYOUT] = layout.name
-        }
-    }
+    suspend fun setSwipeDownAction(action: SwipeDownAction) = swipeDownActionPref.set(action)
 
-    suspend fun setUseLegacyFolderIcons(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.USE_LEGACY_FOLDER_ICONS] = enabled
-        }
-    }
+    suspend fun setTapAction(action: TapAction) = tapActionPref.set(action)
 
-    suspend fun setAddFolderFocusTarget(target: AddFolderFocusTarget) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.ADD_FOLDER_FOCUS_TARGET] = target.name
-        }
-    }
-
-    suspend fun setSwipeSensitivity(sensitivity: SwipeSensitivity) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.SWIPE_SENSITIVITY] = sensitivity.name
-        }
-    }
-
-    suspend fun setSwipeDownAction(action: SwipeDownAction) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.SWIPE_DOWN_ACTION] = action.name
-        }
-    }
-
-    suspend fun setTapAction(action: TapAction) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.TAP_ACTION] = action.name
-        }
-    }
-
-    suspend fun setDoubleTapAction(action: DoubleTapAction) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.DOUBLE_TAP_ACTION] = action.name
-        }
-    }
-
-    suspend fun setBottomBarExpanded(isExpanded: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.BOTTOM_BAR_EXPANDED] = isExpanded
-        }
-    }
+    suspend fun setDoubleTapAction(action: DoubleTapAction) = doubleTapActionPref.set(action)
 
     suspend fun setDefaultVideoSpeed(speed: Float) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.DEFAULT_VIDEO_SPEED] = speed
-        }
-    }
-
-    suspend fun setScreenshotDeletesVideo(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.SCREENSHOT_DELETES_VIDEO] = enabled
         }
     }
 
@@ -905,17 +616,9 @@ class PreferencesRepository @Inject constructor(
         }
     }
 
-    suspend fun setSimilarityThresholdLevel(level: SimilarityThresholdLevel) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.SIMILARITY_THRESHOLD_LEVEL] = level.name
-        }
-    }
+    suspend fun setSimilarityThresholdLevel(level: SimilarityThresholdLevel) = similarityThresholdLevelPref.set(level)
 
-    suspend fun setDuplicateScanScope(scope: DuplicateScanScope) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.DUPLICATE_SCAN_SCOPE] = scope.name
-        }
-    }
+    suspend fun setDuplicateScanScope(scope: DuplicateScanScope) = duplicateScanScopePref.set(scope)
 
     suspend fun setDuplicateScanIncludeList(folders: Set<String>) {
         context.dataStore.edit { preferences ->
@@ -930,9 +633,7 @@ class PreferencesRepository @Inject constructor(
     }
 
     suspend fun setHasRunDuplicateScanOnce() {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.HAS_RUN_DUPLICATE_SCAN_ONCE] = true
-        }
+        hasRunDuplicateScanOncePref.set(true)
     }
 
     suspend fun updateFolderPath(oldPath: String, newPath: String) {
@@ -985,89 +686,7 @@ class PreferencesRepository @Inject constructor(
         }
     }
 
-    suspend fun setAddFavoriteToTargetByDefault(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.ADD_FAVORITE_TO_TARGET_BY_DEFAULT] = enabled
-        }
-    }
-
-    suspend fun setHintOnExistingFolderName(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.HINT_ON_EXISTING_FOLDER_NAME] = enabled
-        }
-    }
-
-    // Dialog Confirmation Setters
-    suspend fun setShowConfirmMarkAsSorted(enabled: Boolean) {
-        context.dataStore.edit { prefs -> prefs[PreferencesKeys.SHOW_CONFIRM_MARK_AS_SORTED] = enabled }
-    }
-
-    suspend fun setShowConfirmResetAllHistory(enabled: Boolean) {
-        context.dataStore.edit { prefs -> prefs[PreferencesKeys.SHOW_CONFIRM_RESET_ALL_HISTORY] = enabled }
-    }
-
-    suspend fun setShowConfirmForgetFolder(enabled: Boolean) {
-        context.dataStore.edit { prefs -> prefs[PreferencesKeys.SHOW_CONFIRM_FORGET_FOLDER] = enabled }
-    }
-
-    suspend fun setShowConfirmResetSourceFavs(enabled: Boolean) {
-        context.dataStore.edit { prefs -> prefs[PreferencesKeys.SHOW_CONFIRM_RESET_SOURCE_FAVS] = enabled }
-    }
-
-    suspend fun setShowConfirmResetTargetFavs(enabled: Boolean) {
-        context.dataStore.edit { prefs -> prefs[PreferencesKeys.SHOW_CONFIRM_RESET_TARGET_FAVS] = enabled }
-    }
-
-    suspend fun setShowConfirmDeleteAllExact(enabled: Boolean) {
-        context.dataStore.edit { prefs -> prefs[PreferencesKeys.SHOW_CONFIRM_DELETE_ALL_EXACT] = enabled }
-    }
-
-    suspend fun resetDialogConfirmations() {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.SHOW_CONFIRM_MARK_AS_SORTED] = true
-            preferences[PreferencesKeys.SHOW_CONFIRM_RESET_ALL_HISTORY] = true
-            preferences[PreferencesKeys.SHOW_CONFIRM_FORGET_FOLDER] = true
-            preferences[PreferencesKeys.SHOW_CONFIRM_RESET_SOURCE_FAVS] = true
-            preferences[PreferencesKeys.SHOW_CONFIRM_RESET_TARGET_FAVS] = true
-            preferences[PreferencesKeys.SHOW_CONFIRM_DELETE_ALL_EXACT] = true
-        }
-    }
-
-    suspend fun setUnselectAllInSearchScope(scope: UnselectScanScope) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.UNSELECT_ALL_IN_SEARCH_SCOPE] = scope.name
-        }
-    }
-
-    suspend fun setScanAudioEnabled(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.SCAN_AUDIO_ENABLED] = enabled
-        }
-    }
-
-    suspend fun setScanDocumentEnabled(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.SCAN_DOCUMENT_ENABLED] = enabled
-        }
-    }
-
-    val recycleBinEnabledFlow: Flow<Boolean> = context.dataStore.data
-        .map { preferences -> preferences[PreferencesKeys.RECYCLE_BIN_ENABLED] ?: true }
-
-    val recycleBinRetentionDaysFlow: Flow<Int> = context.dataStore.data
-        .map { preferences -> preferences[PreferencesKeys.RECYCLE_BIN_RETENTION_DAYS] ?: 30 }
-
-    val recycleBinStorageLocationFlow: Flow<String> = context.dataStore.data
-        .map { preferences -> preferences[PreferencesKeys.RECYCLE_BIN_STORAGE_LOCATION] ?: "external" }
-
-    val recycleBinSkipTrashJunkFlow: Flow<Boolean> = context.dataStore.data
-        .map { preferences -> preferences[PreferencesKeys.RECYCLE_BIN_SKIP_TRASH_JUNK] ?: false }
-
-    suspend fun setRecycleBinEnabled(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.RECYCLE_BIN_ENABLED] = enabled
-        }
-    }
+    suspend fun setUnselectAllInSearchScope(scope: UnselectScanScope) = unselectAllInSearchScopePref.set(scope)
 
     suspend fun setRecycleBinRetentionDays(days: Int) {
         context.dataStore.edit { preferences ->
@@ -1081,9 +700,50 @@ class PreferencesRepository @Inject constructor(
         }
     }
 
-    suspend fun setRecycleBinSkipTrashJunk(enabled: Boolean) {
+    // ── Boolean setters: delegated to Preference instances ────────────────────
+
+    suspend fun setUseDynamicColors(enabled: Boolean) = useDynamicColorsPref.set(enabled)
+    suspend fun setCompactFolderView(enabled: Boolean) = compactFolderViewPref.set(enabled)
+    suspend fun setHideFilename(enabled: Boolean) = hideFilenamePref.set(enabled)
+    suspend fun setInvertSwipe(enabled: Boolean) = invertSwipePref.set(enabled)
+    suspend fun setReduceAnimations(enabled: Boolean) = reduceAnimationsPref.set(enabled)
+    suspend fun setHideFromGallery(enabled: Boolean) = hideFromGalleryPref.set(enabled)
+    suspend fun setFullScreenSwipe(enabled: Boolean) = fullScreenSwipePref.set(enabled)
+    suspend fun setRememberProcessedMedia(enabled: Boolean) = rememberProcessedMediaPref.set(enabled)
+    suspend fun setUnfavoriteRemovesFromBar(enabled: Boolean) = unfavoriteRemovesFromBarPref.set(enabled)
+    suspend fun setHideSkipButton(enabled: Boolean) = hideSkipButtonPref.set(enabled)
+    suspend fun setHidePreviewStrip(enabled: Boolean) = hidePreviewStripPref.set(enabled)
+    suspend fun setAddFavoriteToTargetByDefault(enabled: Boolean) = addFavoriteToTargetByDefaultPref.set(enabled)
+    suspend fun setHintOnExistingFolderName(enabled: Boolean) = hintOnExistingFolderNamePref.set(enabled)
+    suspend fun setShowFavoritesFirstInSetup(enabled: Boolean) = showFavoritesFirstInSetupPref.set(enabled)
+    suspend fun setSearchAutofocusEnabled(enabled: Boolean) = searchAutofocusEnabledPref.set(enabled)
+    suspend fun setSkipPartialExpansion(enabled: Boolean) = skipPartialExpansionPref.set(enabled)
+    suspend fun setUseFullScreenSummarySheet(useFullScreen: Boolean) = useFullScreenSummarySheetPref.set(useFullScreen)
+    suspend fun setUseLegacyFolderIcons(enabled: Boolean) = useLegacyFolderIconsPref.set(enabled)
+    suspend fun setBottomBarExpanded(isExpanded: Boolean) = bottomBarExpandedPref.set(isExpanded)
+    suspend fun setScreenshotDeletesVideo(enabled: Boolean) = screenshotDeletesVideoPref.set(enabled)
+    suspend fun setScanAudioEnabled(enabled: Boolean) = scanAudioEnabledPref.set(enabled)
+    suspend fun setScanDocumentEnabled(enabled: Boolean) = scanDocumentEnabledPref.set(enabled)
+    suspend fun setRecycleBinEnabled(enabled: Boolean) = recycleBinEnabledPref.set(enabled)
+    suspend fun setRecycleBinSkipTrashJunk(enabled: Boolean) = recycleBinSkipTrashJunkPref.set(enabled)
+
+    // ── Dialog confirmation setters ──────────────────────────────────────────
+
+    suspend fun setShowConfirmMarkAsSorted(enabled: Boolean) = showConfirmMarkAsSortedPref.set(enabled)
+    suspend fun setShowConfirmResetAllHistory(enabled: Boolean) = showConfirmResetAllHistoryPref.set(enabled)
+    suspend fun setShowConfirmForgetFolder(enabled: Boolean) = showConfirmForgetFolderPref.set(enabled)
+    suspend fun setShowConfirmResetSourceFavs(enabled: Boolean) = showConfirmResetSourceFavsPref.set(enabled)
+    suspend fun setShowConfirmResetTargetFavs(enabled: Boolean) = showConfirmResetTargetFavsPref.set(enabled)
+    suspend fun setShowConfirmDeleteAllExact(enabled: Boolean) = showConfirmDeleteAllExactPref.set(enabled)
+
+    suspend fun resetDialogConfirmations() {
         context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.RECYCLE_BIN_SKIP_TRASH_JUNK] = enabled
+            preferences[PreferencesKeys.SHOW_CONFIRM_MARK_AS_SORTED] = true
+            preferences[PreferencesKeys.SHOW_CONFIRM_RESET_ALL_HISTORY] = true
+            preferences[PreferencesKeys.SHOW_CONFIRM_FORGET_FOLDER] = true
+            preferences[PreferencesKeys.SHOW_CONFIRM_RESET_SOURCE_FAVS] = true
+            preferences[PreferencesKeys.SHOW_CONFIRM_RESET_TARGET_FAVS] = true
+            preferences[PreferencesKeys.SHOW_CONFIRM_DELETE_ALL_EXACT] = true
         }
     }
 }

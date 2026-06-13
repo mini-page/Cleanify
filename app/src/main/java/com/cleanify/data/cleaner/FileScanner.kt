@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.os.Build
 import android.widget.TextView
 import java.io.File
 
@@ -50,7 +51,12 @@ class FileScanner(private val path: File, private val context: Context) {
     @SuppressLint("QueryPermissionsNeeded")
     private fun getInstalledPackages(): ArrayList<String> {
         val pm = context.packageManager
-        val pkgs = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+        val pkgs = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            pm.getInstalledApplications(PackageManager.ApplicationInfoFlags.of(0))
+        } else {
+            @Suppress("DEPRECATION")
+            pm.getInstalledApplications(PackageManager.GET_META_DATA)
+        }
         val pkgsStr: ArrayList<String> = ArrayList()
         for (pkg in pkgs) {
             pkgsStr.add(pkg.packageName)

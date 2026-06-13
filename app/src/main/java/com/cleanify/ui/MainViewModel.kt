@@ -89,7 +89,6 @@ class MainViewModel @Inject constructor(
         )
 
     val isOnboardingCompleted: StateFlow<Boolean?> = preferencesRepository.isOnboardingCompletedFlow
-        .map<Boolean, Boolean?> { it }
         .onStart { emit(null) }
         .stateIn(
             scope = viewModelScope,

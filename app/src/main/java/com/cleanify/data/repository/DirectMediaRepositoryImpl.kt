@@ -624,7 +624,7 @@ class DirectMediaRepositoryImpl @Inject constructor(
                     null
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e(logTag, "Error moving media to folder", e)
                 null
             }
         }
@@ -639,6 +639,7 @@ class DirectMediaRepositoryImpl @Inject constructor(
                 null
             }
         } catch (e: Exception) {
+            Log.w(logTag, "Failed to find file by ID: $mediaId", e)
             null
         }
     }
@@ -745,7 +746,7 @@ class DirectMediaRepositoryImpl @Inject constructor(
                     queue.add(subDir)
                 }
             } catch (e: Exception) {
-                // Ignore
+                Log.w(logTag, "Failed to list subdirectories in: ${directory.path}", e)
             }
         }
 
@@ -763,6 +764,7 @@ class DirectMediaRepositoryImpl @Inject constructor(
                 ?.filter { it.isFile && isMediaFile(it) }
                 ?.maxByOrNull { it.lastModified() }
         } catch (e: SecurityException) {
+            Log.w(logTag, "SecurityException reading directory: ${directory.absolutePath}", e)
             null
         }
     }
@@ -777,6 +779,7 @@ class DirectMediaRepositoryImpl @Inject constructor(
                 try {
                     File(folderId).exists()
                 } catch (e: Exception) {
+                    Log.w(logTag, "Error checking folder existence: $folderId", e)
                     false
                 }
             }
@@ -789,6 +792,7 @@ class DirectMediaRepositoryImpl @Inject constructor(
                 try {
                     File(path).name
                 } catch (e: Exception) {
+                    Log.w(logTag, "Error getting folder name: $path", e)
                     path
                 }
             }
@@ -812,6 +816,7 @@ class DirectMediaRepositoryImpl @Inject constructor(
                         null
                     }
                 } catch (e: Exception) {
+                    Log.w(logTag, "Error resolving folder path: $path", e)
                     null
                 }
             }
@@ -1112,6 +1117,7 @@ class DirectMediaRepositoryImpl @Inject constructor(
         try {
             File(path).isDirectory
         } catch (e: Exception) {
+            Log.w(logTag, "Failed to check if path is directory: $path", e)
             false
         }
     }
@@ -1126,6 +1132,7 @@ class DirectMediaRepositoryImpl @Inject constructor(
                 ?.sorted()
                 ?: emptyList()
         } catch (e: Exception) {
+            Log.w(logTag, "Failed to list subdirectories: $path", e)
             emptyList()
         }
     }
@@ -1172,6 +1179,7 @@ class DirectMediaRepositoryImpl @Inject constructor(
                 try {
                     File(path).parent
                 } catch (e: Exception) {
+                    Log.w(logTag, "Error getting parent path: $path", e)
                     null
                 }
             }
@@ -1184,6 +1192,7 @@ class DirectMediaRepositoryImpl @Inject constructor(
             try {
                 path to File(path).name
             } catch (e: Exception) {
+                Log.w(logTag, "Error getting hidden folder name: $path", e)
                 null
             }
         }.sortedBy { it.second.lowercase(Locale.ROOT) }

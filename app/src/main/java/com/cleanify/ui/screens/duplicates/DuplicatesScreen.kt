@@ -83,11 +83,13 @@ import com.cleanify.data.repository.DuplicateScanScope
 import com.cleanify.domain.model.DuplicateGroup
 import com.cleanify.domain.model.ScanResultGroup
 import com.cleanify.domain.model.SimilarGroup
+import com.cleanify.ui.components.AppDialog
 import com.cleanify.ui.components.BackNavigationIcon
 import com.cleanify.ui.components.FastScrollbar
 import com.cleanify.ui.components.MediaPreviewDialog
 import com.cleanify.util.rememberIsUsingGestureNavigation
 import kotlinx.coroutines.launch
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.io.File
 
 private const val ZOOM_IN_THRESHOLD = 1.5f
@@ -108,13 +110,13 @@ fun DuplicatesScreen(
     onNavigateToGroup: (String) -> Unit,
     onNavigateToSettings: () -> Unit,
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
     var showConfirmDeleteDialog by remember { mutableStateOf(false) }
     var showConfirmDeleteAllExactDialog by remember { mutableStateOf(false) }
     var previewItem by remember { mutableStateOf<MediaItem?>(null) }
-    val displayedUnscannableFiles by viewModel.displayedUnscannableFiles.collectAsState()
+    val displayedUnscannableFiles by viewModel.displayedUnscannableFiles.collectAsStateWithLifecycle()
     val permissionRequiredMessage = stringResource(R.string.notification_permission_required)
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -150,76 +152,55 @@ fun DuplicatesScreen(
     }
 
     if (showConfirmDeleteDialog) {
-        AlertDialog(
+        AppDialog(
             onDismissRequest = { showConfirmDeleteDialog = false },
             title = { Text(stringResource(R.string.confirm_deletion_title)) },
-            text = { Text(stringResource(R.string.confirm_deletion_body)) },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        viewModel.deleteSelectedFiles()
-                        showConfirmDeleteDialog = false
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text(stringResource(R.string.delete))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showConfirmDeleteDialog = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
+            text = { Text(stringResource(R.string.confirm_deletion_body)) }
+        ) {
+            TextButton(onClick = { showConfirmDeleteDialog = false }) {
+                Text(stringResource(R.string.cancel))
             }
-        )
+            Button(
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    viewModel.deleteSelectedFiles()
+                    showConfirmDeleteDialog = false
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text(stringResource(R.string.delete))
+            }
+        }
     }
 
     if (showConfirmDeleteAllExactDialog) {
         var doNotAskAgain by remember { mutableStateOf(false) }
 
-        AlertDialog(
+        AppDialog(
             onDismissRequest = { showConfirmDeleteAllExactDialog = false },
             title = { Text(stringResource(R.string.delete_all_exact_title)) },
-            text = {
-                Column {
-                    Text(stringResource(R.string.delete_all_exact_body))
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { doNotAskAgain = !doNotAskAgain },
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Checkbox(
-                            checked = doNotAskAgain,
-                            onCheckedChange = { doNotAskAgain = it }
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(stringResource(R.string.do_not_ask_again))
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        if (doNotAskAgain) {
-                            viewModel.setShowConfirmDeleteAllExact(false)
-                        }
-                        viewModel.deleteAllExactDuplicates()
-                        showConfirmDeleteAllExactDialog = false
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text(stringResource(R.string.delete_all))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showConfirmDeleteAllExactDialog = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
+            text = { Text(stringResource(R.string.delete_all_exact_body)) },
+            showDontAskAgain = true,
+            dontAskAgainChecked = doNotAskAgain,
+            onDontAskAgainChanged = { doNotAskAgain = it }
+        ) {
+            TextButton(onClick = { showConfirmDeleteAllExactDialog = false }) {
+                Text(stringResource(R.string.cancel))
             }
-        )
+            Button(
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    if (doNotAskAgain) {
+                        viewModel.setShowConfirmDeleteAllExact(false)
+                    }
+                    viewModel.deleteAllExactDuplicates()
+                    showConfirmDeleteAllExactDialog = false
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text(stringResource(R.string.delete_all))
+            }
+        }
     }
 
     previewItem?.let { item ->
@@ -402,7 +383,7 @@ fun GroupDetailsScreen(
     onNavigateUp: () -> Unit,
     onPreview: ((MediaItem) -> Unit)? = null
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val group = uiState.detailedGroup
     val context = LocalContext.current
     val noAppToOpenMessage = stringResource(R.string.no_app_to_open)
@@ -1559,6 +1540,7 @@ private fun DuplicateGroupCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(top = 12.dp, start = 16.dp, end = 8.dp, bottom = 12.dp)) {
@@ -1658,6 +1640,7 @@ private fun SimilarMediaGroupCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(top = 12.dp, start = 16.dp, end = 8.dp, bottom = 12.dp)) {

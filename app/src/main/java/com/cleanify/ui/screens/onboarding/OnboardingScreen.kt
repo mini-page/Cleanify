@@ -306,9 +306,7 @@ fun OnboardingScreen(
                     showPermissionScreen = true
                 }) { Text(stringResource(R.string.cancel)) }
                 Button(onClick = {
-                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
-                        (context as? ComponentActivity)?.finish()
-                    }
+                    (context as? ComponentActivity)?.finish()
                 }) { Text(stringResource(R.string.close)) }
             }
         )

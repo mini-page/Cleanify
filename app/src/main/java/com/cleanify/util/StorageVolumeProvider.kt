@@ -62,7 +62,6 @@ class StorageVolumeProvider @Inject constructor(
     fun getScanRoots(): List<File> = getVolumes().map { it.directory }
 
     private fun getVolumeId(volume: StorageVolume): String? {
-        @Suppress("DEPRECATION")
-        return volume.getUuid() ?: volume.directory?.absolutePath
+        return volume.uuid ?: volume.directory?.absolutePath
     }
 }

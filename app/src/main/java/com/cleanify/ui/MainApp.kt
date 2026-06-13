@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
+import com.cleanify.ui.components.AppDialog
 import com.cleanify.ui.navigation.AppNavigation
 import com.cleanify.ui.navigation.Screen
 import com.cleanify.util.PermissionManager
@@ -183,30 +184,25 @@ fun PermissionRequiredScreen() {
     }
 
     if (showCloseDialog) {
-        AlertDialog(
+        AppDialog(
             onDismissRequest = { showCloseDialog = false },
             title = { Text("Close Cleanify") },
             text = {
                 Text("Cleanify cannot function without All Files Access permission. We tried to, but it ended up being required for Cleanify to work properly for most users.")
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        (context as? androidx.activity.ComponentActivity)?.finish()
-                    }
-                ) {
-                    Text("Close")
-                }
-            },
-            dismissButton = {
-                Button(
-                    onClick = {
-                        showCloseDialog = false
-                    }
-                ) {
-                    Text("Cancel")
-                }
             }
-        )
+        ) {
+            TextButton(
+                onClick = { showCloseDialog = false }
+            ) {
+                Text("Cancel")
+            }
+            Button(
+                onClick = {
+                    (context as? androidx.activity.ComponentActivity)?.finish()
+                }
+            ) {
+                Text("Close")
+            }
+        }
     }
 }

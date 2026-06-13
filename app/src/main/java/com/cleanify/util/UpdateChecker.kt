@@ -12,6 +12,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -67,9 +68,8 @@ object UpdateChecker {
             conn.connect()
             val responseCode = conn.responseCode
             if (responseCode != HttpURLConnection.HTTP_OK) {
-                val errorStream = conn.errorStream?.bufferedReader()?.readText() ?: "HTTP $responseCode"
-                cachedResult = CachedResult(null, now)
-                return@withContext null
+                val errorBody = conn.errorStream?.bufferedReader()?.readText() ?: "HTTP $responseCode"
+                throw IOException("GitHub API error: $errorBody")
             }
 
             val response = conn.inputStream.bufferedReader().use { it.readText() }
@@ -84,9 +84,6 @@ object UpdateChecker {
 
             cachedResult = CachedResult(if (isNewer) info else null, now)
             if (isNewer) info else null
-        } catch (e: Exception) {
-            cachedResult = CachedResult(null, now)
-            null
         } finally {
             conn.disconnect()
         }

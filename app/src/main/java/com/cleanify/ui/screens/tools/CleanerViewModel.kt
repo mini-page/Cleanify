@@ -268,8 +268,12 @@ class CleanerViewModel(application: Application) : AndroidViewModel(application)
         val beforeFree = mi.availMem
 
         val pm = getApplication<Application>().packageManager
-        @Suppress("DEPRECATION")
-        val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+        val apps = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            pm.getInstalledApplications(PackageManager.ApplicationInfoFlags.of(0))
+        } else {
+            @Suppress("DEPRECATION")
+            pm.getInstalledApplications(PackageManager.GET_META_DATA)
+        }
         for (app in apps) {
             if (app.packageName != getApplication<Application>().packageName) {
                 try {

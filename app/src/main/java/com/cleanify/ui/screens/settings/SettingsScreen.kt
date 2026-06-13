@@ -1,6 +1,10 @@
 package com.cleanify.ui.screens.settings
 
+import android.Manifest
 import android.content.ClipData
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -85,9 +89,12 @@ import com.cleanify.ui.components.BackNavigationIcon
 import com.cleanify.ui.components.FolderSearchDialog
 import com.cleanify.ui.theme.AppTheme
 import com.cleanify.ui.theme.predefinedAccentColors
+import com.cleanify.util.PermissionManager
 import com.cleanify.util.UpdateChecker
 import com.cleanify.util.UpdateCheckState
 import com.cleanify.util.UpdateInfo
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.cleanify.util.Formatters
 import com.cleanify.util.rememberIsUsingGestureNavigation
 import kotlinx.coroutines.launch
 import java.io.File
@@ -122,51 +129,51 @@ fun SettingsScreen(
     initialPage: String? = null,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val debouncedSearchQuery by viewModel.debouncedSearchQuery.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val debouncedSearchQuery by viewModel.debouncedSearchQuery.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
-    val folderSearchState by viewModel.folderSearchManager.state.collectAsState()
-    val displayedUnindexedFiles by viewModel.displayedUnindexedFiles.collectAsState()
-    val currentTheme by viewModel.currentTheme.collectAsState()
-    val currentLocale by viewModel.currentLocale.collectAsState()
-    val useDynamicColors by viewModel.useDynamicColors.collectAsState()
-    val accentColorKey by viewModel.accentColorKey.collectAsState()
-    val compactFolderView by viewModel.compactFolderView.collectAsState()
-    val hideFilename by viewModel.hideFilename.collectAsState()
-    val invertSwipe by viewModel.invertSwipe.collectAsState()
-    val fullScreenSwipe by viewModel.fullScreenSwipe.collectAsState()
-    val folderSelectionMode by viewModel.folderSelectionMode.collectAsState()
-    val rememberProcessedMedia by viewModel.rememberProcessedMedia.collectAsState()
-    val unfavoriteRemovesFromBar by viewModel.unfavoriteRemovesFromBar.collectAsState()
-    val hideSkipButton by viewModel.hideSkipButton.collectAsState()
-    val defaultPath by viewModel.defaultAlbumCreationPath.collectAsState()
-    val showFavoritesInSetup by viewModel.showFavoritesInSetup.collectAsState()
-    val searchAutofocusEnabled by viewModel.searchAutofocusEnabled.collectAsState()
-    val skipPartialExpansion by viewModel.skipPartialExpansion.collectAsState()
-    val useFullScreenSummarySheet by viewModel.useFullScreenSummarySheet.collectAsState()
-    val reduceAnimations by viewModel.reduceAnimations.collectAsState()
-    val hideFromGallery by viewModel.hideFromGallery.collectAsState()
-    val folderBarLayout by viewModel.folderBarLayout.collectAsState()
-    val folderNameLayout by viewModel.folderNameLayout.collectAsState()
-    val useLegacyFolderIcons by viewModel.useLegacyFolderIcons.collectAsState()
-    val addFolderFocusTarget by viewModel.addFolderFocusTarget.collectAsState()
-    val swipeSensitivity by viewModel.swipeSensitivity.collectAsState()
-    val swipeDownAction by viewModel.swipeDownAction.collectAsState()
-    val tapAction by viewModel.tapAction.collectAsState()
-    val doubleTapAction by viewModel.doubleTapAction.collectAsState()
-    val addFavoriteToTargetByDefault by viewModel.addFavoriteToTargetByDefault.collectAsState()
-    val hintOnExistingFolderName by viewModel.hintOnExistingFolderName.collectAsState()
+    val folderSearchState by viewModel.folderSearchManager.state.collectAsStateWithLifecycle()
+    val displayedUnindexedFiles by viewModel.displayedUnindexedFiles.collectAsStateWithLifecycle()
+    val currentTheme by viewModel.currentTheme.collectAsStateWithLifecycle()
+    val currentLocale by viewModel.currentLocale.collectAsStateWithLifecycle()
+    val useDynamicColors by viewModel.useDynamicColors.collectAsStateWithLifecycle()
+    val accentColorKey by viewModel.accentColorKey.collectAsStateWithLifecycle()
+    val compactFolderView by viewModel.compactFolderView.collectAsStateWithLifecycle()
+    val hideFilename by viewModel.hideFilename.collectAsStateWithLifecycle()
+    val invertSwipe by viewModel.invertSwipe.collectAsStateWithLifecycle()
+    val fullScreenSwipe by viewModel.fullScreenSwipe.collectAsStateWithLifecycle()
+    val folderSelectionMode by viewModel.folderSelectionMode.collectAsStateWithLifecycle()
+    val rememberProcessedMedia by viewModel.rememberProcessedMedia.collectAsStateWithLifecycle()
+    val unfavoriteRemovesFromBar by viewModel.unfavoriteRemovesFromBar.collectAsStateWithLifecycle()
+    val hideSkipButton by viewModel.hideSkipButton.collectAsStateWithLifecycle()
+    val defaultPath by viewModel.defaultAlbumCreationPath.collectAsStateWithLifecycle()
+    val showFavoritesInSetup by viewModel.showFavoritesInSetup.collectAsStateWithLifecycle()
+    val searchAutofocusEnabled by viewModel.searchAutofocusEnabled.collectAsStateWithLifecycle()
+    val skipPartialExpansion by viewModel.skipPartialExpansion.collectAsStateWithLifecycle()
+    val useFullScreenSummarySheet by viewModel.useFullScreenSummarySheet.collectAsStateWithLifecycle()
+    val reduceAnimations by viewModel.reduceAnimations.collectAsStateWithLifecycle()
+    val hideFromGallery by viewModel.hideFromGallery.collectAsStateWithLifecycle()
+    val folderBarLayout by viewModel.folderBarLayout.collectAsStateWithLifecycle()
+    val folderNameLayout by viewModel.folderNameLayout.collectAsStateWithLifecycle()
+    val useLegacyFolderIcons by viewModel.useLegacyFolderIcons.collectAsStateWithLifecycle()
+    val addFolderFocusTarget by viewModel.addFolderFocusTarget.collectAsStateWithLifecycle()
+    val swipeSensitivity by viewModel.swipeSensitivity.collectAsStateWithLifecycle()
+    val swipeDownAction by viewModel.swipeDownAction.collectAsStateWithLifecycle()
+    val tapAction by viewModel.tapAction.collectAsStateWithLifecycle()
+    val doubleTapAction by viewModel.doubleTapAction.collectAsStateWithLifecycle()
+    val addFavoriteToTargetByDefault by viewModel.addFavoriteToTargetByDefault.collectAsStateWithLifecycle()
+    val hintOnExistingFolderName by viewModel.hintOnExistingFolderName.collectAsStateWithLifecycle()
     val pathOptions = viewModel.standardAlbumDirectories
-    val defaultVideoSpeed by viewModel.defaultVideoSpeed.collectAsState()
-    val screenshotDeletesVideo by viewModel.screenshotDeletesVideo.collectAsState()
-    val screenshotJpegQuality by viewModel.screenshotJpegQuality.collectAsState()
-    val similarityThresholdLevel by viewModel.similarityThresholdLevel.collectAsState()
-    val unselectAllInSearchScope by viewModel.unselectAllInSearchScope.collectAsState()
-    val duplicateScanScope by viewModel.duplicateScanScope.collectAsState()
-    val duplicateScanIncludeList by viewModel.duplicateScanIncludeList.collectAsState()
-    val duplicateScanExcludeList by viewModel.duplicateScanExcludeList.collectAsState()
-    val scanAudioEnabled by viewModel.scanAudioEnabled.collectAsState()
-    val scanDocumentEnabled by viewModel.scanDocumentEnabled.collectAsState()
+    val defaultVideoSpeed by viewModel.defaultVideoSpeed.collectAsStateWithLifecycle()
+    val screenshotDeletesVideo by viewModel.screenshotDeletesVideo.collectAsStateWithLifecycle()
+    val screenshotJpegQuality by viewModel.screenshotJpegQuality.collectAsStateWithLifecycle()
+    val similarityThresholdLevel by viewModel.similarityThresholdLevel.collectAsStateWithLifecycle()
+    val unselectAllInSearchScope by viewModel.unselectAllInSearchScope.collectAsStateWithLifecycle()
+    val duplicateScanScope by viewModel.duplicateScanScope.collectAsStateWithLifecycle()
+    val duplicateScanIncludeList by viewModel.duplicateScanIncludeList.collectAsStateWithLifecycle()
+    val duplicateScanExcludeList by viewModel.duplicateScanExcludeList.collectAsStateWithLifecycle()
+    val scanAudioEnabled by viewModel.scanAudioEnabled.collectAsStateWithLifecycle()
+    val scanDocumentEnabled by viewModel.scanDocumentEnabled.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
@@ -298,14 +305,14 @@ fun SettingsScreen(
                 )
                 "appearance" -> AppearanceSubPage(
                     currentTheme, currentLocale, useDynamicColors, accentColorKey,
-                    folderNameLayout, compactFolderView, useLegacyFolderIcons, hideFilename,
-                    folderBarLayout, skipPartialExpansion, useFullScreenSummarySheet,
                     supportsDynamicColors, isGestureMode, reduceAnimations, hideFromGallery,
                     viewModel
                 )
                 "sorting" -> SortingSubPage(
                     swipeSensitivity, swipeDownAction, fullScreenSwipe, invertSwipe,
                     tapAction, doubleTapAction,
+                    folderNameLayout, compactFolderView, useLegacyFolderIcons, hideFilename,
+                    folderBarLayout, skipPartialExpansion, useFullScreenSummarySheet,
                     viewModel
                 )
             "behavior" -> BehaviorSubPage(
@@ -382,7 +389,7 @@ fun SettingsScreen(
                 if (selectedPath != null) viewModel.addFolderToScanScopeList(selectedPath)
             },
             onSearch = { scope.launch { viewModel.folderSearchManager.selectSingleResultOrSelf() } },
-            formatListItemTitle = ::formatPathForDisplay
+            formatListItemTitle = Formatters::pathForDisplay
         )
     }
     if (uiState.showDefaultPathSearchDialog) {
@@ -397,7 +404,7 @@ fun SettingsScreen(
             onFolderSelected = viewModel::onPathSelected,
             onConfirm = viewModel::confirmDefaultPathSelection,
             onSearch = { scope.launch { viewModel.folderSearchManager.selectSingleResultOrSelf() } },
-            formatListItemTitle = ::formatPathForDisplay
+            formatListItemTitle = Formatters::pathForDisplay
         )
     }
     if (uiState.showForgetMediaSearchDialog) {
@@ -412,7 +419,7 @@ fun SettingsScreen(
             onFolderSelected = { path -> viewModel.forgetSortedMediaInFolder(path) },
             onConfirm = {},
             onSearch = { scope.launch { viewModel.folderSearchManager.selectSingleResultOrSelf() } },
-            formatListItemTitle = ::formatPathForDisplay
+            formatListItemTitle = Formatters::pathForDisplay
         )
     }
     if (uiState.showConfirmForgetFolderDialog) {
@@ -571,9 +578,7 @@ private fun SettingsMainMenu(
 @Composable
 private fun AppearanceSubPage(
     currentTheme: AppTheme, currentLocale: AppLocale, useDynamicColors: Boolean,
-    accentColorKey: String, folderNameLayout: FolderNameLayout, compactFolderView: Boolean,
-    useLegacyFolderIcons: Boolean, hideFilename: Boolean, folderBarLayout: FolderBarLayout,
-    skipPartialExpansion: Boolean, useFullScreenSummarySheet: Boolean,
+    accentColorKey: String,
     supportsDynamicColors: Boolean, isGestureMode: Boolean, reduceAnimations: Boolean,
     hideFromGallery: Boolean, viewModel: SettingsViewModel
 ) {
@@ -597,17 +602,6 @@ private fun AppearanceSubPage(
         SettingSwitch(R.string.reduce_animations_title, R.string.reduce_animations_desc, reduceAnimations, { viewModel.setReduceAnimations(it) })
         SettingSwitch(R.string.hide_from_gallery_title, R.string.hide_from_gallery_desc, hideFromGallery, { viewModel.setHideFromGallery(it) })
 
-        HorizontalDivider(Modifier.padding(vertical = 4.dp))
-        SectionHeader(R.string.layout_section_header)
-
-        SettingsPickerItem(R.string.folder_name_position_title, R.string.folder_name_position_desc, FolderNameLayout.entries, folderNameLayout, { viewModel.setFolderNameLayout(it) }, ::getFolderNameLayoutDisplayName)
-        SettingSwitch(R.string.compact_folder_view_title, R.string.compact_folder_view_desc, compactFolderView, { viewModel.setCompactFolderView(it) })
-        SettingSwitch(R.string.legacy_folder_icons_title, R.string.legacy_folder_icons_desc, useLegacyFolderIcons, { viewModel.setUseLegacyFolderIcons(it) })
-        SettingSwitch(R.string.hide_media_filename_title, R.string.hide_media_filename_desc, hideFilename, { viewModel.setHideFilename(it) })
-        SettingsPickerItem(R.string.folder_bar_layout_title, R.string.folder_bar_layout_desc, FolderBarLayout.entries, folderBarLayout, { viewModel.setFolderBarLayout(it) }, { l -> when (l) { FolderBarLayout.HORIZONTAL -> stringResource(R.string.layout_horizontal); FolderBarLayout.VERTICAL -> stringResource(R.string.layout_vertical) } })
-        SettingSwitch(R.string.skip_partial_expansion_title, R.string.skip_partial_expansion_desc, skipPartialExpansion, { viewModel.onSkipPartialExpansionChanged(it) })
-        SettingSwitch(R.string.use_full_screen_summary_title, R.string.use_full_screen_summary_desc, useFullScreenSummarySheet, { viewModel.onUseFullScreenSummarySheetChanged(it) })
-
         Spacer(Modifier.height(if (isGestureMode) 0.dp else 32.dp))
     }
 }
@@ -620,6 +614,13 @@ private fun SortingSubPage(
     invertSwipe: Boolean,
     tapAction: TapAction,
     doubleTapAction: DoubleTapAction,
+    folderNameLayout: FolderNameLayout,
+    compactFolderView: Boolean,
+    useLegacyFolderIcons: Boolean,
+    hideFilename: Boolean,
+    folderBarLayout: FolderBarLayout,
+    skipPartialExpansion: Boolean,
+    useFullScreenSummarySheet: Boolean,
     viewModel: SettingsViewModel
 ) {
     Column(
@@ -636,6 +637,16 @@ private fun SortingSubPage(
         SectionHeader(R.string.tap_section_header)
         SettingsPickerItem(R.string.tap_action_title, R.string.tap_action_desc, TapAction.entries, tapAction, { viewModel.setTapAction(it) }, ::getTapActionDisplayName)
         SettingsPickerItem(R.string.double_tap_action_title, R.string.double_tap_action_desc, DoubleTapAction.entries, doubleTapAction, { viewModel.setDoubleTapAction(it) }, ::getDoubleTapActionDisplayName)
+
+        HorizontalDivider(Modifier.padding(vertical = 4.dp))
+        SectionHeader(R.string.layout_section_header)
+        SettingsPickerItem(R.string.folder_name_position_title, R.string.folder_name_position_desc, FolderNameLayout.entries, folderNameLayout, { viewModel.setFolderNameLayout(it) }, ::getFolderNameLayoutDisplayName)
+        SettingSwitch(R.string.compact_folder_view_title, R.string.compact_folder_view_desc, compactFolderView, { viewModel.setCompactFolderView(it) })
+        SettingSwitch(R.string.legacy_folder_icons_title, R.string.legacy_folder_icons_desc, useLegacyFolderIcons, { viewModel.setUseLegacyFolderIcons(it) })
+        SettingSwitch(R.string.hide_media_filename_title, R.string.hide_media_filename_desc, hideFilename, { viewModel.setHideFilename(it) })
+        SettingsPickerItem(R.string.folder_bar_layout_title, R.string.folder_bar_layout_desc, FolderBarLayout.entries, folderBarLayout, { viewModel.setFolderBarLayout(it) }, { l -> when (l) { FolderBarLayout.HORIZONTAL -> stringResource(R.string.layout_horizontal); FolderBarLayout.VERTICAL -> stringResource(R.string.layout_vertical) } })
+        SettingSwitch(R.string.skip_partial_expansion_title, R.string.skip_partial_expansion_desc, skipPartialExpansion, { viewModel.onSkipPartialExpansionChanged(it) })
+        SettingSwitch(R.string.use_full_screen_summary_title, R.string.use_full_screen_summary_desc, useFullScreenSummarySheet, { viewModel.onUseFullScreenSummarySheetChanged(it) })
 
         Spacer(Modifier.height(32.dp))
     }
@@ -754,6 +765,11 @@ private fun HelpSupportSubPage(
     defaultExportFilename: String,
     viewModel: SettingsViewModel
 ) {
+    val context = LocalContext.current
+    val requestPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { _ -> /* re-composition handles refreshed state */ }
+
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
@@ -790,8 +806,164 @@ private fun HelpSupportSubPage(
             }
         }
 
+        HorizontalDivider(Modifier.padding(vertical = 4.dp))
+        SectionHeader(R.string.permission_manager_header)
+
+        val permissionEntries = remember {
+            listOf(
+                PermissionEntry(
+                    name = "All Files Access",
+                    desc = "Read and manage files on device storage",
+                    icon = Icons.Default.Storage,
+                    isGranted = PermissionManager.hasAllFilesAccess(),
+                    settingsAction = PermissionManager::createAllFilesAccessIntent
+                ),
+                PermissionEntry(
+                    name = "Notifications",
+                    desc = "Show scan progress notifications",
+                    icon = Icons.Default.Notifications,
+                    isGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+                        checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+                    else true,
+                    requestPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+                        Manifest.permission.POST_NOTIFICATIONS else null
+                ),
+                PermissionEntry(
+                    name = "Contacts (Read)",
+                    desc = "Scan and clean duplicate contacts",
+                    icon = Icons.Default.Contacts,
+                    isGranted = checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED,
+                    requestPermission = Manifest.permission.READ_CONTACTS
+                ),
+                PermissionEntry(
+                    name = "Contacts (Write)",
+                    desc = "Merge and update cleaned contacts",
+                    icon = Icons.Default.Edit,
+                    isGranted = checkSelfPermission(context, Manifest.permission.WRITE_CONTACTS) == PackageManager.PERMISSION_GRANTED,
+                    requestPermission = Manifest.permission.WRITE_CONTACTS
+                ),
+                PermissionEntry(
+                    name = "Foreground Service",
+                    desc = "Run duplicate scans in the background",
+                    icon = Icons.Default.History,
+                    isGranted = true,
+                    grantedNote = "Auto-granted"
+                ),
+                PermissionEntry(
+                    name = "Boot Completed",
+                    desc = "Run cleaner automatically after device restart",
+                    icon = Icons.Default.RestartAlt,
+                    isGranted = true,
+                    grantedNote = "Auto-granted"
+                ),
+                PermissionEntry(
+                    name = "Query All Packages",
+                    desc = "Detect orphaned folders from uninstalled apps",
+                    icon = Icons.Default.Apps,
+                    isGranted = true,
+                    grantedNote = "Auto-granted"
+                )
+            )
+        }
+
+        permissionEntries.forEach { entry ->
+            PermissionRow(
+                entry = entry,
+                context = context,
+                onRequest = { perm -> requestPermissionLauncher.launch(perm) },
+                onOpenSettings = { intent -> intent?.let { context.startActivity(it) } }
+            )
+        }
+
         Spacer(Modifier.height(32.dp))
     }
+}
+
+@Composable
+private fun PermissionRow(
+    entry: PermissionEntry,
+    context: Context,
+    onRequest: (String) -> Unit,
+    onOpenSettings: (Intent) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = if (entry.isGranted) MaterialTheme.colorScheme.primaryContainer
+                    else MaterialTheme.colorScheme.errorContainer,
+                modifier = Modifier.size(40.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = entry.icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = if (entry.isGranted) MaterialTheme.colorScheme.onPrimaryContainer
+                            else MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(entry.name, style = MaterialTheme.typography.titleMedium)
+                Text(entry.desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Spacer(Modifier.width(8.dp))
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = if (entry.isGranted) MaterialTheme.colorScheme.primaryContainer
+                    else MaterialTheme.colorScheme.errorContainer
+            ) {
+                Text(
+                    text = if (entry.isGranted) (entry.grantedNote ?: "Granted") else "Denied",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = if (entry.isGranted) MaterialTheme.colorScheme.onPrimaryContainer
+                        else MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            if (!entry.isGranted) {
+                if (entry.settingsAction != null) {
+                    FilledTonalButton(
+                        onClick = { entry.settingsAction(context)?.let(onOpenSettings) },
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                    ) {
+                        Text("Settings", style = MaterialTheme.typography.labelMedium)
+                    }
+                } else if (entry.requestPermission != null) {
+                    FilledTonalButton(
+                        onClick = { onRequest(entry.requestPermission) },
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                    ) {
+                        Text("Grant", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private data class PermissionEntry(
+    val name: String,
+    val desc: String,
+    val icon: ImageVector,
+    val isGranted: Boolean,
+    val settingsAction: ((Context) -> Intent?)? = null,
+    val requestPermission: String? = null,
+    val grantedNote: String? = null
+)
+
+private fun checkSelfPermission(context: Context, permission: String): Int {
+    return androidx.core.content.ContextCompat.checkSelfPermission(context, permission)
 }
 
 @Composable
@@ -868,13 +1040,15 @@ private fun AboutSubPage(
             onCheck = {
                 scope.launch {
                     updateState = UpdateCheckState.Checking
-                    val result = UpdateChecker.checkForUpdate(viewModel.appVersion)
-                    updateState = if (result != null) {
-                        UpdateCheckState.Available(result)
-                    } else if (updateState is UpdateCheckState.Checking) {
-                        UpdateCheckState.UpToDate
-                    } else {
-                        updateState
+                    try {
+                        val result = UpdateChecker.checkForUpdate(viewModel.appVersion)
+                        updateState = if (result != null) {
+                            UpdateCheckState.Available(result)
+                        } else {
+                            UpdateCheckState.UpToDate
+                        }
+                    } catch (e: Exception) {
+                        updateState = UpdateCheckState.Error(e.message ?: "Update check failed")
                     }
                 }
             },
@@ -1071,14 +1245,6 @@ private fun SettingsItem(title: String, summary: String, onClick: (() -> Unit)? 
             Text(text = summary, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
-}
-
-private fun formatPathForDisplay(path: String): Pair<String, String> {
-    val file = File(path)
-    val name = file.name
-    val parentPath = file.parent?.replace("/storage/emulated/0", "") ?: ""
-    val displayParent = if (parentPath.length > 30) "...${parentPath.takeLast(27)}" else parentPath
-    return Pair(name, displayParent)
 }
 
 @Composable
@@ -1278,90 +1444,68 @@ private fun <T> SettingsPickerItem(titleRes: Int, descriptionRes: Int, options: 
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun <T> SettingsPickerItem(titleRes: Int, description: String, options: List<T>, selectedOption: T, onOptionSelected: (T) -> Unit, getDisplayName: @Composable (T) -> String) {
     val accentColor = settingsPickerAccents[titleRes] ?: Color(0xFF7F8C8D)
-    var showSheet by remember { mutableStateOf(false) }
+    var showDropdown by remember { mutableStateOf(false) }
     val displayValue = getDisplayName(selectedOption)
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable { showSheet = true },
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-    ) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-            Text(stringResource(titleRes), style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(2.dp))
-            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(8.dp))
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                color = accentColor.copy(alpha = 0.08f),
-                border = BorderStroke(1.dp, accentColor.copy(alpha = 0.25f))
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Card(
+            modifier = Modifier.fillMaxWidth().clickable { showDropdown = true },
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                Text(stringResource(titleRes), style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(2.dp))
+                Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(8.dp))
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = accentColor.copy(alpha = 0.08f),
+                    border = BorderStroke(1.dp, accentColor.copy(alpha = 0.25f))
                 ) {
-                    Text(displayValue, style = MaterialTheme.typography.bodyLarge, color = accentColor, modifier = Modifier.weight(1f))
-                    Icon(imageVector = Icons.Default.UnfoldMore, contentDescription = null, tint = accentColor.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(displayValue, style = MaterialTheme.typography.bodyLarge, color = accentColor, modifier = Modifier.weight(1f))
+                        Icon(imageVector = Icons.Default.UnfoldMore, contentDescription = null, tint = accentColor.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+                    }
                 }
             }
         }
-    }
-    if (showSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showSheet = false },
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-            containerColor = MaterialTheme.colorScheme.surface,
-            dragHandle = null
+        DropdownMenu(
+            expanded = showDropdown,
+            onDismissRequest = { showDropdown = false },
+            shape = RoundedCornerShape(16.dp)
         ) {
-            Column(modifier = Modifier.padding(bottom = 32.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        Box(modifier = Modifier.size(40.dp, 4.dp).clip(RoundedCornerShape(2.dp)).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)))
-                    }
-                    Box(
-                        modifier = Modifier.padding(end = 8.dp).size(32.dp).clip(androidx.compose.foundation.shape.CircleShape).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)).clickable { showSheet = false },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Close, contentDescription = "Close",
-                            modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(stringResource(titleRes), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                }
-                Spacer(Modifier.height(8.dp))
-                options.forEach { option ->
-                    val isSelected = option == selectedOption
-                    Surface(
-                        modifier = Modifier.fillMaxWidth().clickable { onOptionSelected(option); showSheet = false }.padding(horizontal = 16.dp, vertical = 4.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        color = if (isSelected) accentColor.copy(alpha = 0.1f) else Color.Transparent,
-                        border = if (isSelected) BorderStroke(1.5.dp, accentColor) else null
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(getDisplayName(option), style = MaterialTheme.typography.bodyLarge, fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal, modifier = Modifier.weight(1f))
+            options.forEach { option ->
+                val isSelected = option == selectedOption
+                DropdownMenuItem(
+                    text = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                getDisplayName(option),
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) accentColor else MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f)
+                            )
                             if (isSelected) {
-                                Spacer(Modifier.width(8.dp))
-                                Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = accentColor, modifier = Modifier.size(24.dp))
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = accentColor,
+                                    modifier = Modifier.size(20.dp)
+                                )
                             }
                         }
-                    }
-                }
+                    },
+                    onClick = { onOptionSelected(option); showDropdown = false },
+                    leadingIcon = if (isSelected) {
+                        { Icon(Icons.Default.Check, contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp)) }
+                    } else null
+                )
             }
         }
     }

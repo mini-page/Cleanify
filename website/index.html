@@ -69,13 +69,7 @@
   .hero .hero-logo { margin: 0 auto 28px; width: 90px; height: 90px; }
   .hero .logo-big {
     width: 90px; height: 90px; border-radius: 22px; display: block; object-fit: cover;
-    padding: 3px;
-    background: linear-gradient(135deg, var(--accent), var(--pink), var(--teal));
-    animation: logoPulse 3s ease-in-out infinite;
-  }
-  @keyframes logoPulse {
-    0%,100% { box-shadow: 0 0 30px rgba(124,92,252,0.2); }
-    50% { box-shadow: 0 0 60px rgba(124,92,252,0.4); }
+    background: #fff;
   }
   .hero h1 { font-size: clamp(40px, 7vw, 64px); font-weight: 800; letter-spacing: -1.5px; line-height: 1.1; }
   .hero h1 span {
@@ -318,7 +312,7 @@
 <section class="hero">
   <div class="container">
     <div class="hero-logo">
-      <img src="images/logo.webp" alt="Cleanify" class="logo-big" onerror="this.parentElement.innerHTML='<svg width=\'90\' height=\'90\' viewBox=\'0 0 28 28\' fill=\'none\' style=\'border-radius:22px;background:linear-gradient(135deg,#7c5cfc,#f472b6,#2dd4bf);padding:6px\'><rect width=\'28\' height=\'28\' rx=\'6\' fill=\'#7c5cfc\'/><path d=\'M7 14l5 5 9-9\' stroke=\'#fff\' stroke-width=\'2.5\' stroke-linecap=\'round\' stroke-linejoin=\'round\'/></svg>'">
+      <img src="images/logo.webp" alt="Cleanify" class="logo-big" onerror="this.parentElement.innerHTML='<svg width=\'90\' height=\'90\' viewBox=\'0 0 28 28\' fill=\'none\' style=\'border-radius:22px;background:#fff;padding:6px\'><rect width=\'28\' height=\'28\' rx=\'6\' fill=\'#7c5cfc\'/><path d=\'M7 14l5 5 9-9\' stroke=\'#fff\' stroke-width=\'2.5\' stroke-linecap=\'round\' stroke-linejoin=\'round\'/></svg>'">
     </div>
     <h1><span>Cleanify</span></h1>
     <p class="tagline">Swipe. Sort. Reclaim your space. 100% offline &mdash; your files never leave your device.</p>

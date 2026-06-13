@@ -58,8 +58,12 @@ class CleanerWorker(
     private fun stopBackgroundApps() {
         val am = applicationContext.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         val pm = applicationContext.packageManager
-        @Suppress("DEPRECATION")
-        val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+        val apps = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            pm.getInstalledApplications(PackageManager.ApplicationInfoFlags.of(0))
+        } else {
+            @Suppress("DEPRECATION")
+            pm.getInstalledApplications(PackageManager.GET_META_DATA)
+        }
         for (app in apps) {
             if (app.packageName != applicationContext.packageName) {
                 try {

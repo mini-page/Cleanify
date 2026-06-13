@@ -42,6 +42,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DriveFileMove
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -56,6 +57,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -79,6 +81,8 @@ import com.cleanify.ui.components.FolderSearchDialog
 import com.cleanify.ui.components.RenameFolderDialog
 import com.cleanify.ui.theme.AppTheme
 import com.cleanify.ui.theme.LocalAppTheme
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.cleanify.util.Formatters
 import kotlinx.coroutines.launch
 import java.io.File
 import java.text.DecimalFormat
@@ -94,13 +98,13 @@ fun SessionSetupScreen(
     onNavigateToTools: () -> Unit,
     viewModel: SessionSetupViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val folderSearchState by viewModel.folderSearchManager.state.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val folderSearchState by viewModel.folderSearchManager.state.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
-    val searchAutofocusEnabled by viewModel.searchAutofocusEnabled.collectAsState()
+    val searchAutofocusEnabled by viewModel.searchAutofocusEnabled.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val isExpandedScreen = windowSizeClass.widthSizeClass > WindowWidthSizeClass.Compact
     val pullToRefreshState = rememberPullToRefreshState()
@@ -150,7 +154,7 @@ fun SessionSetupScreen(
             onFolderSelected = { path -> scope.launch { viewModel.folderSearchManager.selectPath(path) } },
             onConfirm = viewModel::confirmMoveFolderSelection,
             onSearch = { scope.launch { viewModel.folderSearchManager.selectSingleResultOrSelf() } },
-            formatListItemTitle = { formatPathForDisplay(it) }
+            formatListItemTitle = Formatters::pathForDisplay
         )
     }
 
@@ -269,7 +273,7 @@ fun SessionSetupScreen(
                     contentAlignment = Alignment.CenterStart
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
@@ -328,60 +332,60 @@ fun SessionSetupScreen(
                         onDismissRequest = { showSortMenu = false },
                         shape = RoundedCornerShape(16.dp)
                     ) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.sort_name_az)) },
+                        SortMenuItem(
+                            icon = Icons.Default.TextFields,
+                            label = stringResource(R.string.sort_name_az),
+                            isSelected = uiState.currentSortOption == FolderSortOption.ALPHABETICAL_ASC,
                             onClick = {
                                 viewModel.changeSortOption(FolderSortOption.ALPHABETICAL_ASC)
                                 showSortMenu = false
-                            },
-                            leadingIcon = {
-                                if (uiState.currentSortOption == FolderSortOption.ALPHABETICAL_ASC) Icon(Icons.Default.Check, contentDescription = "Check")
-                            })
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.sort_name_za)) },
+                            }
+                        )
+                        SortMenuItem(
+                            icon = Icons.Default.TextFields,
+                            label = stringResource(R.string.sort_name_za),
+                            isSelected = uiState.currentSortOption == FolderSortOption.ALPHABETICAL_DESC,
                             onClick = {
                                 viewModel.changeSortOption(FolderSortOption.ALPHABETICAL_DESC)
                                 showSortMenu = false
-                            },
-                            leadingIcon = {
-                                if (uiState.currentSortOption == FolderSortOption.ALPHABETICAL_DESC) Icon(Icons.Default.Check, contentDescription = "Check")
-                            })
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.sort_size_largest)) },
+                            }
+                        )
+                        SortMenuItem(
+                            icon = Icons.Default.Storage,
+                            label = stringResource(R.string.sort_size_largest),
+                            isSelected = uiState.currentSortOption == FolderSortOption.SIZE_DESC,
                             onClick = {
                                 viewModel.changeSortOption(FolderSortOption.SIZE_DESC)
                                 showSortMenu = false
-                            },
-                            leadingIcon = {
-                                if (uiState.currentSortOption == FolderSortOption.SIZE_DESC) Icon(Icons.Default.Check, contentDescription = "Check")
-                            })
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.sort_size_smallest)) },
+                            }
+                        )
+                        SortMenuItem(
+                            icon = Icons.Default.Storage,
+                            label = stringResource(R.string.sort_size_smallest),
+                            isSelected = uiState.currentSortOption == FolderSortOption.SIZE_ASC,
                             onClick = {
                                 viewModel.changeSortOption(FolderSortOption.SIZE_ASC)
                                 showSortMenu = false
-                            },
-                            leadingIcon = {
-                                if (uiState.currentSortOption == FolderSortOption.SIZE_ASC) Icon(Icons.Default.Check, contentDescription = "Check")
-                            })
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.sort_count_most)) },
+                            }
+                        )
+                        SortMenuItem(
+                            icon = Icons.Default.Folder,
+                            label = stringResource(R.string.sort_count_most),
+                            isSelected = uiState.currentSortOption == FolderSortOption.ITEM_COUNT_DESC,
                             onClick = {
                                 viewModel.changeSortOption(FolderSortOption.ITEM_COUNT_DESC)
                                 showSortMenu = false
-                            },
-                            leadingIcon = {
-                                if (uiState.currentSortOption == FolderSortOption.ITEM_COUNT_DESC) Icon(Icons.Default.Check, contentDescription = "Check")
-                            })
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.sort_count_fewest)) },
+                            }
+                        )
+                        SortMenuItem(
+                            icon = Icons.Default.Folder,
+                            label = stringResource(R.string.sort_count_fewest),
+                            isSelected = uiState.currentSortOption == FolderSortOption.ITEM_COUNT_ASC,
                             onClick = {
                                 viewModel.changeSortOption(FolderSortOption.ITEM_COUNT_ASC)
                                 showSortMenu = false
-                            },
-                            leadingIcon = {
-                                if (uiState.currentSortOption == FolderSortOption.ITEM_COUNT_ASC) Icon(Icons.Default.Check, contentDescription = "Check")
-                            })
+                            }
+                        )
                     }
                 }
             }
@@ -825,7 +829,7 @@ private fun EnhancedFolderItem(
             ) {
                 Text(text = folder.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
-                    text = pluralStringResource(R.plurals.folder_item_desc, folder.itemCount, folder.itemCount, formatFileSize(folder.totalSize)),
+                    text = pluralStringResource(R.plurals.folder_item_desc, folder.itemCount, folder.itemCount, Formatters.fileSize(folder.totalSize)),
                     style = MaterialTheme.typography.bodySmall,
                     color = secondaryTextColor
                 )
@@ -916,18 +920,29 @@ private fun EnhancedFolderItem(
     }
 }
 
-private fun formatPathForDisplay(path: String): Pair<String, String> {
-    val file = File(path)
-    val name = file.name
-    val parentPath = file.parent?.replace("/storage/emulated/0", "") ?: ""
-    val displayParent = if (parentPath.length > 30) "...${parentPath.takeLast(27)}" else parentPath
-    return Pair(name, displayParent)
-}
-
-private fun formatFileSize(size: Long): String {
-    if (size <= 0) return "0 B"
-    val units = arrayOf("B", "KB", "MB", "GB", "TB")
-    val digitGroups = (log10(size.toDouble()) / log10(1024.0)).toInt()
-    val formatter = DecimalFormat("#,##0.#")
-    return formatter.format(size / 1024.0.pow(digitGroups.toDouble())) + " " + units[digitGroups]
+@Composable
+private fun SortMenuItem(
+    icon: ImageVector,
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    DropdownMenuItem(
+        text = {
+            Text(label, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+        },
+        onClick = onClick,
+        leadingIcon = {
+            Icon(icon, contentDescription = label)
+        },
+        trailingIcon = {
+            if (isSelected) {
+                Icon(
+                    imageVector = Icons.Outlined.CheckCircle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+    )
 }

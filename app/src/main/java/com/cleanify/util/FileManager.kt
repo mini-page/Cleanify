@@ -22,9 +22,11 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.DocumentsContract
+import android.util.Log
 import java.io.File
 
 object FileManager {
+    private const val logTag = "FileManager"
 
     /**
      * Moves a file from a source path to a destination folder.
@@ -72,7 +74,7 @@ object FileManager {
                 null
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.w(logTag, "Failed to create album", e)
             null
         }
     }
@@ -86,7 +88,7 @@ object FileManager {
             val file = File(filePath)
             file.delete()
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.w(logTag, "Failed to delete file", e)
             false
         }
     }
@@ -112,7 +114,7 @@ object FileManager {
                 else -> null
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.w(logTag, "Failed to get file path from URI", e)
             null
         }
     }
@@ -163,8 +165,7 @@ object FileManager {
         if (storageManager != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             for (sv in storageManager.storageVolumes) {
                 val dir = sv.directory ?: continue
-                @Suppress("DEPRECATION")
-                val uuid = sv.getUuid()
+                val uuid = sv.uuid
                 if (uuid != null && uuid.equals(volumeType, ignoreCase = true)) {
                     return "${dir.absolutePath}/$path"
                 }

@@ -1,6 +1,7 @@
 package com.cleanify.util
 
 import android.content.Context
+import android.util.Log
 import android.webkit.MimeTypeMap
 import com.cleanify.data.db.dao.RecycleBinDao
 import com.cleanify.data.db.entity.FileCategory
@@ -144,7 +145,9 @@ class RecycleBinManager @Inject constructor(
             try {
                 File(entry.recycledPath).delete()
                 count++
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to delete recycled file: ${entry.recycledPath}", e)
+            }
         }
         recycleBinDao.clearAll()
         return count
@@ -156,7 +159,9 @@ class RecycleBinManager @Inject constructor(
         expired.forEach { entry ->
             try {
                 File(entry.recycledPath).delete()
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to delete expired file: ${entry.recycledPath}", e)
+            }
         }
         recycleBinDao.deleteExpired(now)
         return expired.size
@@ -172,6 +177,7 @@ class RecycleBinManager @Inject constructor(
     }
 
     companion object {
+        private const val TAG = "RecycleBinManager"
         const val DEFAULT_RETENTION_DAYS = 30
         const val MIN_RETENTION_DAYS = 1
         const val MAX_RETENTION_DAYS = 30

@@ -36,6 +36,7 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.cleanify.ui.components.AppDialog
 import com.cleanify.ui.components.BackNavigationIcon
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -89,25 +90,22 @@ fun ContactCleanerScreen(
     }
 
     if (uiState.showDeleteConfirm) {
-        AlertDialog(
+        AppDialog(
             onDismissRequest = viewModel::dismissDeleteConfirm,
             title = { Text("Delete contacts?") },
-            text = { Text("This will permanently delete ${uiState.selectedIds.size} selected contact(s). This action cannot be undone.") },
-            confirmButton = {
-                Button(onClick = viewModel::confirmDelete, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) {
-                    Text("Delete")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = viewModel::dismissDeleteConfirm) { Text("Cancel") }
+            text = { Text("This will permanently delete ${uiState.selectedIds.size} selected contact(s). This action cannot be undone.") }
+        ) {
+            TextButton(onClick = viewModel::dismissDeleteConfirm) { Text("Cancel") }
+            Button(onClick = viewModel::confirmDelete, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) {
+                Text("Delete")
             }
-        )
+        }
     }
 
     if (uiState.showMergeConfirm != null) {
         val groupIdx = uiState.showMergeConfirm!!
         val group = uiState.duplicateGroups.getOrNull(groupIdx)
-        AlertDialog(
+        AppDialog(
             onDismissRequest = viewModel::dismissMergeConfirm,
             title = { Text("Merge duplicates?") },
             text = {
@@ -115,14 +113,11 @@ fun ContactCleanerScreen(
                     if (group != null) "Merge ${group.contacts.size} contacts into one? The first contact will be kept as the primary."
                     else "Merge this duplicate group?"
                 )
-            },
-            confirmButton = {
-                Button(onClick = viewModel::confirmMerge) { Text("Merge") }
-            },
-            dismissButton = {
-                TextButton(onClick = viewModel::dismissMergeConfirm) { Text("Cancel") }
             }
-        )
+        ) {
+            TextButton(onClick = viewModel::dismissMergeConfirm) { Text("Cancel") }
+            Button(onClick = viewModel::confirmMerge) { Text("Merge") }
+        }
     }
 
     Scaffold(
@@ -508,11 +503,26 @@ private fun IssueCard(
     onDelete: (Long) -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
+    var showDeleteConfirm by remember { mutableStateOf(false) }
     val issueLabel = when {
         contact.name.isBlank() -> "No name"
         contact.phoneNumbers.isEmpty() -> "No phone number"
         else -> "Unknown issue"
     }
+
+    if (showDeleteConfirm) {
+        AppDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Delete contact?") },
+            text = { Text("This will permanently delete \"${contact.name.ifBlank { "(unnamed)" }}\". This action cannot be undone.") }
+        ) {
+            TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
+            Button(onClick = { showDeleteConfirm = false; onDelete(contact.id) }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) {
+                Text("Delete")
+            }
+        }
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -552,7 +562,7 @@ private fun IssueCard(
                 }
             }
             IconButton(
-                onClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onDelete(contact.id) },
+                onClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); showDeleteConfirm = true },
                 enabled = !isOperating
             ) {
                 Icon(

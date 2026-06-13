@@ -88,7 +88,7 @@ fun RecycleBinScreen(
                         Spacer(Modifier.width(4.dp))
                         Text("Restore")
                     }
-                    TextButton(onClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); showDeleteConfirmDialog = true }) {
+                    TextButton(onClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); showDeleteConfirmDialog = true }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
                         Icon(Icons.Default.Delete, contentDescription = "Delete", modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(4.dp))
                         Text("Delete")

@@ -20,6 +20,7 @@ package com.cleanify.ui.components
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -47,6 +48,7 @@ fun AppDropdownMenu(
     modifier: Modifier = Modifier,
     offset: DpOffset = DpOffset(0.dp, 0.dp),
     properties: PopupProperties = PopupProperties(focusable = true),
+    shape: RoundedCornerShape = RoundedCornerShape(16.dp),
     content: @Composable ColumnScope.() -> Unit
 ) {
     val isAmoled = LocalAppTheme.current == AppTheme.AMOLED
@@ -54,11 +56,11 @@ fun AppDropdownMenu(
     val menuModifier = if (isAmoled) {
         // For AMOLED, add a visible border to distinguish the menu from the black background.
         modifier
-            .clip(ExpressiveShapes.medium) // Clip first to ensure the border follows the shape.
+            .clip(shape) // Clip first to ensure the border follows the shape.
             .border(
                 width = 1.dp,
                 color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                shape = ExpressiveShapes.medium
+                shape = shape
             )
     } else {
         modifier
@@ -70,6 +72,7 @@ fun AppDropdownMenu(
         modifier = menuModifier,
         offset = offset,
         properties = properties,
+        shape = shape,
         content = content
     )
 }

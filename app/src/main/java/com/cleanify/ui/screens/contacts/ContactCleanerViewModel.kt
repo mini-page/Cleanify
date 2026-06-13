@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.ContactsContract
 import android.provider.Settings
+import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -59,6 +60,7 @@ class ContactCleanerViewModel @Inject constructor(
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
+    private val logTag = "ContactCleanerVM"
     private val _uiState = MutableStateFlow(ContactCleanerUiState())
     val uiState: StateFlow<ContactCleanerUiState> = _uiState.asStateFlow()
 
@@ -319,7 +321,9 @@ class ContactCleanerViewModel @Inject constructor(
                 try {
                     performMergeInternal(group)
                     mergedCount += group.contacts.size
-                } catch (_: Exception) { }
+                } catch (e: Exception) {
+                    Log.w(logTag, "Failed to merge group with ${group.contacts.size} contacts", e)
+                }
             }
             _uiState.value = _uiState.value.copy(
                 snackbarMessage = "Merged $mergedCount contacts across ${groups.size} groups",

@@ -40,10 +40,14 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateOffsetAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -123,6 +127,7 @@ import com.cleanify.data.repository.FolderBarLayout
 import com.cleanify.data.repository.FolderNameLayout
 import com.cleanify.data.repository.SwipeDownAction
 import com.cleanify.data.repository.SwipeSensitivity
+import com.cleanify.ui.components.AppDialog
 import com.cleanify.ui.components.AppDropdownMenu
 import com.cleanify.ui.components.AppMenuDivider
 import com.cleanify.ui.components.FolderSearchDialog
@@ -137,6 +142,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.cleanify.util.Formatters
 import java.io.File
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
@@ -168,21 +175,22 @@ fun SwiperScreen(
     onNavigateToTools: () -> Unit = {},
     viewModel: SwiperViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val invertSwipe by viewModel.invertSwipe.collectAsState()
-    val swipeSensitivity by viewModel.swipeSensitivity.collectAsState()
-    val swipeDownAction by viewModel.swipeDownAction.collectAsState()
-    val folderBarLayout by viewModel.folderBarLayout.collectAsState()
-    val folderNameLayout by viewModel.folderNameLayout.collectAsState()
-    val skipPartialExpansion by viewModel.skipPartialExpansion.collectAsState()
-    val screenshotDeletesVideo by viewModel.screenshotDeletesVideo.collectAsState()
-    val addFolderFocusTarget by viewModel.addFolderFocusTarget.collectAsState()
-    val addFavoriteToTargetByDefault by viewModel.addFavoriteToTargetByDefault.collectAsState()
-    val hintOnExistingFolderName by viewModel.hintOnExistingFolderName.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val invertSwipe by viewModel.invertSwipe.collectAsStateWithLifecycle()
+    val swipeSensitivity by viewModel.swipeSensitivity.collectAsStateWithLifecycle()
+    val swipeDownAction by viewModel.swipeDownAction.collectAsStateWithLifecycle()
+    val folderBarLayout by viewModel.folderBarLayout.collectAsStateWithLifecycle()
+    val folderNameLayout by viewModel.folderNameLayout.collectAsStateWithLifecycle()
+    val hidePreviewStrip by viewModel.hidePreviewStrip.collectAsStateWithLifecycle()
+    val skipPartialExpansion by viewModel.skipPartialExpansion.collectAsStateWithLifecycle()
+    val screenshotDeletesVideo by viewModel.screenshotDeletesVideo.collectAsStateWithLifecycle()
+    val addFolderFocusTarget by viewModel.addFolderFocusTarget.collectAsStateWithLifecycle()
+    val addFavoriteToTargetByDefault by viewModel.addFavoriteToTargetByDefault.collectAsStateWithLifecycle()
+    val hintOnExistingFolderName by viewModel.hintOnExistingFolderName.collectAsStateWithLifecycle()
     val appContext = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val isExpandedScreen = windowSizeClass.widthSizeClass > WindowWidthSizeClass.Compact
-    val folderSearchState by viewModel.folderSearchManager.state.collectAsState()
+    val folderSearchState by viewModel.folderSearchManager.state.collectAsStateWithLifecycle()
     val focusRequester = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
 
@@ -286,32 +294,34 @@ fun SwiperScreen(
         }
     }
     if (uiState.showConfirmExitDialog) {
-        AlertDialog(
+        AppDialog(
             onDismissRequest = { viewModel.cancelExit() },
             title = { Text(stringResource(R.string.unsaved_changes_title)) },
-            text = { Text(stringResource(R.string.unsaved_changes_message)) },
-            confirmButton = {
-                Button(
-                    onClick = { viewModel.confirmExit() }
-                ) {
-                    Text(stringResource(R.string.cancel_all_changes))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.cancelExitAndShowSummary() }) {
-                    Text(stringResource(R.string.review_changes))
-                }
+            text = { Text(stringResource(R.string.unsaved_changes_message)) }
+        ) {
+            TextButton(onClick = { viewModel.cancelExitAndShowSummary() }) {
+                Text(stringResource(R.string.review_changes))
             }
-        )
+            Button(onClick = { viewModel.confirmExit() }) {
+                Text(stringResource(R.string.cancel_all_changes))
+            }
+        }
     }
 
     Scaffold(
         topBar = {
             SwiperTopBar(
                 currentItem = uiState.currentItem,
+                currentIndex = uiState.currentIndex,
+                totalCount = uiState.allMediaItems.size,
                 onNavigateUp = { viewModel.onNavigateUp() },
                 onOpenWith = { viewModel.openCurrentItem() },
-                onNavigateToSettings = onNavigateToSettings
+                onShare = viewModel::shareCurrentItem,
+                onInfoClick = viewModel::showItemInfoSheet,
+                onNavigateToSettings = onNavigateToSettings,
+                folderNameLayout = folderNameLayout,
+                hidePreviewStrip = hidePreviewStrip,
+                onToggleHidePreviewStrip = viewModel::toggleHidePreviewStrip
             )
         }
     ) { paddingValues ->
@@ -366,6 +376,7 @@ fun SwiperScreen(
                                 isPendingConversion = uiState.isCurrentItemPendingConversion,
                                 screenshotDeletesVideo = screenshotDeletesVideo,
                                 folderNameLayout = folderNameLayout,
+                                hidePreviewStrip = hidePreviewStrip,
                                 onNavigateToIndex = viewModel::navigateToIndex,
                                 onDelete = viewModel::handleSwipeLeft,
                                 onKeep = viewModel::handleSwipeRight,
@@ -424,6 +435,7 @@ fun SwiperScreen(
                                 isPendingConversion = uiState.isCurrentItemPendingConversion,
                                 screenshotDeletesVideo = screenshotDeletesVideo,
                                 folderNameLayout = folderNameLayout,
+                                hidePreviewStrip = hidePreviewStrip,
                                 onNavigateToIndex = viewModel::navigateToIndex,
                                 onDelete = viewModel::handleSwipeLeft,
                                 onKeep = viewModel::handleSwipeRight,
@@ -453,7 +465,7 @@ fun SwiperScreen(
                     }
                 }
                 uiState.isSortingComplete && uiState.pendingChanges.isEmpty() -> {
-                    val rememberProcessedMedia by viewModel.rememberProcessedMedia.collectAsState()
+                    val rememberProcessedMedia by viewModel.rememberProcessedMedia.collectAsStateWithLifecycle()
                     AlreadyOrganizedDialog(
                         onSelectNewFolders = onNavigateUpAndReset,
                         showResetHistoryButton = rememberProcessedMedia,
@@ -506,21 +518,18 @@ fun SwiperScreen(
                     }
                 )
                 if (showConfirmDialog && folderToForget != null) {
-                    AlertDialog(
+                    AppDialog(
                         onDismissRequest = { showConfirmDialog = false },
                         title = { Text(stringResource(R.string.forget_confirm_title)) },
-                        text = { Text(stringResource(R.string.forget_confirm_body, File(folderToForget).name)) },
-                        confirmButton = {
-                            Button(onClick = {
-                                viewModel.forgetSortedMediaInFolder(folderToForget)
-                                showConfirmDialog = false
-                                viewModel.dismissForgetMediaSearchDialog()
-                            }) { Text(stringResource(R.string.confirm)) }
-                        },
-                        dismissButton = {
-                            TextButton(onClick = { showConfirmDialog = false }) { Text(stringResource(R.string.cancel)) }
-                        }
-                    )
+                        text = { Text(stringResource(R.string.forget_confirm_body, File(folderToForget).name)) }
+                    ) {
+                        TextButton(onClick = { showConfirmDialog = false }) { Text(stringResource(R.string.cancel)) }
+                        Button(onClick = {
+                            viewModel.forgetSortedMediaInFolder(folderToForget)
+                            showConfirmDialog = false
+                            viewModel.dismissForgetMediaSearchDialog()
+                        }) { Text(stringResource(R.string.confirm)) }
+                    }
                 }
             }
             FolderContextMenu(
@@ -541,7 +550,8 @@ fun SwiperScreen(
                 onScreenshot = viewModel::addScreenshotChange,
                 onMoveToEdit = viewModel::moveToEditFolder,
                 onShare = viewModel::shareCurrentItem,
-                onOpen = viewModel::openCurrentItem
+                onOpen = viewModel::openCurrentItem,
+                onInfo = viewModel::showItemInfoSheet
             )
         }
         if (uiState.showSummarySheet) {
@@ -640,9 +650,16 @@ fun SwiperScreen(
 @Composable
 private fun SwiperTopBar(
     currentItem: MediaItem?,
+    currentIndex: Int,
+    totalCount: Int,
     onNavigateUp: () -> Unit,
     onOpenWith: () -> Unit,
-    onNavigateToSettings: () -> Unit
+    onShare: () -> Unit,
+    onInfoClick: () -> Unit,
+    onNavigateToSettings: () -> Unit,
+    folderNameLayout: FolderNameLayout = FolderNameLayout.ABOVE,
+    hidePreviewStrip: Boolean = false,
+    onToggleHidePreviewStrip: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier
@@ -676,101 +693,93 @@ private fun SwiperTopBar(
             }
         }
 
-        // Center: bucket name pill
+        // Center: folder name text
+        if (folderNameLayout == FolderNameLayout.ABOVE) {
+            Text(
+                text = currentItem?.bucketName ?: "",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 12.dp)
+            )
+        } else {
+            Spacer(Modifier.weight(1f))
+        }
+
+        // N/N counter pill (next to overflow)
         Surface(
             shape = MaterialTheme.shapes.extraLarge,
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = 12.dp)
+            color = MaterialTheme.colorScheme.surfaceVariant
         ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
+            Text(
+                text = "${currentIndex + 1} / $totalCount",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+            )
+        }
+
+        Spacer(Modifier.width(4.dp))
+
+        // Overflow menu
+        var showOverflow by remember { mutableStateOf(false) }
+        TooltipBox(
+            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                positioning = TooltipAnchorPosition.Above,
+                spacingBetweenTooltipAndAnchor = 4.dp
+            ),
+            tooltip = { PlainTooltip { Text("More") } },
+            state = rememberTooltipState()
+        ) {
+            IconButton(
+                onClick = { showOverflow = true },
+                modifier = Modifier.size(40.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.CalendarMonth,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    text = currentItem?.bucketName ?: "",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = "More",
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }
-
-        // Right: Open with / ⋯ grouped pill
-        Card(
-            shape = MaterialTheme.shapes.extraLarge,
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-            )
+        DropdownMenu(
+            expanded = showOverflow,
+            onDismissRequest = { showOverflow = false },
+            shape = RoundedCornerShape(16.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                TooltipBox(
-                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                        positioning = TooltipAnchorPosition.Above,
-                        spacingBetweenTooltipAndAnchor = 4.dp
-                    ),
-                    tooltip = { PlainTooltip { Text("Open with") } },
-                    state = rememberTooltipState()
-                ) {
-                    IconButton(
-                        onClick = onOpenWith,
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                            contentDescription = "Open with",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-                Box(
-                    modifier = Modifier
-                        .width(1.dp)
-                        .height(20.dp)
-                        .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-                )
-                var showOverflow by remember { mutableStateOf(false) }
-                TooltipBox(
-                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                        positioning = TooltipAnchorPosition.Above,
-                        spacingBetweenTooltipAndAnchor = 4.dp
-                    ),
-                    tooltip = { PlainTooltip { Text("More") } },
-                    state = rememberTooltipState()
-                ) {
-                    IconButton(
-                        onClick = { showOverflow = true },
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "More",
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-                DropdownMenu(
-                    expanded = showOverflow,
-                    onDismissRequest = { showOverflow = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Settings") },
-                        onClick = { onNavigateToSettings(); showOverflow = false },
-                        leadingIcon = { Icon(Icons.Default.Settings, contentDescription = "Settings") }
+            DropdownMenuItem(
+                text = { Text("Open with") },
+                onClick = { onOpenWith(); showOverflow = false },
+                leadingIcon = { Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = "Open with") }
+            )
+            DropdownMenuItem(
+                text = { Text("Share") },
+                onClick = { onShare(); showOverflow = false },
+                leadingIcon = { Icon(Icons.Default.Share, contentDescription = "Share") }
+            )
+            DropdownMenuItem(
+                text = { Text("Info") },
+                onClick = { onInfoClick(); showOverflow = false },
+                leadingIcon = { Icon(Icons.Default.Info, contentDescription = "Info") }
+            )
+            DropdownMenuItem(
+                text = { Text(if (hidePreviewStrip) "Show Media Previews" else "Hide Media Previews") },
+                onClick = { onToggleHidePreviewStrip(); showOverflow = false },
+                leadingIcon = {
+                    Icon(
+                        if (hidePreviewStrip) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                        contentDescription = if (hidePreviewStrip) "Show Media Previews" else "Hide Media Previews"
                     )
                 }
-            }
+            )
+            DropdownMenuItem(
+                text = { Text("Settings") },
+                onClick = { onNavigateToSettings(); showOverflow = false },
+                leadingIcon = { Icon(Icons.Default.Settings, contentDescription = "Settings") }
+            )
         }
     }
 }
@@ -892,79 +901,34 @@ private fun ThumbnailStrip(
     }
 }
 
-/**
- * Info bar below the thumbnail strip.
- * [🖼]  3 / 22  VID-20260604-WA0009.mp4  (ℹ)
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MediaInfoBar(
-    currentIndex: Int,
-    totalCount: Int,
-    currentItem: MediaItem,
-    hideFilename: Boolean,
-    onInfoClick: () -> Unit
-) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp),
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
+private fun InfoButton(onClick: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .width(1.dp)
+                .height(20.dp)
+                .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+        )
+        TooltipBox(
+            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                positioning = TooltipAnchorPosition.Above,
+                spacingBetweenTooltipAndAnchor = 4.dp
+            ),
+            tooltip = { PlainTooltip { Text("Item info") } },
+            state = rememberTooltipState()
         ) {
-            // Type icon
-            Icon(
-                imageVector = when (currentItem.category) {
-                    FileCategory.Video -> Icons.Default.VideoFile
-                    FileCategory.Audio -> Icons.Default.AudioFile
-                    else -> Icons.Default.Image
-                },
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(Modifier.width(8.dp))
-            // Index counter
-            Text(
-                text = "${currentIndex + 1} / $totalCount",
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Spacer(Modifier.width(10.dp))
-            // Filename — truncated, primary tint
-            if (!hideFilename) {
-                Text(
-                    text = currentItem.displayName,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            Spacer(Modifier.width(4.dp))
-            // ⓘ info button — opens details bottom sheet
-            TooltipBox(
-                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                    positioning = TooltipAnchorPosition.Above,
-                    spacingBetweenTooltipAndAnchor = 4.dp
-                ),
-                tooltip = { PlainTooltip { Text("Item info") } },
-                state = rememberTooltipState()
+            IconButton(
+                onClick = onClick,
+                modifier = Modifier.size(40.dp)
             ) {
-                IconButton(onClick = onInfoClick, modifier = Modifier.size(28.dp)) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = "Info",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = "Info",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }
@@ -983,6 +947,7 @@ private fun SwiperBottomBar(
     onUndo: () -> Unit,
     onShowSummary: () -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1028,7 +993,7 @@ private fun SwiperBottomBar(
                 tooltip = { PlainTooltip { Text("Undo") } },
                 state = rememberTooltipState()
             ) {
-                IconButton(onClick = onUndo) {
+                IconButton(onClick = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onUndo() }) {
                     Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo")
                 }
             }
@@ -1068,6 +1033,7 @@ private fun MainContent(
     isPendingConversion: Boolean,
     screenshotDeletesVideo: Boolean,
     folderNameLayout: FolderNameLayout,
+    hidePreviewStrip: Boolean = false,
     onNavigateToIndex: (Int) -> Unit,
     onDelete: () -> Unit,
     onKeep: () -> Unit,
@@ -1079,25 +1045,16 @@ private fun MainContent(
     }
 
     Column(modifier) {
-        if (folderNameLayout == FolderNameLayout.ABOVE) {
-            FolderNameHeader(currentItem.bucketName)
-        }
         // Thumbnail strip
-        ThumbnailStrip(
+        if (!hidePreviewStrip) {
+            ThumbnailStrip(
             items = uiState.allMediaItems,
             currentIndex = uiState.currentIndex,
             decidedIds = decidedIds,
             onTap = onNavigateToIndex,
             imageLoader = imageLoader
         )
-        // Info bar
-        MediaInfoBar(
-            currentIndex = uiState.currentIndex,
-            totalCount = uiState.allMediaItems.size,
-            currentItem = currentItem,
-            hideFilename = uiState.hideFilename,
-            onInfoClick = onInfoClick
-        )
+        }
         // Media card + FABs
         Box(modifier = Modifier.weight(1f)) {
             key(currentItem.id) {
@@ -1124,87 +1081,55 @@ private fun MainContent(
                     fullScreenSwipe = uiState.fullScreenSwipe
                 )
             }
-            // Delete / Keep FABs
+            // Delete / Keep round icon buttons with N/N counter between
+            val leftIsDelete = !invertSwipe
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter)
+                    .padding(horizontal = 24.dp)
                     .padding(bottom = 12.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                val leftIsDelete = !invertSwipe
                 // Left FAB
-                TooltipBox(
-                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                        positioning = TooltipAnchorPosition.Above,
-                        spacingBetweenTooltipAndAnchor = 4.dp
-                    ),
-                    tooltip = { PlainTooltip { Text(if (leftIsDelete) "Delete (swipe left)" else "Keep (swipe left)") } },
-                    state = rememberTooltipState()
+                Surface(
+                    onClick = if (leftIsDelete) onDelete else onKeep,
+                    shape = CircleShape,
+                    color = if (leftIsDelete) MaterialTheme.colorScheme.errorContainer else Color(0xFF1B5E20),
+                    shadowElevation = 6.dp,
+                    modifier = Modifier.size(64.dp)
                 ) {
-                    Surface(
-                        onClick = onDelete,
-                        shape = CircleShape,
-                        color = if (leftIsDelete) MaterialTheme.colorScheme.errorContainer else Color(0xFF1B5E20),
-                        shadowElevation = 6.dp,
-                        modifier = Modifier.size(64.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = if (leftIsDelete) Icons.Default.Delete else Icons.Default.Check,
-                                contentDescription = if (leftIsDelete) "Delete" else "Keep",
-                                tint = if (leftIsDelete) MaterialTheme.colorScheme.onErrorContainer else Color.White,
-                                modifier = Modifier.size(28.dp)
-                            )
-                        }
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = if (leftIsDelete) Icons.Default.Delete else Icons.Default.Check,
+                            contentDescription = if (leftIsDelete) "Delete" else "Keep",
+                            tint = if (leftIsDelete) MaterialTheme.colorScheme.onErrorContainer else Color.White,
+                            modifier = Modifier.size(28.dp)
+                        )
                     }
                 }
                 // Right FAB
-                TooltipBox(
-                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                        positioning = TooltipAnchorPosition.Above,
-                        spacingBetweenTooltipAndAnchor = 4.dp
-                    ),
-                    tooltip = { PlainTooltip { Text(if (leftIsDelete) "Keep (swipe right)" else "Delete (swipe right)") } },
-                    state = rememberTooltipState()
+                Surface(
+                    onClick = if (leftIsDelete) onKeep else onDelete,
+                    shape = CircleShape,
+                    color = if (leftIsDelete) Color(0xFF1B5E20) else MaterialTheme.colorScheme.errorContainer,
+                    shadowElevation = 6.dp,
+                    modifier = Modifier.size(64.dp)
                 ) {
-                    Surface(
-                        onClick = onKeep,
-                        shape = CircleShape,
-                        color = if (leftIsDelete) Color(0xFF1B5E20) else MaterialTheme.colorScheme.errorContainer,
-                        shadowElevation = 6.dp,
-                        modifier = Modifier.size(64.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = if (leftIsDelete) Icons.Default.Check else Icons.Default.Delete,
-                                contentDescription = if (leftIsDelete) "Keep" else "Delete",
-                                tint = if (leftIsDelete) Color.White else MaterialTheme.colorScheme.onErrorContainer,
-                                modifier = Modifier.size(28.dp)
-                            )
-                        }
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = if (leftIsDelete) Icons.Default.Check else Icons.Default.Delete,
+                            contentDescription = if (leftIsDelete) "Keep" else "Delete",
+                            tint = if (leftIsDelete) Color.White else MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.size(28.dp)
+                        )
                     }
                 }
             }
         }
     }
 }
-
-@Composable
-private fun FolderNameHeader(folderName: String) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
-    ) {
-        Text(
-            text = folderName,
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-            modifier = Modifier.padding(12.dp),
-            textAlign = TextAlign.Center
-        )
-    }
-}
-
 
 @Composable
 private fun FolderContextMenu(
@@ -1251,14 +1176,6 @@ private fun FolderContextMenu(
     }
 }
 
-private fun formatFileSize(size: Long): String {
-    if (size <= 0) return "0 B"
-    val units = arrayOf("B", "KB", "MB", "GB", "TB")
-    val digitGroups = (log10(size.toDouble()) / log10(1024.0)).toInt()
-    val formatter = DecimalFormat("#,##0.#")
-    return formatter.format(size / 1024.0.pow(digitGroups.toDouble())) + " " + units[digitGroups]
-}
-
 @Composable
 private fun MediaItemContextMenu(
     isVisible: Boolean,
@@ -1270,7 +1187,8 @@ private fun MediaItemContextMenu(
     onScreenshot: (Long) -> Unit,
     onMoveToEdit: () -> Unit,
     onShare: () -> Unit,
-    onOpen: () -> Unit
+    onOpen: () -> Unit,
+    onInfo: () -> Unit
 ) {
     val appContext = LocalContext.current
     val copiedString = stringResource(R.string.filename_copied)
@@ -1279,17 +1197,13 @@ private fun MediaItemContextMenu(
         DropdownMenu(
             expanded = true,
             onDismissRequest = onDismiss,
-            offset = menuOffset,
-            modifier = Modifier.clip(RoundedCornerShape(24.dp))
+            offset = DpOffset((-16).dp, 0.dp),
+            shape = RoundedCornerShape(24.dp),
+            modifier = Modifier.widthIn(max = 260.dp)
         ) {
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                tonalElevation = 4.dp
-            ) {
-                Column {
-                    // Info Section
-                    Box(
+            Column {
+                    // Info Section with truncated filename + Info button
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
@@ -1299,22 +1213,32 @@ private fun MediaItemContextMenu(
                                 Toast.makeText(appContext, copiedString, Toast.LENGTH_SHORT).show()
                                 onDismiss()
                             }
-                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 currentItem.displayName,
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary,
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.widthIn(max = 180.dp)
                             )
                             Spacer(Modifier.height(2.dp))
                             Text(
-                                stringResource(R.string.file_size_label, formatFileSize(currentItem.size)),
+                                stringResource(R.string.file_size_label, Formatters.fileSize(currentItem.size)),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        IconButton(onClick = { onInfo(); onDismiss() }, modifier = Modifier.size(32.dp)) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = "Info",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }
@@ -1350,7 +1274,6 @@ private fun MediaItemContextMenu(
                         onClick = onOpen,
                         leadingIcon = { Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = "Open in new tab") }
                     )
-                }
             }
         }
     }
@@ -1637,6 +1560,7 @@ private fun FolderChip(
     val color = MaterialTheme.colorScheme.secondaryContainer
     val contentColor = MaterialTheme.colorScheme.onSecondaryContainer
     val textStyle = if (isCompact) MaterialTheme.typography.labelSmall else MaterialTheme.typography.bodySmall
+    val haptic = LocalHapticFeedback.current
     Column(
         modifier = modifier
             .width(chipWidth)
@@ -1645,7 +1569,7 @@ private fun FolderChip(
             .pointerInput(onClick, onLongClick, isEnabled) {
                 detectTapGestures(
                     onLongPress = { offset -> onLongClick(offset) },
-                    onTap = { if (isEnabled) onClick() }
+                    onTap = { if (isEnabled) { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onClick() } }
                 )
             },
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -1732,13 +1656,14 @@ private fun MediaItemCard(
     screenshotDeletesVideo: Boolean,
     fullScreenSwipe: Boolean
 ) {
-    var swipeOffsetX by remember { mutableFloatStateOf(0f) }
-    var swipeOffsetY by remember { mutableFloatStateOf(0f) }
+    val swipeOffsetX = remember { Animatable(0f) }
+    val swipeOffsetY = remember { Animatable(0f) }
     val density = LocalDensity.current
     var scale by remember { mutableFloatStateOf(1f) }
     var panOffset by remember { mutableStateOf(Offset.Zero) }
     var showVideoControls by remember { mutableStateOf(true) }
     val videoControlsScope = rememberCoroutineScope()
+    val swipeScope = rememberCoroutineScope()
 
     val haptic = LocalHapticFeedback.current
 
@@ -1749,17 +1674,21 @@ private fun MediaItemCard(
     }
     // Make swipe down slightly easier to trigger than horizontal swipes
     val swipeDownThreshold = swipeThreshold * 0.8f
+    // Velocity threshold for fling detection (px/sec)
+    val velocityThreshold = with(density) { 800.dp.toPx() }
 
     val reduceAnimations = LocalReducedAnimations.current
-    val animSpec = if (reduceAnimations) snap<Float>() else tween<Float>(durationMillis = 150)
-    val rotation = (swipeOffsetX / 30).coerceIn(-6f, 6f)
-    val animatedOffsetX by animateFloatAsState(targetValue = swipeOffsetX, label = "offsetX", animationSpec = animSpec)
-    val animatedOffsetY by animateFloatAsState(targetValue = swipeOffsetY, label = "offsetY", animationSpec = animSpec)
+    val snapBackSpec = if (reduceAnimations) snap<Float>() else spring<Float>(
+        dampingRatio = Spring.DampingRatioMediumBouncy,
+        stiffness = Spring.StiffnessLow
+    )
+    val flyAwaySpec = if (reduceAnimations) snap<Float>() else tween<Float>(durationMillis = 200)
+    val rotation = (swipeOffsetX.value / 30).coerceIn(-6f, 6f)
     val animatedScale by animateFloatAsState(targetValue = scale, label = "scale")
     val animatedPanOffset by animateOffsetAsState(targetValue = panOffset, label = "panOffset")
 
-    val leftBorderAlpha = if (swipeOffsetX < 0) (abs(swipeOffsetX) / swipeThreshold).coerceIn(0f, 1f) else 0f
-    val rightBorderAlpha = if (swipeOffsetX > 0) (swipeOffsetX / swipeThreshold).coerceIn(0f, 1f) else 0f
+    val leftBorderAlpha = if (swipeOffsetX.value < 0) (abs(swipeOffsetX.value) / swipeThreshold).coerceIn(0f, 1f) else 0f
+    val rightBorderAlpha = if (swipeOffsetX.value > 0) (swipeOffsetX.value / swipeThreshold).coerceIn(0f, 1f) else 0f
     val leftColor = if (invertSwipe) Color.Green else Color.Red
     val rightColor = if (invertSwipe) Color.Red else Color.Green
     var globalPosition by remember { mutableStateOf(Offset.Zero) }
@@ -1767,8 +1696,8 @@ private fun MediaItemCard(
     LaunchedEffect(item.id) {
         scale = 1f
         panOffset = Offset.Zero
-        swipeOffsetX = 0f
-        swipeOffsetY = 0f
+        swipeOffsetX.snapTo(0f)
+        swipeOffsetY.snapTo(0f)
     }
 
     BoxWithConstraints(
@@ -1794,8 +1723,10 @@ private fun MediaItemCard(
                         var wasDragging = false
                         var wasTransforming = false
                         var longPressFired = false
+                        val velocityTracker = VelocityTracker()
 
                         val down = awaitFirstDown(requireUnconsumed = true)
+                        velocityTracker.addPosition(System.currentTimeMillis(), down.position)
                         val longPressJob = launch {
                             delay(viewConfiguration.longPressTimeoutMillis)
                             longPressFired = true
@@ -1843,12 +1774,13 @@ private fun MediaItemCard(
                                 if (dragAmount.getDistance() > viewConfiguration.touchSlop) {
                                     longPressJob.cancel()
                                     wasDragging = true
+                                    velocityTracker.addPosition(System.currentTimeMillis(), change.position)
                                     if (abs(dragAmount.x) > abs(dragAmount.y) && scale <= 1f) {
-                                        swipeOffsetX += dragAmount.x
+                                        swipeScope.launch { swipeOffsetX.snapTo(swipeOffsetX.value + dragAmount.x) }
                                     } else if (abs(dragAmount.y) > abs(dragAmount.x) && scale <= 1f) {
                                         if (swipeDownAction != SwipeDownAction.NONE) {
-                                            // Prevent dragging card upwards
-                                            swipeOffsetY = (swipeOffsetY + dragAmount.y).coerceAtLeast(0f)
+                                            val newY = (swipeOffsetY.value + dragAmount.y).coerceAtLeast(0f)
+                                            swipeScope.launch { swipeOffsetY.snapTo(newY) }
                                         }
                                     }
                                     change.consume()
@@ -1859,23 +1791,39 @@ private fun MediaItemCard(
                         longPressJob.cancel()
 
                         if (wasDragging) {
+                            val velocity = velocityTracker.calculateVelocity()
+                            val vx = velocity.x
+                            val vy = velocity.y
+                            val isFlingX = abs(vx) > velocityThreshold
+                            val isFlingY = abs(vy) > velocityThreshold
+
                             when {
-                                swipeOffsetX < -swipeThreshold -> {
+                                swipeOffsetX.value < -swipeThreshold || (isFlingX && vx < 0) -> {
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    swipeScope.launch {
+                                        swipeOffsetX.animateTo(-cardWidth.toPx() * 1.5f, flyAwaySpec)
+                                    }
                                     onSwipeLeft()
                                 }
-                                swipeOffsetX > swipeThreshold -> {
+                                swipeOffsetX.value > swipeThreshold || (isFlingX && vx > 0) -> {
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    swipeScope.launch {
+                                        swipeOffsetX.animateTo(cardWidth.toPx() * 1.5f, flyAwaySpec)
+                                    }
                                     onSwipeRight()
                                 }
-                                swipeOffsetY > swipeDownThreshold -> {
+                                swipeOffsetY.value > swipeDownThreshold || (isFlingY && vy > 0) -> {
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    swipeScope.launch {
+                                        swipeOffsetY.animateTo(cardHeight.toPx() * 1.5f, flyAwaySpec)
+                                    }
                                     onSwipeDown()
-                                    swipeOffsetY = 0f
                                 }
                                 else -> {
-                                    swipeOffsetX = 0f
-                                    swipeOffsetY = 0f
+                                    swipeScope.launch {
+                                        launch { swipeOffsetX.animateTo(0f, snapBackSpec) }
+                                        launch { swipeOffsetY.animateTo(0f, snapBackSpec) }
+                                    }
                                 }
                             }
                         } else if (!wasTransforming && !longPressFired) {
@@ -1915,8 +1863,8 @@ private fun MediaItemCard(
                     }
                     .then(if (!fullScreenSwipe) gestureModifier else Modifier)
                     .graphicsLayer {
-                        translationX = if (animatedScale > 1f) animatedPanOffset.x else animatedOffsetX
-                        translationY = if (animatedScale > 1f) animatedPanOffset.y else animatedOffsetY
+                        translationX = if (animatedScale > 1f) animatedPanOffset.x else swipeOffsetX.value
+                        translationY = if (animatedScale > 1f) animatedPanOffset.y else swipeOffsetY.value
                         scaleX = animatedScale
                         scaleY = animatedScale
                         rotationZ = if (animatedScale > 1f) 0f else rotation
@@ -1964,17 +1912,52 @@ private fun MediaItemCard(
                         }
                         if (leftBorderAlpha > 0f) {
                             Canvas(modifier = Modifier.fillMaxSize()) {
-                                val intensity = (leftBorderAlpha * 0.7f).coerceAtMost(0.7f)
-                                drawRect(brush = Brush.radialGradient(0.0f to leftColor.copy(alpha = intensity), 0.15f to leftColor.copy(alpha = intensity * 0.2f), 1.0f to Color.Transparent, center = Offset(0f, size.height), radius = size.maxDimension * (1.0f + leftBorderAlpha)))
+                                val intensity = (leftBorderAlpha * 0.9f).coerceAtMost(0.9f)
+                                drawRect(brush = Brush.radialGradient(0.0f to leftColor.copy(alpha = intensity), 0.12f to leftColor.copy(alpha = intensity * 0.5f), 0.5f to leftColor.copy(alpha = intensity * 0.1f), 1.0f to Color.Transparent, center = Offset(0f, size.height), radius = size.maxDimension * (1.2f + leftBorderAlpha)))
                             }
                         }
                         if (rightBorderAlpha > 0f) {
                             Canvas(modifier = Modifier.fillMaxSize()) {
-                                val intensity = (rightBorderAlpha * 0.6f).coerceAtMost(0.6f)
-                                drawRect(brush = Brush.radialGradient(0.0f to rightColor.copy(alpha = intensity), 0.15f to rightColor.copy(alpha = intensity * 0.2f), 1.0f to Color.Transparent, center = Offset(size.width, size.height), radius = size.maxDimension * (1.0f + rightBorderAlpha)))
+                                val intensity = (rightBorderAlpha * 0.9f).coerceAtMost(0.9f)
+                                drawRect(brush = Brush.radialGradient(0.0f to rightColor.copy(alpha = intensity), 0.12f to rightColor.copy(alpha = intensity * 0.5f), 0.5f to rightColor.copy(alpha = intensity * 0.1f), 1.0f to Color.Transparent, center = Offset(size.width, size.height), radius = size.maxDimension * (1.2f + rightBorderAlpha)))
                             }
                         }
                         Box(modifier = Modifier.fillMaxSize()) {
+                            // Swipe direction tags
+                            if (leftBorderAlpha > 0.3f) {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = leftColor.copy(alpha = 0.85f),
+                                    modifier = Modifier
+                                        .align(Alignment.CenterStart)
+                                        .padding(start = 16.dp)
+                                ) {
+                                    Text(
+                                        text = if (invertSwipe) "Keep" else "Delete",
+                                        color = Color.White,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        style = MaterialTheme.typography.titleLarge,
+                                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
+                                    )
+                                }
+                            }
+                            if (rightBorderAlpha > 0.3f) {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = rightColor.copy(alpha = 0.85f),
+                                    modifier = Modifier
+                                        .align(Alignment.CenterEnd)
+                                        .padding(end = 16.dp)
+                                ) {
+                                    Text(
+                                        text = if (invertSwipe) "Delete" else "Keep",
+                                        color = Color.White,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        style = MaterialTheme.typography.titleLarge,
+                                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
+                                    )
+                                }
+                            }
                             if (item.category == FileCategory.Video) {
                                 // Mute button
                                 val muteDesc = if (isVideoMuted) stringResource(R.string.unmute_video) else stringResource(R.string.mute_video)
@@ -2159,12 +2142,12 @@ private fun VideoBottomBar(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = formatDuration(currentPosition),
+                    text = Formatters.duration(currentPosition),
                     style = MaterialTheme.typography.labelSmall,
                     color = Color.White
                 )
                 Text(
-                    text = formatDuration(duration),
+                    text = Formatters.duration(duration),
                     style = MaterialTheme.typography.labelSmall,
                     color = Color.White
                 )
@@ -2233,7 +2216,7 @@ private fun AudioPlayerCard(
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                text = formatDuration(duration),
+                text = Formatters.duration(duration),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.White.copy(alpha = 0.6f)
             )
@@ -2250,12 +2233,12 @@ private fun AudioPlayerCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = formatDuration(currentPosition),
+                    text = Formatters.duration(currentPosition),
                     style = MaterialTheme.typography.labelSmall,
                     color = Color.White.copy(alpha = 0.5f)
                 )
                 Text(
-                    text = formatDuration(duration),
+                    text = Formatters.duration(duration),
                     style = MaterialTheme.typography.labelSmall,
                     color = Color.White.copy(alpha = 0.5f)
                 )
@@ -2317,7 +2300,7 @@ private fun FileInfoCard(
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                text = formatFileSize(mediaItem.size),
+                text = Formatters.fileSize(mediaItem.size),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.White.copy(alpha = 0.6f)
             )
@@ -2516,13 +2499,6 @@ private fun TextPreview(
             else -> FileInfoCard(mediaItem = mediaItem, modifier = Modifier.fillMaxSize())
         }
     }
-}
-
-private fun formatDuration(millis: Long): String {
-    val totalSeconds = millis / 1000
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return "%d:%02d".format(minutes, seconds)
 }
 
 private val MediaItem.extension: String
@@ -2816,7 +2792,7 @@ private fun ItemInfoSheet(
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
                     ) {
                         Text(
-                            text = formatFileSize(item.size),
+                            text = Formatters.fileSize(item.size),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Medium,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
@@ -2841,7 +2817,7 @@ private fun ItemInfoSheet(
                             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
                         ) {
                             Text(
-                                text = formatDuration(item.duration),
+                                text = Formatters.duration(item.duration),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Medium,
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
@@ -2926,7 +2902,7 @@ private fun ItemInfoSheet(
     }
 
     if (showRenameDialog) {
-        AlertDialog(
+        AppDialog(
             onDismissRequest = { showRenameDialog = false },
             title = { Text("Rename File") },
             text = {
@@ -2936,17 +2912,14 @@ private fun ItemInfoSheet(
                     singleLine = true,
                     label = { Text("New name") }
                 )
-            },
-            confirmButton = {
-                Button(onClick = {
-                    onRename(renameText)
-                    showRenameDialog = false
-                }) { Text("Rename") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showRenameDialog = false }) { Text("Cancel") }
             }
-        )
+        ) {
+            TextButton(onClick = { showRenameDialog = false }) { Text("Cancel") }
+            Button(onClick = {
+                onRename(renameText)
+                showRenameDialog = false
+            }) { Text("Rename") }
+        }
     }
 }
 

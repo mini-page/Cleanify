@@ -141,6 +141,7 @@ data class SwiperUiState(
     val showItemInfoSheet: Boolean = false,
     val tapAction: TapAction = TapAction.PLAY_PAUSE,
     val doubleTapAction: DoubleTapAction = DoubleTapAction.FAVORITE,
+    val hidePreviewStrip: Boolean = false,
 
     // Pre-processed lists for Summary Sheet performance
     val toDelete: List<PendingChange> = emptyList(),
@@ -222,6 +223,10 @@ class SwiperViewModel @Inject constructor(
 
     val screenshotDeletesVideo: StateFlow<Boolean> =
         preferencesRepository.screenshotDeletesVideoFlow
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val hidePreviewStrip: StateFlow<Boolean> =
+        preferencesRepository.hidePreviewStripFlow
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     val screenshotJpegQuality: StateFlow<String> =
@@ -433,6 +438,11 @@ class SwiperViewModel @Inject constructor(
         viewModelScope.launch {
             preferencesRepository.doubleTapActionFlow.collect { action ->
                 _uiState.update { it.copy(doubleTapAction = action) }
+            }
+        }
+        viewModelScope.launch {
+            preferencesRepository.hidePreviewStripFlow.collect { hidden ->
+                _uiState.update { it.copy(hidePreviewStrip = hidden) }
             }
         }
     }
@@ -1592,6 +1602,12 @@ class SwiperViewModel @Inject constructor(
 
     fun setPlaybackSpeed(speed: Float) {
         _uiState.update { it.copy(videoPlaybackSpeed = speed) }
+    }
+
+    fun toggleHidePreviewStrip() {
+        viewModelScope.launch {
+            preferencesRepository.setHidePreviewStrip(!_uiState.value.hidePreviewStrip)
+        }
     }
 
     fun toggleMute(hasAudio: Boolean) {

@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Devices
@@ -28,6 +29,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.cleanify.ui.components.AppDialog
 import com.cleanify.ui.components.BackNavigationIcon
 import java.io.File
 import java.text.DecimalFormat
@@ -312,6 +314,7 @@ private fun ResultsSection(
     onRescan: () -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
+    var showDeleteConfirm by remember { mutableStateOf(false) }
     val format = DecimalFormat("#.##")
     val kib: Long = 1024
     val mib: Long = 1048576
@@ -321,26 +324,58 @@ private fun ResultsSection(
         else -> "$totalSize B"
     }
 
+    if (showDeleteConfirm) {
+        AppDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Delete all found items?") },
+            text = { Text("This will permanently delete ${foundFiles.size} empty file(s)/folder(s). This action cannot be undone.") }
+        ) {
+            TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
+            Button(onClick = { showDeleteConfirm = false; onClean() }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) {
+                Text("Delete All")
+            }
+        }
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Scan Complete", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Text("Found: ${foundFiles.size} items")
-            Text("Total size: $sizeStr")
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Button(onClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onClean() }, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Delete All")
-                }
-                Spacer(modifier = Modifier.width(8.dp))
+        if (foundFiles.isEmpty()) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(48.dp)
+                )
+                Text("Your device is clean!", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text("No empty files or folders found.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(8.dp))
                 OutlinedButton(onClick = onRescan) {
                     Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Rescan")
+                }
+            }
+        } else {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Scan Complete", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text("Found: ${foundFiles.size} items")
+                Text("Total size: $sizeStr")
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Button(onClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); showDeleteConfirm = true }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) {
+                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Delete All")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    OutlinedButton(onClick = onRescan) {
+                        Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Rescan")
+                    }
                 }
             }
         }
