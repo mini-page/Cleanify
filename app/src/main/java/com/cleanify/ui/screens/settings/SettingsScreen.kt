@@ -1178,6 +1178,12 @@ private fun AboutSubPage(
             }
         }
 
+        SettingsItem(
+            title = stringResource(R.string.privacy_policy_title),
+            summary = stringResource(R.string.privacy_policy_desc),
+            onClick = { uriHandler.openUri("https://mini-page.github.io/Cleanify/website/#privacy") }
+        )
+
         SettingsItem(stringResource(R.string.open_source_licenses_title), stringResource(R.string.open_source_licenses_desc), onClick = onNavigateToLibraries)
 
         Spacer(Modifier.height(32.dp))

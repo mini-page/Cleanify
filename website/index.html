@@ -51,6 +51,8 @@
   nav a:not(.logo) { color: var(--text2); text-decoration: none; font-size: 14px; transition: color .2s; }
   nav a:not(.logo):hover { color: #fff; }
   nav .links { display: flex; gap: 28px; align-items: center; }
+  /* Screenshots nav link */
+  nav a[href='#screenshots'] { color: var(--text2); }
   nav .dl-btn {
     background: linear-gradient(135deg, var(--accent), var(--pink)); color: #fff !important;
     padding: 7px 18px; border-radius: 9px; font-weight: 600; font-size: 13px !important;
@@ -125,13 +127,38 @@
     border: none;
   }
 
-  /* Screenshots */
-  .screenshots { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
-  .screenshots img {
-    width: 200px; max-width: 22%; border-radius: var(--radius);
-    border: 1px solid var(--border); transition: transform .3s, box-shadow .3s;
+  /* Screenshots Gallery */
+  .screenshot-gallery { display: flex; flex-direction: column; gap: 48px; }
+  .ss-group-label {
+    font-size: 13px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 18px; display: flex; align-items: center; gap: 10px;
   }
-  .screenshots img:hover { transform: translateY(-4px) scale(1.02); box-shadow: var(--glow); }
+  .ss-group-label::after {
+    content: ''; flex: 1; height: 1px;
+    background: linear-gradient(90deg, var(--border), transparent);
+  }
+  .screenshots { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+  .ss-item {
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    flex: 0 0 auto;
+  }
+  .ss-item img {
+    width: 155px; border-radius: 20px;
+    border: 1px solid var(--border);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+    transition: transform .35s cubic-bezier(.4,0,.2,1), box-shadow .35s, border-color .35s;
+    display: block;
+  }
+  .ss-item img:hover {
+    transform: translateY(-8px) scale(1.04);
+    box-shadow: 0 20px 60px rgba(124,92,252,0.25), 0 8px 32px rgba(0,0,0,0.4);
+    border-color: var(--border-hover);
+  }
+  .ss-caption {
+    font-size: 12px; color: var(--text2); text-align: center; line-height: 1.4;
+    max-width: 140px;
+  }
+  .ss-caption strong { color: var(--text); display: block; font-size: 13px; margin-bottom: 2px; }
 
   /* Features grid */
   .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 28px; }
@@ -299,6 +326,7 @@
     </a>
     <div class="links">
       <a href="#features">Features</a>
+      <a href="#screenshots">Screenshots</a>
       <a href="#changelog">Changelog</a>
       <a href="#privacy">Privacy</a>
       <a href="#tech">Tech</a>
@@ -337,17 +365,75 @@
 </section>
 
 <!-- Screenshots -->
-<section class="fade-in">
+<section id="screenshots" class="fade-in">
   <div class="container">
     <div class="section-header">
-      <h2>Screenshots</h2>
-      <p>A quick look at the Cleanify experience.</p>
+      <h2>App Showcase</h2>
+      <p>A full tour of the Cleanify experience &mdash; every screen, beautifully detailed.</p>
     </div>
-    <div class="screenshots">
-      <img src="../docs/images/01.png" alt="Session Setup" onerror="this.style.display='none'">
-      <img src="../docs/images/02.png" alt="Swipe to Sort" onerror="this.style.display='none'">
-      <img src="../docs/images/03.png" alt="Duplicate Finder" onerror="this.style.display='none'">
-      <img src="../docs/images/04.png" alt="Quick Organize" onerror="this.style.display='none'">
+    <div class="screenshot-gallery">
+
+      <!-- Core Workflow -->
+      <div>
+        <div class="ss-group-label">&#x1F4F1; Core Workflow</div>
+        <div class="screenshots">
+          <div class="ss-item">
+            <img src="../docs/images/Home_screen.png" alt="Folder Selection" loading="lazy">
+            <div class="ss-caption"><strong>Folder Selection</strong>Scan, Select &amp; Start</div>
+          </div>
+          <div class="ss-item">
+            <img src="../docs/images/Swiper_screen.png" alt="Swipe Sorter" loading="lazy">
+            <div class="ss-caption"><strong>Swipe Sorter</strong>Just Swipe Left or Right</div>
+          </div>
+          <div class="ss-item">
+            <img src="../docs/images/Review_screen.png" alt="Review Changes" loading="lazy">
+            <div class="ss-caption"><strong>Review Changes</strong>Before Making Changes</div>
+          </div>
+          <div class="ss-item">
+            <img src="../docs/images/Tools_screen.png" alt="Tools Hub" loading="lazy">
+            <div class="ss-caption"><strong>Tools Hub</strong>All Cleanups in One Place</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cleaning Tools -->
+      <div>
+        <div class="ss-group-label">&#x1F9F9; Cleaning Tools</div>
+        <div class="screenshots">
+          <div class="ss-item">
+            <img src="../docs/images/Duplicates_screen.png" alt="Duplicate Finder" loading="lazy">
+            <div class="ss-caption"><strong>Duplicate Finder</strong>Similar &amp; Exact Groups</div>
+          </div>
+          <div class="ss-item">
+            <img src="../docs/images/Empty_screen.png" alt="Empty Cleaner" loading="lazy">
+            <div class="ss-caption"><strong>Empty Cleaner</strong>Remove Empty Folders</div>
+          </div>
+          <div class="ss-item">
+            <img src="../docs/images/Bin_screen.png" alt="Recycle Bin" loading="lazy">
+            <div class="ss-caption"><strong>Recycle Bin</strong>Accidental Recovery</div>
+          </div>
+          <div class="ss-item">
+            <img src="../docs/images/Contact_screen.png" alt="Contact Cleaner" loading="lazy">
+            <div class="ss-caption"><strong>Contact Cleaner</strong>Clutter-Free Connections</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Insights & Customization -->
+      <div>
+        <div class="ss-group-label">&#x1F4CA; Insights &amp; Customization</div>
+        <div class="screenshots">
+          <div class="ss-item">
+            <img src="../docs/images/storage_screen.png" alt="Storage Analysis" loading="lazy">
+            <div class="ss-caption"><strong>Storage Analysis</strong>What&rsquo;s Taking Space</div>
+          </div>
+          <div class="ss-item">
+            <img src="../docs/images/Settings_screen.png" alt="Settings" loading="lazy">
+            <div class="ss-caption"><strong>Settings</strong>Well Organised</div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </section>
@@ -437,6 +523,19 @@
           <li>Multi-select &amp; recursive folder selection</li>
           <li>Search, sort, and pull-to-refresh</li>
           <li>Mark folders as sorted to hide them later</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <span class="feat-icon">&#x1F4DE;</span>
+        <h3>Contact Cleaner</h3>
+        <p>Manage your contacts &mdash; merge duplicates, fix issues, and keep your address book clean.</p>
+        <ul>
+          <li>Detect duplicate contacts by phone or name</li>
+          <li>Merge groups with one tap &mdash; keep all data</li>
+          <li>Issues tab for contacts with missing fields</li>
+          <li>Bulk merge all groups at once</li>
+          <li>All (245+) contacts browsable in one view</li>
         </ul>
       </div>
 

@@ -51,17 +51,39 @@ Cleanify is a powerful, privacy-first Android app for managing your photos, vide
 
 ## Screenshots
 
+### Core Workflow
+
 <p align="center">
-  <img src="docs/images/01.png" width="22%" alt="Session Setup — Folder Selection" />
+  <img src="docs/images/Home_screen.png" width="22%" alt="Folder Selection — Scan, Select, Start" />
   &nbsp;
-  <img src="docs/images/02.png" width="22%" alt="Swipe to Sort" />
+  <img src="docs/images/Swiper_screen.png" width="22%" alt="Swipe Sorter — Just Swipe Left or Right" />
   &nbsp;
-  <img src="docs/images/03.png" width="22%" alt="Duplicate Finder" />
+  <img src="docs/images/Review_screen.png" width="22%" alt="Review Changes — Review Before Making Changes" />
   &nbsp;
-  <img src="docs/images/04.png" width="22%" alt="Quick Organize" />
+  <img src="docs/images/Tools_screen.png" width="22%" alt="Tools Hub — Many Tools for Other Cleanups" />
 </p>
 
-<p align="center"><em>Note: The AMOLED theme has a true-black background by design.</em></p>
+### Cleaning Tools
+
+<p align="center">
+  <img src="docs/images/Duplicates_screen.png" width="22%" alt="Duplicate Finder — Remove All Similar and Duplicate Groups" />
+  &nbsp;
+  <img src="docs/images/Empty_screen.png" width="22%" alt="Empty Cleaner — Remove Empty Folders" />
+  &nbsp;
+  <img src="docs/images/Bin_screen.png" width="22%" alt="Recycle Bin — Accidental Recovery" />
+  &nbsp;
+  <img src="docs/images/Contact_screen.png" width="22%" alt="Contacts Cleaner — Clutter-Free Connections" />
+</p>
+
+### Insights & Customization
+
+<p align="center">
+  <img src="docs/images/storage_screen.png" width="22%" alt="Storage Analysis — What's Actually Taking the Space" />
+  &nbsp;
+  <img src="docs/images/Settings_screen.png" width="22%" alt="All Settings — Well Organised" />
+</p>
+
+<p align="center"><em>All screens shown in Light theme. AMOLED theme uses true-black backgrounds for zero power draw on OLED displays.</em></p>
 
 ---
 

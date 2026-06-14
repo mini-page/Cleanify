@@ -59,7 +59,23 @@
     <!-- Required for Android 13 (API 33) and above to post notifications, primarily for the foreground service progress. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- Package query permission for cleaner corpse detection -->
+    <!--
+    NETWORK PERMISSION (Update Checker only)
+    Used exclusively by UpdateChecker.kt to check for new releases on
+    https://api.github.com/repos/mini-page/Cleanify/releases/latest
+    and download the updated APK. No other network calls are made.
+    The app is 100% offline for all file-management features.
+    -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
+    Package query permission — required for the Corpse Cleaner feature.
+    The feature enumerates all installed applications (via getInstalledApplications)
+    to identify leftover data folders from apps that have been uninstalled.
+    This cannot be implemented with a <queries> element because the app must
+    discover ALL installed packages, not just known ones.
+    Play Console declaration: Device & Network Abuse → Enumerate packages → Junk file cleaner.
+    -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="PackageVisibility" />
 
@@ -181,4 +197,22 @@
         </provider>
 
     </application>
+    <!--
+    Explicit package visibility — allows resolving share/view/install intents
+    without needing QUERY_ALL_PACKAGES for these specific actions.
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.SEND" />
+            <data android:mimeType="*/*" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="*/*" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.INSTALL_PACKAGE" />
+        </intent>
+    </queries>
+
 </manifest>

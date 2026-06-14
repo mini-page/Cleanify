@@ -38,5 +38,17 @@
             android:targetPackage="com.cleanify"
             android:targetClass="com.cleanify.ui.MainActivity"
             android:data="app://com.cleanify/contact_cleaner" />
+    <shortcut
+        android:shortcutId="recycle_bin"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher_monochrome"
+        android:shortcutShortLabel="@string/shortcut_recycle_bin"
+        android:shortcutLongLabel="@string/shortcut_recycle_bin_long"
+        android:shortcutDisabledMessage="@string/shortcut_disabled">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.cleanify"
+            android:targetClass="com.cleanify.ui.MainActivity"
+            android:data="app://com.cleanify/recycle_bin" />
     </shortcut>
 </shortcuts>

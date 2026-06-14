@@ -657,6 +657,8 @@
     <string name="shortcut_find_duplicates_long">Find Duplicate Files</string>
     <string name="shortcut_contact_cleaner">Contact Cleaner</string>
     <string name="shortcut_contact_cleaner_long">Clean Your Contacts</string>
+    <string name="shortcut_recycle_bin">Recycle Bin</string>
+    <string name="shortcut_recycle_bin_long">View Recycle Bin</string>
     <string name="shortcut_disabled">This shortcut is currently disabled.</string>
     <string name="accessibility_section_header">Accessibility</string>
     <string name="reduce_animations_title">Reduce Animations</string>
@@ -667,5 +669,10 @@
     <string name="widget_quick_clean">Quick Clean</string>
     <string name="widget_duplicates">Duplicates</string>
     <string name="widget_recycle_bin">Recycle Bin</string>
+
+    <!-- Privacy Policy / About -->
+    <string name="privacy_policy_title">Privacy Policy</string>
+    <string name="privacy_policy_desc">View our privacy policy online</string>
+    <string name="privacy_policy_url">https://mini-page.github.io/Cleanify/website/#privacy</string>
 
 </resources>
