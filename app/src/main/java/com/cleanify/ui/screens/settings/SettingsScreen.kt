@@ -49,6 +49,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -152,6 +153,7 @@ fun SettingsScreen(
     val skipPartialExpansion by viewModel.skipPartialExpansion.collectAsStateWithLifecycle()
     val useFullScreenSummarySheet by viewModel.useFullScreenSummarySheet.collectAsStateWithLifecycle()
     val reduceAnimations by viewModel.reduceAnimations.collectAsStateWithLifecycle()
+    val immersiveMode by viewModel.immersiveMode.collectAsStateWithLifecycle()
     val hideFromGallery by viewModel.hideFromGallery.collectAsStateWithLifecycle()
     val folderBarLayout by viewModel.folderBarLayout.collectAsStateWithLifecycle()
     val folderNameLayout by viewModel.folderNameLayout.collectAsStateWithLifecycle()
@@ -305,7 +307,7 @@ fun SettingsScreen(
                 )
                 "appearance" -> AppearanceSubPage(
                     currentTheme, currentLocale, useDynamicColors, accentColorKey,
-                    supportsDynamicColors, isGestureMode, reduceAnimations, hideFromGallery,
+                    supportsDynamicColors, isGestureMode, reduceAnimations, immersiveMode, hideFromGallery,
                     viewModel
                 )
                 "sorting" -> SortingSubPage(
@@ -580,6 +582,7 @@ private fun AppearanceSubPage(
     currentTheme: AppTheme, currentLocale: AppLocale, useDynamicColors: Boolean,
     accentColorKey: String,
     supportsDynamicColors: Boolean, isGestureMode: Boolean, reduceAnimations: Boolean,
+    immersiveMode: Boolean,
     hideFromGallery: Boolean, viewModel: SettingsViewModel
 ) {
     Column(
@@ -600,6 +603,12 @@ private fun AppearanceSubPage(
         SectionHeader(R.string.accessibility_section_header)
 
         SettingSwitch(R.string.reduce_animations_title, R.string.reduce_animations_desc, reduceAnimations, { viewModel.setReduceAnimations(it) })
+        SettingSwitch(
+            titleRes = R.string.immersive_mode_title,
+            description = stringResource(R.string.immersive_mode_desc),
+            checked = immersiveMode,
+            onCheckedChange = { viewModel.setImmersiveMode(it) }
+        )
         SettingSwitch(R.string.hide_from_gallery_title, R.string.hide_from_gallery_desc, hideFromGallery, { viewModel.setHideFromGallery(it) })
 
         Spacer(Modifier.height(if (isGestureMode) 0.dp else 32.dp))
@@ -1095,7 +1104,7 @@ private fun AboutSubPage(
         val socialLinks = remember {
             listOf(
                 Triple(Icons.Default.Star, "Star Repo", "https://github.com/mini-page/Cleanify"),
-                Triple(Icons.Default.Code, "GitHub", "https://github.com/mini-page/"),
+                Triple(Icons.Default.Code, "Developer", "https://mini-page.github.io/ugsoc"),
                 Triple(Icons.Default.BusinessCenter, "LinkedIn", "https://www.linkedin.com/in/ug5711"),
                 Triple(Icons.Default.CameraAlt, "Instagram", "https://www.instagram.com/ug_5711"),
                 Triple(Icons.AutoMirrored.Filled.Send, "Telegram", "https://t.me/ug_5711"),
@@ -1181,7 +1190,13 @@ private fun AboutSubPage(
         SettingsItem(
             title = stringResource(R.string.privacy_policy_title),
             summary = stringResource(R.string.privacy_policy_desc),
-            onClick = { uriHandler.openUri("https://mini-page.github.io/Cleanify/website/#privacy") }
+            onClick = { uriHandler.openUri("https://home-cleanify.vercel.app/privacy.html") }
+        )
+
+        SettingsItem(
+            title = stringResource(R.string.terms_of_use_title),
+            summary = stringResource(R.string.terms_of_use_desc),
+            onClick = { uriHandler.openUri("https://home-cleanify.vercel.app/terms.html") }
         )
 
         SettingsItem(stringResource(R.string.open_source_licenses_title), stringResource(R.string.open_source_licenses_desc), onClick = onNavigateToLibraries)
@@ -1455,51 +1470,60 @@ private fun <T> SettingsPickerItem(titleRes: Int, description: String, options: 
     val accentColor = settingsPickerAccents[titleRes] ?: Color(0xFF7F8C8D)
     var showDropdown by remember { mutableStateOf(false) }
     val displayValue = getDisplayName(selectedOption)
-    Box(modifier = Modifier.fillMaxWidth()) {
-        Card(
-            modifier = Modifier.fillMaxWidth().clickable { showDropdown = true },
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Column(Modifier.weight(1f)) {
                 Text(stringResource(titleRes), style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(2.dp))
                 Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.height(8.dp))
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    color = accentColor.copy(alpha = 0.08f),
-                    border = BorderStroke(1.dp, accentColor.copy(alpha = 0.25f))
+            }
+            Surface(
+                shape = MaterialTheme.shapes.extraLarge,
+                color = accentColor.copy(alpha = 0.12f),
+                border = BorderStroke(1.dp, accentColor.copy(alpha = 0.3f)),
+                modifier = Modifier
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                    .clickable { showDropdown = true }
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(displayValue, style = MaterialTheme.typography.bodyLarge, color = accentColor, modifier = Modifier.weight(1f))
-                        Icon(imageVector = Icons.Default.UnfoldMore, contentDescription = null, tint = accentColor.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
-                    }
+                    Text(displayValue, style = MaterialTheme.typography.bodyMedium, color = accentColor)
+                    Spacer(Modifier.width(6.dp))
+                    Icon(imageVector = Icons.Default.UnfoldMore, contentDescription = null, tint = accentColor.copy(alpha = 0.7f), modifier = Modifier.size(16.dp))
                 }
             }
         }
         DropdownMenu(
             expanded = showDropdown,
             onDismissRequest = { showDropdown = false },
-            shape = RoundedCornerShape(16.dp)
+            shape = RoundedCornerShape(16.dp),
+            offset = DpOffset(x = (-280).dp, y = 8.dp)
         ) {
             options.forEach { option ->
                 val isSelected = option == selectedOption
                 DropdownMenuItem(
                     text = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
                             Text(
                                 getDisplayName(option),
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                 color = if (isSelected) accentColor else MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.weight(1f)
                             )
                             if (isSelected) {
                                 Icon(
-                                    imageVector = Icons.Default.CheckCircle,
+                                    imageVector = Icons.Default.Check,
                                     contentDescription = null,
                                     tint = accentColor,
                                     modifier = Modifier.size(20.dp)
@@ -1507,10 +1531,7 @@ private fun <T> SettingsPickerItem(titleRes: Int, description: String, options: 
                             }
                         }
                     },
-                    onClick = { onOptionSelected(option); showDropdown = false },
-                    leadingIcon = if (isSelected) {
-                        { Icon(Icons.Default.Check, contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp)) }
-                    } else null
+                    onClick = { onOptionSelected(option); showDropdown = false }
                 )
             }
         }

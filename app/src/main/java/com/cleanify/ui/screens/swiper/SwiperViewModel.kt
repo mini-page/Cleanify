@@ -233,6 +233,10 @@ class SwiperViewModel @Inject constructor(
         preferencesRepository.screenshotJpegQualityFlow
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "90")
 
+    val immersiveMode: StateFlow<Boolean> =
+        preferencesRepository.immersiveModeFlow
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
 
     private var bucketIds: List<String> = emptyList()
     private var _invertSwipe = false

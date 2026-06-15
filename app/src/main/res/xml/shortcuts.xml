@@ -38,6 +38,7 @@
             android:targetPackage="com.cleanify"
             android:targetClass="com.cleanify.ui.MainActivity"
             android:data="app://com.cleanify/contact_cleaner" />
+    </shortcut>
     <shortcut
         android:shortcutId="recycle_bin"
         android:enabled="true"

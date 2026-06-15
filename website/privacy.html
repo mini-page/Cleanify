@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Policy — Cleanify</title>
+<meta name="description" content="Cleanify Privacy Policy — a 100% offline, zero-tracking Android app. No data is collected, stored, or shared.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0f; --bg2: #0f0f18; --card: rgba(24,24,44,0.6);
+    --border: rgba(124,92,252,0.12); --border-hover: rgba(124,92,252,0.35);
+    --text: #e8e6f0; --text2: #9a94b8; --accent: #7c5cfc;
+    --pink: #f472b6; --teal: #2dd4bf; --green: #34d399;
+    --radius: 16px; --radius-sm: 12px;
+    --glow: 0 0 50px rgba(124,92,252,0.12); --card-shadow: 0 4px 24px rgba(0,0,0,0.2);
+  }
+  html { scroll-behavior: smooth; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  .container { max-width: 820px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+  .bg-orbs { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+  .bg-orbs .orb { position: absolute; border-radius: 50%; filter: blur(80px); animation: orbFloat 20s ease-in-out infinite; }
+  .bg-orbs .orb:nth-child(1) { width: 500px; height: 500px; background: rgba(124,92,252,0.06); top: -10%; left: -10%; }
+  .bg-orbs .orb:nth-child(2) { width: 400px; height: 400px; background: rgba(244,114,182,0.04); bottom: -10%; right: -10%; animation-delay: -7s; }
+  @keyframes orbFloat { 0%, 100% { transform: translate(0,0) scale(1); } 33% { transform: translate(30px,-30px) scale(1.05); } 66% { transform: translate(-20px,20px) scale(0.95); } }
+  nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(10,10,15,0.8); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); padding: 0 24px; }
+  nav .container { display: flex; align-items: center; justify-content: space-between; height: 64px; max-width: 1100px; }
+  nav .logo { font-weight: 700; font-size: 18px; color: #fff; text-decoration: none; display: flex; align-items: center; gap: 10px; }
+  nav .back-link { color: var(--text2); text-decoration: none; font-size: 14px; transition: color .2s; display: flex; align-items: center; gap: 6px; }
+  nav .back-link:hover { color: var(--accent); }
+  .page-header { padding: 140px 0 60px; text-align: center; background: radial-gradient(ellipse at 50% 0%, rgba(124,92,252,0.08) 0%, transparent 60%); }
+  .page-header .badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(124,92,252,0.1); border: 1px solid var(--border-hover); border-radius: 100px; padding: 6px 16px; font-size: 13px; color: var(--accent); margin-bottom: 20px; font-weight: 500; }
+  .page-header h1 { font-size: clamp(32px, 5vw, 48px); font-weight: 800; letter-spacing: -1px; margin-bottom: 14px; }
+  .page-header h1 span { background: linear-gradient(135deg, var(--accent) 0%, var(--pink) 60%, var(--teal) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .page-header .subtitle { font-size: 16px; color: var(--text2); max-width: 500px; margin: 0 auto; }
+  .page-header .last-updated { margin-top: 16px; font-size: 13px; color: var(--text2); }
+  .content { padding: 40px 0 100px; position: relative; z-index: 1; }
+  .content-card { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); backdrop-filter: blur(16px); padding: 40px; margin-bottom: 24px; box-shadow: var(--card-shadow); transition: border-color .35s; }
+  .content-card:hover { border-color: var(--border-hover); }
+  .content-card h2 { font-size: 20px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 12px; }
+  .content-card h2 .icon { font-size: 24px; }
+  .content-card h3 { font-size: 16px; font-weight: 600; margin: 24px 0 10px; color: var(--teal); }
+  .content-card p { font-size: 15px; color: var(--text2); line-height: 1.8; margin-bottom: 14px; }
+  .content-card p:last-child { margin-bottom: 0; }
+  .content-card ul { padding-left: 24px; font-size: 15px; color: var(--text2); line-height: 2; margin-bottom: 14px; }
+  .content-card ul li::marker { color: var(--accent); }
+  .content-card a { color: var(--accent); text-decoration: none; }
+  .content-card a:hover { text-decoration: underline; }
+  code { font-family: 'Courier New', monospace; font-size: 13px; background: rgba(124,92,252,0.1); padding: 2px 6px; border-radius: 4px; color: var(--pink); }
+  .highlight-box { background: rgba(52,211,153,0.06); border: 1px solid rgba(52,211,153,0.2); border-radius: var(--radius-sm); padding: 20px 24px; margin: 16px 0; display: flex; gap: 14px; align-items: flex-start; }
+  .highlight-box .hi-icon { font-size: 22px; flex-shrink: 0; }
+  .highlight-box p { color: var(--green) !important; font-weight: 500; margin: 0 !important; }
+  .perm-grid { display: grid; gap: 12px; margin-top: 16px; }
+  .perm-item { background: rgba(124,92,252,0.05); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px 20px; }
+  .perm-item .perm-name { font-size: 13px; font-family: 'Courier New', monospace; color: var(--pink); font-weight: 600; margin-bottom: 4px; }
+  .perm-item .perm-use { font-size: 13px; color: var(--text2); }
+  footer { border-top: 1px solid var(--border); padding: 40px 0; text-align: center; font-size: 13px; color: var(--text2); background: var(--bg2); }
+  footer .links { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; margin-bottom: 16px; }
+  footer a { color: var(--text2); text-decoration: none; transition: color .2s; }
+  footer a:hover { color: var(--accent); }
+  @media (max-width: 640px) { .page-header { padding: 110px 0 40px; } .content-card { padding: 24px; } }
+</style>
+</head>
+<body>
+<div class="bg-orbs"><div class="orb"></div><div class="orb"></div></div>
+<nav>
+  <div class="container">
+    <a href="index.html" class="logo">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="6" fill="#7c5cfc"/><path d="M7 14l5 5 9-9" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Cleanify
+    </a>
+    <a href="index.html" class="back-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+      Back to Home
+    </a>
+  </div>
+</nav>
+<div class="page-header">
+  <div class="container">
+    <div class="badge">&#x1F510; Privacy Policy</div>
+    <h1>Your <span>Privacy</span> is Sacred</h1>
+    <p class="subtitle">Cleanify is built on one principle: your files are yours alone. No data ever leaves your device.</p>
+    <p class="last-updated">Last updated: June 2025 &bull; Effective: June 2025</p>
+  </div>
+</div>
+<div class="content">
+  <div class="container">
+    <div class="content-card">
+      <h2><span class="icon">&#x1F4CB;</span> Overview</h2>
+      <div class="highlight-box">
+        <span class="hi-icon">&#x2705;</span>
+        <p>Cleanify collects <strong>zero personal data</strong>. No analytics, no crash reports, no telemetry, no ads, no accounts. Everything stays on your device.</p>
+      </div>
+      <p>This Privacy Policy explains how Cleanify handles (or rather, doesn't handle) your information. By using Cleanify, you agree to this policy.</p>
+    </div>
+    <div class="content-card">
+      <h2><span class="icon">&#x1F6AB;</span> Information We Do Not Collect</h2>
+      <p>Cleanify does not collect, process, store, or transmit any of the following:</p>
+      <ul>
+        <li>Personal information (name, email, phone number)</li>
+        <li>Device identifiers (IMEI, advertising ID, Android ID)</li>
+        <li>Location data (GPS or network-based)</li>
+        <li>Usage analytics or behavioral data</li>
+        <li>Crash reports or diagnostic data</li>
+        <li>Photos, videos, or any media file content</li>
+        <li>Contact names, numbers, or any contact data</li>
+        <li>Purchase or payment information</li>
+      </ul>
+    </div>
+    <div class="content-card">
+      <h2><span class="icon">&#x1F4BE;</span> Local Data Storage</h2>
+      <p>All preferences, scan history, and Recycle Bin data are stored exclusively in <strong>local on-device storage</strong> using Android DataStore and Room database. This data:</p>
+      <ul>
+        <li>Never leaves your device</li>
+        <li>Is not accessible to Cleanify developers</li>
+        <li>Can be cleared by uninstalling the app</li>
+        <li>Can be partially cleared in Settings &rarr; Advanced &rarr; Reset History</li>
+      </ul>
+    </div>
+    <div class="content-card">
+      <h2><span class="icon">&#x1F512;</span> Permissions Explained</h2>
+      <p>Cleanify requests these Android permissions, each with a specific, limited purpose:</p>
+      <div class="perm-grid">
+        <div class="perm-item">
+          <div class="perm-name">MANAGE_EXTERNAL_STORAGE</div>
+          <div class="perm-use">Scan, read, move, and delete files across all device directories. Required for all core file-management features.</div>
+        </div>
+        <div class="perm-item">
+          <div class="perm-name">QUERY_ALL_PACKAGES</div>
+          <div class="perm-use">Detects leftover data folders from apps you've uninstalled (Corpse Cleaner). No package data is stored or transmitted.</div>
+        </div>
+        <div class="perm-item">
+          <div class="perm-name">READ_CONTACTS / WRITE_CONTACTS</div>
+          <div class="perm-use">Only requested when you open Contact Cleaner. Contact data is processed locally only — never transmitted.</div>
+        </div>
+        <div class="perm-item">
+          <div class="perm-name">KILL_BACKGROUND_PROCESSES</div>
+          <div class="perm-use">Optional RAM-clearing feature in Empty Cleaner. Uses Android's ActivityManager locally only.</div>
+        </div>
+        <div class="perm-item">
+          <div class="perm-name">INTERNET</div>
+          <div class="perm-use">Used only for the optional update checker: queries <code>api.github.com/repos/mini-page/Cleanify/releases/latest</code>. No other network requests are ever made.</div>
+        </div>
+        <div class="perm-item">
+          <div class="perm-name">RECEIVE_BOOT_COMPLETED</div>
+          <div class="perm-use">Enables the optional "clean on boot" feature. No data is transmitted.</div>
+        </div>
+        <div class="perm-item">
+          <div class="perm-name">FOREGROUND_SERVICE / POST_NOTIFICATIONS</div>
+          <div class="perm-use">Shows progress notifications during background scans. Only active when a scan is running.</div>
+        </div>
+      </div>
+    </div>
+    <div class="content-card">
+      <h2><span class="icon">&#x1F310;</span> Network Requests</h2>
+      <p>The only network request Cleanify ever makes is the optional, user-triggered update check:</p>
+      <ul>
+        <li><code>https://api.github.com/repos/mini-page/Cleanify/releases/latest</code></li>
+      </ul>
+      <p>This only runs when you tap "Check for Updates" in Settings &rarr; About. No personal or device data is included.</p>
+      <div class="highlight-box">
+        <span class="hi-icon">&#x1F6E1;&#xFE0F;</span>
+        <p>All file management features are <strong>100% offline</strong> and make zero network requests.</p>
+      </div>
+    </div>
+    <div class="content-card">
+      <h2><span class="icon">&#x1F9D2;</span> Children's Privacy</h2>
+      <p>Cleanify does not collect any data from users of any age. Since no data is collected at all, the app is safe and suitable for all ages including children under 13.</p>
+    </div>
+    <div class="content-card">
+      <h2><span class="icon">&#x1F504;</span> Changes to This Policy</h2>
+      <p>If this Privacy Policy changes (e.g., due to a new feature requiring network access), the change will be announced in the app changelog and this page will be updated. We will never introduce data collection without clearly documenting it first.</p>
+    </div>
+    <div class="content-card">
+      <h2><span class="icon">&#x1F4EC;</span> Contact</h2>
+      <p>Have a privacy question? Reach the developer through:</p>
+      <ul>
+        <li><a href="https://github.com/mini-page/Cleanify/issues" target="_blank">GitHub Issues</a> — public questions</li>
+        <li><a href="mailto:raghavans5711+cleanify@gmail.com">Email</a> — private inquiries</li>
+        <li><a href="https://mini-page.github.io/ugsoc" target="_blank">Developer portfolio</a></li>
+      </ul>
+    </div>
+    <div style="text-align:center; margin-top: 40px;">
+      <a href="terms.html" style="color: var(--accent); text-decoration: none; font-size: 15px;">Also read: Terms of Use &rarr;</a>
+    </div>
+  </div>
+</div>
+<footer>
+  <div class="container">
+    <div class="links">
+      <a href="index.html">Home</a>
+      <a href="https://github.com/mini-page/Cleanify">GitHub</a>
+      <a href="https://github.com/mini-page/Cleanify/releases">Releases</a>
+      <a href="privacy.html">Privacy Policy</a>
+      <a href="terms.html">Terms of Use</a>
+      <a href="https://mini-page.github.io/ugsoc" target="_blank">Developer</a>
+    </div>
+    <p>&copy; 2025 mini-page. Licensed under GPL-3.0. Built with &#x2665; for Android.</p>
+  </div>
+</footer>
+</body>
+</html>

@@ -422,6 +422,9 @@ class SettingsViewModel @Inject constructor(
             initialValue = true
         )
 
+    val immersiveMode: StateFlow<Boolean> = preferencesRepository.immersiveModeFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
 
     val standardAlbumDirectories: List<Pair<String, String>> = listOf(
         "Pictures" to Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).absolutePath,
@@ -661,6 +664,10 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             preferencesRepository.setReduceAnimations(enabled)
         }
+    }
+
+    fun setImmersiveMode(enabled: Boolean) {
+        viewModelScope.launch { preferencesRepository.setImmersiveMode(enabled) }
     }
 
     fun setHideFromGallery(enabled: Boolean) {

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terms of Use — Cleanify</title>
+<meta name="description" content="Cleanify Terms of Use — free, open-source Android file manager. GPL-3.0 licensed. Use it, study it, share it.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0f; --bg2: #0f0f18; --card: rgba(24,24,44,0.6);
+    --border: rgba(124,92,252,0.12); --border-hover: rgba(124,92,252,0.35);
+    --text: #e8e6f0; --text2: #9a94b8; --accent: #7c5cfc;
+    --pink: #f472b6; --teal: #2dd4bf; --green: #34d399; --yellow: #fbbf24;
+    --radius: 16px; --radius-sm: 12px;
+    --card-shadow: 0 4px 24px rgba(0,0,0,0.2);
+  }
+  html { scroll-behavior: smooth; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  .container { max-width: 820px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+  .bg-orbs { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+  .bg-orbs .orb { position: absolute; border-radius: 50%; filter: blur(80px); animation: orbFloat 20s ease-in-out infinite; }
+  .bg-orbs .orb:nth-child(1) { width: 500px; height: 500px; background: rgba(124,92,252,0.06); top: -10%; left: -10%; }
+  .bg-orbs .orb:nth-child(2) { width: 400px; height: 400px; background: rgba(251,191,36,0.03); bottom: -10%; right: -10%; animation-delay: -7s; }
+  @keyframes orbFloat { 0%, 100% { transform: translate(0,0) scale(1); } 33% { transform: translate(30px,-30px) scale(1.05); } 66% { transform: translate(-20px,20px) scale(0.95); } }
+  nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(10,10,15,0.8); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); padding: 0 24px; }
+  nav .container { display: flex; align-items: center; justify-content: space-between; height: 64px; max-width: 1100px; }
+  nav .logo { font-weight: 700; font-size: 18px; color: #fff; text-decoration: none; display: flex; align-items: center; gap: 10px; }
+  nav .back-link { color: var(--text2); text-decoration: none; font-size: 14px; transition: color .2s; display: flex; align-items: center; gap: 6px; }
+  nav .back-link:hover { color: var(--accent); }
+  .page-header { padding: 140px 0 60px; text-align: center; background: radial-gradient(ellipse at 50% 0%, rgba(124,92,252,0.08) 0%, transparent 60%); }
+  .page-header .badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.25); border-radius: 100px; padding: 6px 16px; font-size: 13px; color: var(--yellow); margin-bottom: 20px; font-weight: 500; }
+  .page-header h1 { font-size: clamp(32px, 5vw, 48px); font-weight: 800; letter-spacing: -1px; margin-bottom: 14px; }
+  .page-header h1 span { background: linear-gradient(135deg, var(--accent) 0%, var(--pink) 60%, var(--teal) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .page-header .subtitle { font-size: 16px; color: var(--text2); max-width: 500px; margin: 0 auto; }
+  .page-header .last-updated { margin-top: 16px; font-size: 13px; color: var(--text2); }
+  .content { padding: 40px 0 100px; position: relative; z-index: 1; }
+  .content-card { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); backdrop-filter: blur(16px); padding: 40px; margin-bottom: 24px; box-shadow: var(--card-shadow); transition: border-color .35s; }
+  .content-card:hover { border-color: var(--border-hover); }
+  .content-card h2 { font-size: 20px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 12px; }
+  .content-card h2 .icon { font-size: 24px; }
+  .content-card p { font-size: 15px; color: var(--text2); line-height: 1.8; margin-bottom: 14px; }
+  .content-card p:last-child { margin-bottom: 0; }
+  .content-card ul { padding-left: 24px; font-size: 15px; color: var(--text2); line-height: 2; margin-bottom: 14px; }
+  .content-card ul li::marker { color: var(--accent); }
+  .content-card ol { padding-left: 24px; font-size: 15px; color: var(--text2); line-height: 2; }
+  .content-card ol li { padding-left: 6px; }
+  .content-card a { color: var(--accent); text-decoration: none; }
+  .content-card a:hover { text-decoration: underline; }
+  .highlight-box { border-radius: var(--radius-sm); padding: 20px 24px; margin: 16px 0; display: flex; gap: 14px; align-items: flex-start; }
+  .highlight-box.green { background: rgba(52,211,153,0.06); border: 1px solid rgba(52,211,153,0.2); }
+  .highlight-box.yellow { background: rgba(251,191,36,0.05); border: 1px solid rgba(251,191,36,0.2); }
+  .highlight-box .hi-icon { font-size: 22px; flex-shrink: 0; }
+  .highlight-box.green p { color: var(--green) !important; }
+  .highlight-box.yellow p { color: var(--yellow) !important; }
+  .highlight-box p { font-weight: 500; margin: 0 !important; }
+  footer { border-top: 1px solid var(--border); padding: 40px 0; text-align: center; font-size: 13px; color: var(--text2); background: var(--bg2); }
+  footer .links { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; margin-bottom: 16px; }
+  footer a { color: var(--text2); text-decoration: none; transition: color .2s; }
+  footer a:hover { color: var(--accent); }
+  @media (max-width: 640px) { .page-header { padding: 110px 0 40px; } .content-card { padding: 24px; } }
+</style>
+</head>
+<body>
+<div class="bg-orbs"><div class="orb"></div><div class="orb"></div></div>
+<nav>
+  <div class="container">
+    <a href="index.html" class="logo">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="6" fill="#7c5cfc"/><path d="M7 14l5 5 9-9" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Cleanify
+    </a>
+    <a href="index.html" class="back-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+      Back to Home
+    </a>
+  </div>
+</nav>
+<div class="page-header">
+  <div class="container">
+    <div class="badge">&#x1F4DC; Terms of Use</div>
+    <h1>Simple, <span>Honest</span> Terms</h1>
+    <p class="subtitle">Cleanify is free, open-source software. These terms are straightforward because we have nothing to hide.</p>
+    <p class="last-updated">Last updated: June 2025 &bull; Effective: June 2025</p>
+  </div>
+</div>
+<div class="content">
+  <div class="container">
+    <div class="content-card">
+      <h2><span class="icon">&#x1F44B;</span> Welcome</h2>
+      <div class="highlight-box green">
+        <span class="hi-icon">&#x2705;</span>
+        <p>Cleanify is free software released under the <strong>GNU General Public License v3.0</strong>. You are free to use, study, modify, and distribute it — as long as you follow the license terms.</p>
+      </div>
+      <p>By downloading or using Cleanify, you agree to these Terms of Use. If you do not agree, simply do not use the app.</p>
+    </div>
+    <div class="content-card">
+      <h2><span class="icon">&#x2696;&#xFE0F;</span> License</h2>
+      <p>Cleanify is distributed under the <a href="https://github.com/mini-page/Cleanify/blob/main/LICENSE" target="_blank">GNU General Public License v3.0 (GPL-3.0)</a>. Under this license, you have the freedom to:</p>
+      <ul>
+        <li><strong>Run</strong> the program for any purpose</li>
+        <li><strong>Study</strong> how the program works and modify it</li>
+        <li><strong>Redistribute</strong> copies to help others</li>
+        <li><strong>Distribute</strong> modified versions under the same GPL-3.0 license</li>
+      </ul>
+      <p>The full license text is available at <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank">gnu.org/licenses/gpl-3.0</a> and inside the app under Settings &rarr; About &rarr; Open Source Licenses.</p>
+    </div>
+    <div class="content-card">
+      <h2><span class="icon">&#x1F6E1;&#xFE0F;</span> Acceptable Use</h2>
+      <p>Cleanify is designed to help you manage your own files on your own device. You agree to use it only for lawful purposes. Specifically, you agree <strong>not</strong> to:</p>
+      <ul>
+        <li>Use Cleanify to delete or damage files belonging to others without authorization</li>
+        <li>Modify and redistribute Cleanify in a way that violates the GPL-3.0 license</li>
+        <li>Attempt to reverse-engineer any obfuscated or proprietary components (there are none — it's all open source)</li>
+        <li>Use Cleanify in a way that violates applicable laws or regulations in your jurisdiction</li>
+      </ul>
+    </div>
+    <div class="content-card">
+      <h2><span class="icon">&#x26A0;&#xFE0F;</span> Disclaimer of Warranty</h2>
+      <div class="highlight-box yellow">
+        <span class="hi-icon">&#x26A0;&#xFE0F;</span>
+        <p>Cleanify is provided <strong>"as is"</strong>, without warranty of any kind, express or implied.</p>
+      </div>
+      <p>The GPL-3.0 license expressly states that the software is distributed without warranty. This means:</p>
+      <ul>
+        <li>We do not guarantee the app is free of bugs or errors</li>
+        <li>We do not warrant that it will work on every device or Android version</li>
+        <li>We are not responsible for any data loss that may result from using the app</li>
+      </ul>
+      <p><strong>Always back up important files</strong> before using any file-management or cleaning tool, including Cleanify.</p>
+    </div>
+    <div class="content-card">
+      <h2><span class="icon">&#x1F9EF;</span> Limitation of Liability</h2>
+      <p>To the maximum extent permitted by applicable law, the developer of Cleanify shall not be liable for any direct, indirect, incidental, special, consequential, or punitive damages arising from:</p>
+      <ul>
+        <li>Use or inability to use the application</li>
+        <li>Loss of data, files, or contacts resulting from app operations</li>
+        <li>Errors, bugs, or crashes in the software</li>
+        <li>Device incompatibility or unexpected behavior on specific Android versions</li>
+      </ul>
+    </div>
+    <div class="content-card">
+      <h2><span class="icon">&#x1F4F1;</span> Third-Party Services</h2>
+      <p>Cleanify optionally connects to the following external service:</p>
+      <ul>
+        <li><strong>GitHub API</strong> (<code style="font-family: 'Courier New', monospace; font-size: 13px; background: rgba(124,92,252,0.1); padding: 2px 6px; border-radius: 4px; color: var(--pink);">api.github.com</code>) — to check for the latest app release when you manually trigger an update check in Settings.</li>
+      </ul>
+      <p>No other third-party services, SDKs, ad networks, or analytics providers are integrated in Cleanify.</p>
+    </div>
+    <div class="content-card">
+      <h2><span class="icon">&#x1F504;</span> Changes to Terms</h2>
+      <p>We may update these Terms of Use from time to time, particularly if new features require different terms. Changes will be announced in the <a href="index.html#changelog">changelog</a> and reflected here with a new "Last updated" date.</p>
+      <p>Continued use of the app after changes constitutes acceptance of the revised terms.</p>
+    </div>
+    <div class="content-card">
+      <h2><span class="icon">&#x1F4EC;</span> Contact</h2>
+      <p>Questions about these terms? Reach out through:</p>
+      <ul>
+        <li><a href="https://github.com/mini-page/Cleanify/issues" target="_blank">GitHub Issues</a></li>
+        <li><a href="mailto:raghavans5711+cleanify@gmail.com">Email</a></li>
+        <li><a href="https://mini-page.github.io/ugsoc" target="_blank">Developer portfolio</a></li>
+      </ul>
+    </div>
+    <div style="text-align:center; margin-top: 40px;">
+      <a href="privacy.html" style="color: var(--accent); text-decoration: none; font-size: 15px;">&larr; Also read: Privacy Policy</a>
+    </div>
+  </div>
+</div>
+<footer>
+  <div class="container">
+    <div class="links">
+      <a href="index.html">Home</a>
+      <a href="https://github.com/mini-page/Cleanify">GitHub</a>
+      <a href="https://github.com/mini-page/Cleanify/releases">Releases</a>
+      <a href="privacy.html">Privacy Policy</a>
+      <a href="terms.html">Terms of Use</a>
+      <a href="https://mini-page.github.io/ugsoc" target="_blank">Developer</a>
+    </div>
+    <p>&copy; 2025 mini-page. Licensed under GPL-3.0. Built with &#x2665; for Android.</p>
+  </div>
+</footer>
+</body>
+</html>

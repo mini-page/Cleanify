@@ -1,0 +1,19 @@
+e: file:///C:/Users/umang/Documents/GitHub/Cleanify/app/src/main/java/com/cleanify/ui/screens/settings/SettingsScreen.kt:605:9 None of the following candidates is applicable:
+fun SettingSwitch(titleRes: Int, descriptionRes: Int, checked: Boolean, onCheckedChange: (Boolean) -> Unit, enabled: Boolean = ...): Unit
+fun SettingSwitch(titleRes: Int, description: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit, enabled: Boolean = ...): Unit
+e: file:///C:/Users/umang/Documents/GitHub/Cleanify/app/src/main/java/com/cleanify/ui/screens/settings/SettingsScreen.kt:609:60 Unresolved reference 'it'.
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:compileReleaseKotlin'.
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+   > Compilation error. See log for more details
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 2m 10s

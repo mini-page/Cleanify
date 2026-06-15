@@ -159,6 +159,9 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.runtime.DisposableEffect
+import androidx.core.view.WindowCompat
 import java.text.DecimalFormat
 import kotlin.math.abs
 import kotlin.math.log10
@@ -187,6 +190,22 @@ fun SwiperScreen(
     val addFolderFocusTarget by viewModel.addFolderFocusTarget.collectAsStateWithLifecycle()
     val addFavoriteToTargetByDefault by viewModel.addFavoriteToTargetByDefault.collectAsStateWithLifecycle()
     val hintOnExistingFolderName by viewModel.hintOnExistingFolderName.collectAsStateWithLifecycle()
+    val immersiveMode by viewModel.immersiveMode.collectAsStateWithLifecycle()
+    val view = LocalView.current
+    DisposableEffect(immersiveMode) {
+        val window = (view.context as? android.app.Activity)?.window ?: return@DisposableEffect onDispose {}
+        if (immersiveMode) {
+            WindowCompat.getInsetsController(window, view).apply {
+                hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+                systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
+        } else {
+            WindowCompat.getInsetsController(window, view).show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+        }
+        onDispose {
+            WindowCompat.getInsetsController(window, view).show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+        }
+    }
     val appContext = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val isExpandedScreen = windowSizeClass.widthSizeClass > WindowWidthSizeClass.Compact
@@ -712,13 +731,13 @@ private fun SwiperTopBar(
         // N/N counter pill (next to overflow)
         Surface(
             shape = MaterialTheme.shapes.extraLarge,
-            color = MaterialTheme.colorScheme.surfaceVariant
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
         ) {
             Text(
                 text = "${currentIndex + 1} / $totalCount",
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
             )
         }
 
@@ -748,7 +767,8 @@ private fun SwiperTopBar(
         DropdownMenu(
             expanded = showOverflow,
             onDismissRequest = { showOverflow = false },
-            shape = RoundedCornerShape(16.dp)
+            shape = RoundedCornerShape(16.dp),
+            offset = DpOffset((-220).dp, 40.dp)
         ) {
             DropdownMenuItem(
                 text = { Text("Open with") },
@@ -1923,14 +1943,14 @@ private fun MediaItemCard(
                             }
                         }
                         Box(modifier = Modifier.fillMaxSize()) {
-                            // Swipe direction tags
+                            // Swipe direction tags (trailing edge)
                             if (leftBorderAlpha > 0.3f) {
                                 Surface(
                                     shape = RoundedCornerShape(12.dp),
                                     color = leftColor.copy(alpha = 0.85f),
                                     modifier = Modifier
-                                        .align(Alignment.CenterStart)
-                                        .padding(start = 16.dp)
+                                        .align(Alignment.CenterEnd)
+                                        .padding(end = 16.dp)
                                 ) {
                                     Text(
                                         text = if (invertSwipe) "Keep" else "Delete",
@@ -1946,8 +1966,8 @@ private fun MediaItemCard(
                                     shape = RoundedCornerShape(12.dp),
                                     color = rightColor.copy(alpha = 0.85f),
                                     modifier = Modifier
-                                        .align(Alignment.CenterEnd)
-                                        .padding(end = 16.dp)
+                                        .align(Alignment.CenterStart)
+                                        .padding(start = 16.dp)
                                 ) {
                                     Text(
                                         text = if (invertSwipe) "Delete" else "Keep",

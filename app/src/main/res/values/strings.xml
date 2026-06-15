@@ -663,6 +663,8 @@
     <string name="accessibility_section_header">Accessibility</string>
     <string name="reduce_animations_title">Reduce Animations</string>
     <string name="reduce_animations_desc">Minimize motion throughout the app</string>
+    <string name="immersive_mode_title">Immersive Mode</string>
+    <string name="immersive_mode_desc">Hide status bar and navigation bar for a full-screen experience in the Swiper</string>
     <string name="hide_from_gallery_title">Hide from Gallery</string>
     <string name="hide_from_gallery_desc">Prevents trashed photos and videos from appearing in gallery, music player, or other media apps (recommended)</string>
     <string name="widget_description">Quick actions for Cleanify</string>
@@ -673,6 +675,8 @@
     <!-- Privacy Policy / About -->
     <string name="privacy_policy_title">Privacy Policy</string>
     <string name="privacy_policy_desc">View our privacy policy online</string>
-    <string name="privacy_policy_url">https://mini-page.github.io/Cleanify/website/#privacy</string>
+    <string name="privacy_policy_url">https://home-cleanify.vercel.app/privacy.html</string>
+    <string name="terms_of_use_title">Terms of Use</string>
+    <string name="terms_of_use_desc">View the terms of use for this app</string>
 
 </resources>
