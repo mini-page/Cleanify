@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Deselect
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.FolderOff
 import androidx.compose.material.icons.filled.FolderZip
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
@@ -34,7 +35,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cleanify.data.db.entity.FileCategory
 import com.cleanify.data.db.entity.RecycleBinEntry
 import com.cleanify.ui.components.BackNavigationIcon
+import com.cleanify.ui.components.EmptyState
 import com.cleanify.ui.components.MediaPreviewDialog
+import com.cleanify.R
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -113,20 +116,21 @@ fun RecycleBinScreen(
             }
 
             if (uiState.entries.isEmpty()) {
-                EmptyState(hasEntriesElsewhere = hasAnyEntries && uiState.entries.isEmpty())
+                EmptyState(
+                    modifier = Modifier.fillMaxSize(),
+                    icon = Icons.Default.DeleteSweep,
+                    titleRes = R.string.empty_recycle_bin_title,
+                    descriptionRes = R.string.empty_recycle_bin_desc
+                )
             } else {
                 val context = LocalContext.current
                 if (uiState.selectedCategory != null && uiState.entries.isEmpty()) {
-                    Box(
+                    EmptyState(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "No files in this category",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                        icon = Icons.Default.FolderOff,
+                        titleRes = R.string.empty_generic_title,
+                        descriptionRes = R.string.empty_generic_desc
+                    )
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
@@ -209,35 +213,6 @@ fun RecycleBinScreen(
             entry = entry,
             onDismiss = { viewModel.dismissPreview() }
         )
-    }
-}
-
-@Composable
-private fun EmptyState(hasEntriesElsewhere: Boolean) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                imageVector = Icons.Default.DeleteSweep,
-                contentDescription = null,
-                modifier = Modifier.size(72.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-            )
-            Spacer(Modifier.height(16.dp))
-            Text(
-                text = if (hasEntriesElsewhere) "No files in this category" else "Recycle bin is empty",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = if (hasEntriesElsewhere) "Try another category" else "Deleted files will appear here",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-            )
-        }
     }
 }
 

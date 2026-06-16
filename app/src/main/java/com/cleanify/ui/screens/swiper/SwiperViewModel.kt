@@ -259,6 +259,8 @@ class SwiperViewModel @Inject constructor(
         observeFileDeletions()
         observeAppLifecycle()
         observeDialogSearchQuery()
+        observeSessionState()
+        restoreSessionState()
         val savedChanges: List<PendingChange>? = savedStateHandle["pendingChanges"]
         if (savedChanges != null) {
             _uiState.update { currentState ->
@@ -271,6 +273,45 @@ class SwiperViewModel @Inject constructor(
                     groupedMoves = summary.groupedMoves
                 )
             }
+        }
+    }
+
+    private fun observeSessionState() {
+        viewModelScope.launch {
+            uiState
+                .debounce(2000) // Debounce to avoid excessive saves
+                .distinctUntilChanged()
+                .collect { state ->
+                    saveSessionState(state)
+                }
+        }
+    }
+
+    private fun saveSessionState(state: SwiperUiState) {
+        savedStateHandle["pendingChanges"] = state.pendingChanges
+        savedStateHandle["currentIndex"] = state.currentIndex
+        savedStateHandle["sessionSkippedMediaIds"] = state.sessionSkippedMediaIds
+        savedStateHandle["favoriteItemIds"] = state.favoriteItemIds
+        savedStateHandle["videoPlaybackPosition"] = state.videoPlaybackPosition
+        savedStateHandle["videoPlaybackSpeed"] = state.videoPlaybackSpeed
+        savedStateHandle["isVideoMuted"] = state.isVideoMuted
+        savedStateHandle["hidePreviewStrip"] = state.hidePreviewStrip
+        savedStateHandle["showSummarySheet"] = state.showSummarySheet
+        savedStateHandle["isFolderBarExpanded"] = state.isFolderBarExpanded
+        savedStateHandle["invertSwipe"] = _invertSwipe
+    }
+
+    private fun restoreSessionState() {
+        try {
+            bucketIds = emptyList()
+            _invertSwipe = savedStateHandle["invertSwipe"] as Boolean? ?: false
+            processedMediaIds = (savedStateHandle["processedMediaIds"] as Set<String>? ?: emptySet()).toMutableSet()
+            sessionProcessedMediaIds = (savedStateHandle["sessionProcessedMediaIds"] as Set<String>? ?: emptySet()).toMutableSet()
+            _rememberProcessedMediaEnabled = savedStateHandle["rememberProcessedMediaEnabled"] as Boolean? ?: true
+            _defaultVideoSpeed = savedStateHandle["defaultVideoSpeed"] as Float? ?: 1.0f
+            lastUsedTargetPath = savedStateHandle["lastUsedTargetPath"] as String?
+        } catch (e: ClassCastException) {
+            Log.e(logTag, "Error restoring session state", e)
         }
     }
 

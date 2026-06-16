@@ -85,6 +85,7 @@ import com.cleanify.domain.model.ScanResultGroup
 import com.cleanify.domain.model.SimilarGroup
 import com.cleanify.ui.components.AppDialog
 import com.cleanify.ui.components.BackNavigationIcon
+import com.cleanify.ui.components.EmptyState
 import com.cleanify.ui.components.FastScrollbar
 import com.cleanify.ui.components.MediaPreviewDialog
 import com.cleanify.util.rememberIsUsingGestureNavigation
@@ -913,15 +914,15 @@ private fun ResultsView(
         }
 
         if (showEmptyMessage) {
-            val message = when {
-                uiState.scanForExactDuplicates && uiState.scanForSimilarMedia -> stringResource(R.string.no_exact_or_similar_found)
-                uiState.scanForExactDuplicates -> stringResource(R.string.no_exact_found)
-                uiState.scanForSimilarMedia -> stringResource(R.string.no_similar_found)
-                else -> stringResource(R.string.no_results_found)
-            }
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(message, modifier = Modifier.padding(16.dp))
-            }
+            EmptyState(
+                modifier = Modifier.fillMaxSize(),
+                icon = Icons.Default.CheckCircle,
+                titleRes = R.string.empty_duplicates_title,
+                descriptionRes = R.string.empty_duplicates_desc,
+                actionTextRes = R.string.rescan_duplicates,
+                actionIcon = Icons.Default.Refresh,
+                onActionClick = startScanWithPermissionCheck
+            )
         } else {
             when (uiState.resultViewMode) {
                 ResultViewMode.LIST -> ListView(

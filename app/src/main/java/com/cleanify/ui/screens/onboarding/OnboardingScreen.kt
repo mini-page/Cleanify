@@ -43,38 +43,20 @@ private val pages = listOf(
     OnboardingPage(
         titleRes = R.string.onboarding_p1_title,
         descriptionRes = R.string.onboarding_p1_desc,
-        icon = Icons.Default.AutoAwesome,
-        gradientColor = Color(0xFF6366F1)
-    ),
-    OnboardingPage(
-        titleRes = R.string.onboarding_p2_title,
-        descriptionRes = R.string.onboarding_p2_desc,
         icon = Icons.Default.SwipeVertical,
         gradientColor = Color(0xFF06B6D4)
     ),
     OnboardingPage(
-        titleRes = R.string.onboarding_p3_title,
-        descriptionRes = R.string.onboarding_p3_desc,
-        icon = Icons.Default.Description,
+        titleRes = R.string.onboarding_p2_title,
+        descriptionRes = R.string.onboarding_p2_desc,
+        icon = Icons.Default.Compare,
         gradientColor = Color(0xFF10B981)
     ),
     OnboardingPage(
-        titleRes = R.string.onboarding_p4_title,
-        descriptionRes = R.string.onboarding_p4_desc,
-        icon = Icons.Default.CreateNewFolder,
-        gradientColor = Color(0xFFF59E0B)
-    ),
-    OnboardingPage(
-        titleRes = R.string.onboarding_p5_title,
-        descriptionRes = R.string.onboarding_p5_desc,
-        icon = Icons.Default.Storage,
-        gradientColor = Color(0xFFEF4444)
-    ),
-    OnboardingPage(
-        titleRes = R.string.onboarding_p6_title,
-        descriptionRes = R.string.onboarding_p6_desc,
+        titleRes = R.string.onboarding_p3_title,
+        descriptionRes = R.string.onboarding_p3_desc,
         icon = Icons.Default.Lock,
-        gradientColor = Color(0xFF8B5CF6)
+        gradientColor = Color(0xFF6366F1)
     )
 )
 

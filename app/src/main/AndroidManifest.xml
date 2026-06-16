@@ -104,7 +104,8 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Cleanify"
         tools:targetApi="36"
-        android:requestLegacyExternalStorage="true"> <!-- Required for the legacy storage model on Android 10 -->
+        android:requestLegacyExternalStorage="true"
+        android:enableOnBackInvokedCallback="true"> <!-- Required for the legacy storage model on Android 10 -->
 
         <!--
         Main and single Activity of the application.

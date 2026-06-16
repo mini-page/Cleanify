@@ -76,6 +76,7 @@ import com.cleanify.domain.model.FolderDetails
 import com.cleanify.ui.components.AppDialog
 import com.cleanify.ui.components.AppDropdownMenu
 import com.cleanify.ui.components.AppMenuDivider
+import com.cleanify.ui.components.EmptyState
 import com.cleanify.ui.components.FastScrollbar
 import com.cleanify.ui.components.FolderSearchDialog
 import com.cleanify.ui.components.RenameFolderDialog
@@ -436,24 +437,29 @@ fun SessionSetupScreen(
 
                     // Case 3: Load complete, but device has no media folders at all.
                     uiState.allFolderDetails.isEmpty() -> {
-                        LazyColumn(modifier = Modifier.fillMaxSize()) {
-                            item {
-                                EmptyStateMessage(modifier = Modifier.fillParentMaxSize())
-                            }
-                        }
+                        EmptyState(
+                            modifier = Modifier.fillMaxSize(),
+                            icon = Icons.Default.Collections,
+                            titleRes = R.string.no_media_folders_found,
+                            descriptionRes = R.string.no_media_folders_desc,
+                            actionTextRes = R.string.rescan,
+                            actionIcon = Icons.Default.Refresh,
+                            onActionClick = { viewModel.refreshFolders() }
+                        )
                     }
 
                     // Case 4: Load complete, but the current search query filters them all out.
                     // Only show this if a search is not actively in progress.
                     uiState.folderCategories.isEmpty() && !uiState.isSearching -> {
-                        LazyColumn(modifier = Modifier.fillMaxSize()) {
-                            item {
-                                NoSearchResultsMessage(
-                                    searchQuery = uiState.searchQuery,
-                                    modifier = Modifier.fillParentMaxSize()
-                                )
-                            }
-                        }
+                        EmptyState(
+                            modifier = Modifier.fillMaxSize(),
+                            icon = Icons.Default.SearchOff,
+                            titleRes = R.string.no_results_found,
+                            descriptionRes = R.string.no_search_results_desc,
+                            actionTextRes = R.string.clear_search,
+                            actionIcon = Icons.Default.Clear,
+                            onActionClick = { viewModel.updateSearchQuery("") }
+                        )
                     }
 
                     // Case 5: Load complete, display the folder list (or the old list while a new search is debouncing).
@@ -539,72 +545,6 @@ fun SessionSetupScreen(
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun EmptyStateMessage(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .padding(16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.padding(bottom = 64.dp) // Offset from FABs
-        ) {
-            Icon(
-                imageVector = Icons.Default.Collections,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.surfaceVariant
-            )
-            Text(
-                text = stringResource(R.string.no_media_folders_found),
-                style = MaterialTheme.typography.titleLarge
-            )
-            Text(
-                text = stringResource(R.string.no_media_folders_desc),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun NoSearchResultsMessage(searchQuery: String, modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .padding(16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.padding(bottom = 64.dp) // Offset from FABs
-        ) {
-            Icon(
-                imageVector = Icons.Default.SearchOff,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.surfaceVariant
-            )
-            Text(
-                text = stringResource(R.string.no_results_found),
-                style = MaterialTheme.typography.titleLarge
-            )
-            Text(
-                text = stringResource(R.string.no_search_results_desc, searchQuery),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
         }
     }
 }

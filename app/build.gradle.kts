@@ -124,6 +124,14 @@ android {
             resources.excludes.add("META-INF/DEPENDENCIES")
         }
     }
+
+    lint {
+        baseline = file("lint-baseline.xml")
+        abortOnError = false
+        warningsAsErrors = false
+        xmlReport = true
+        htmlReport = true
+    }
 }
 
 androidComponents {

@@ -21,6 +21,8 @@ import android.content.Context
 import android.os.Build
 import androidx.work.WorkManager
 import coil.ImageLoader
+import coil.disk.DiskCache
+import coil.memory.MemoryCache
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import com.cleanify.domain.bus.FileModificationEventBus
@@ -61,7 +63,14 @@ object AppModule {
     @Provides
     @Singleton
     fun provideImageLoader(@ApplicationContext context: Context): ImageLoader {
+        val diskCacheSize = 200 * 1024 * 1024 // 200MB
         return ImageLoader.Builder(context)
+            .memoryCache {
+                MemoryCache.Builder(context).maxSizePercent(0.25).build()
+            }
+            .diskCache {
+                DiskCache.Builder().directory(context.cacheDir.resolve("image_cache")).maxSizeBytes(diskCacheSize.toLong()).build()
+            }
             .respectCacheHeaders(false)
             .build()
     }

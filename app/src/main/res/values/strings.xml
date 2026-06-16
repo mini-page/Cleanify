@@ -336,19 +336,13 @@
     <string name="permission_screen_instruction">Please grant the permission in your device settings to use Cleanify.</string>
     <string name="open_settings">Open Settings</string>
 
-    <!-- Onboarding Pages -->
-    <string name="onboarding_p1_title">Welcome to Cleanify</string>
-    <string name="onboarding_p1_desc">The smartest way to organize your digital life. Photos, videos, audio, PDFs, and documents — all managed with simple gestures. More file types coming soon.</string>
-    <string name="onboarding_p2_title">Swipe to Organize</string>
-    <string name="onboarding_p2_desc">Swipe right to keep, swipe left to delete. Not sure? Skip it and decide later. Made a mistake? Undo instantly. It\'s that simple.</string>
-    <string name="onboarding_p3_title">All File Types Supported</string>
-    <string name="onboarding_p3_desc">Go beyond photos and videos. Cleanify handles audio files, PDFs, and documents too. Organize everything from one place — no app switching needed.</string>
-    <string name="onboarding_p4_title">Smart Sorting</string>
-    <string name="onboarding_p4_desc">Move files to folders with a single tap. Create custom albums, add favorites, and organize thousands of files in seconds.</string>
-    <string name="onboarding_p5_title">Reclaim Your Space</string>
-    <string name="onboarding_p5_desc">Find exact duplicates and visually similar files across all types. Reclaim gigabytes of storage with just a few taps.</string>
-    <string name="onboarding_p6_title">100% Private &amp; Offline</string>
-    <string name="onboarding_p6_desc">Your files never leave your device. No accounts, no tracking, no data collection. Just you and your files, safe and private.</string>
+    <!-- Onboarding Pages (3 screens) -->
+    <string name="onboarding_p1_title">Swipe to Organize</string>
+    <string name="onboarding_p1_desc">Swipe right to keep, left to delete. Tap to view full-screen. Skip uncertain ones and decide later. All file types: photos, videos, audio, PDFs, documents.</string>
+    <string name="onboarding_p2_title">Find Duplicates &amp; Similar</string>
+    <string name="onboarding_p2_desc">Detect exact duplicates byte-for-byte. Find visually similar images with adjustable sensitivity. Select and delete in bulk. Reclaim gigabytes instantly.</string>
+    <string name="onboarding_p3_title">100% Private &amp; Offline</string>
+    <string name="onboarding_p3_desc">Your files never leave your device. No accounts, no tracking, no data collection. Deleted files go to Recycle Bin — recover anytime. Grant All Files Access to begin.</string>
 
     <!-- Settings Screen -->
     <string name="search_settings_placeholder">Search settings…</string>
@@ -678,5 +672,20 @@
     <string name="privacy_policy_url">https://home-cleanify.vercel.app/privacy.html</string>
     <string name="terms_of_use_title">Terms of Use</string>
     <string name="terms_of_use_desc">View the terms of use for this app</string>
+
+    <!-- Empty States -->
+    <string name="empty_duplicates_title">No Duplicates Found</string>
+    <string name="empty_duplicates_desc">Your library is clean! No exact duplicate files were detected.</string>
+    <string name="rescan_duplicates">Rescan</string>
+    <string name="empty_similar_title">No Similar Files</string>
+    <string name="empty_similar_desc">No visually similar files found with the current sensitivity level.</string>
+    <string name="empty_recycle_bin_title">Recycle Bin Empty</string>
+    <string name="empty_recycle_bin_desc">Deleted items appear here. You can restore them within 30 days.</string>
+    <string name="empty_swiper_title">No Media to Review</string>
+    <string name="empty_swiper_desc">Add folders in Session Setup to start organizing your media.</string>
+    <string name="empty_search_title">No Results</string>
+    <string name="empty_search_desc">No files match your search. Try different keywords or filters.</string>
+    <string name="empty_generic_title">Nothing Here</string>
+    <string name="empty_generic_desc">No items to display at the moment.</string>
 
 </resources>

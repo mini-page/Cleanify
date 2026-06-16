@@ -22,6 +22,7 @@ import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.util.TypedValue
+import android.view.View
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.fillMaxSize
@@ -73,6 +74,13 @@ class MainActivity : BaseActivity() {
         // Set the window background color instantly to prevent flicker on activity recreation.
         window.setWindowAnimations(0)
         applyImmediateBackgroundColor()
+
+        // Handle system bar colors for edge-to-edge
+        window.setStatusBarColor(Color.TRANSPARENT.toInt())
+        window.setNavigationBarColor(Color.TRANSPARENT.toInt())
+        val controller = WindowCompat.getInsetsController(window, window.decorView)
+        controller.isAppearanceLightStatusBars = mainViewModel.currentTheme.value != AppTheme.AMOLED
+        controller.isAppearanceLightNavigationBars = mainViewModel.currentTheme.value != AppTheme.AMOLED
 
         // Observe locale changes and apply them via AppCompatDelegate.
         lifecycleScope.launch {

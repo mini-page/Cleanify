@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <issue id="UnusedResources" severity="warning" />
+    <issue id="MissingContentDescription" severity="warning" />
+    <issue id="HardcodedText" severity="ignore" />
+    <issue id="LongParameterList" severity="ignore" />
+    <issue id="LongMethod" severity="ignore" />
+    <issue id="MagicNumber" severity="ignore" />
+    <issue id="ModifierParameter" severity="ignore" />
+    <issue id="ComposableNaming" severity="ignore" />
+    <issue id="ComposableModifierFactory" severity="ignore" />
+    <issue id="TopLevelPropertyNaming" severity="ignore" />
+    <issue id="ReturnFromComposable" severity="ignore" />
+</lint>

@@ -362,18 +362,12 @@
     <string name="open_settings">Apri Impostazioni</string>
 
     <!-- Onboarding Pages -->
-    <string name="onboarding_p1_title">Benvenuto in Cleanify</string>
-    <string name="onboarding_p1_desc">Il modo più intelligente per organizzare la tua vita digitale. Foto, video, audio, PDF e documenti — tutto gestito con gesti semplici. Altri formati in arrivo.</string>
-    <string name="onboarding_p2_title">Scorri per Organizzare</string>
-    <string name="onboarding_p2_desc">Scorri a destra per tenere, a sinistra per eliminare. Non sei sicuro? Salta e decidi dopo. Hai sbagliato? Annulla all\'istante. Così semplice.</string>
-    <string name="onboarding_p3_title">Tutti i Formati Supportati</string>
-    <string name="onboarding_p3_desc">Vai oltre foto e video. Cleanify gestisce anche file audio, PDF e documenti. Organizza tutto da un unico posto — senza cambiare app.</string>
-    <string name="onboarding_p4_title">Ordinamento Intelligente</string>
-    <string name="onboarding_p4_desc">Sposta file nelle cartelle con un solo tocco. Crea album personalizzati, aggiungi preferiti e organizza migliaia di file in pochi secondi.</string>
-    <string name="onboarding_p5_title">Recupera Spazio</string>
-    <string name="onboarding_p5_desc">Trova duplicati esatti e file visivamente simili di ogni tipo. Recupera gigabyte di spazio con pochi tocchi.</string>
-    <string name="onboarding_p6_title">100% Privato e Offline</string>
-    <string name="onboarding_p6_desc">I tuoi file non lasciano mai il dispositivo. Niente account, nessun tracciamento, nessuna raccolta dati. Solo tu e i tuoi file, al sicuro.</string>
+<string name="onboarding_p1_title">Scorri per Organizzare</string>
+    <string name="onboarding_p1_desc">Scorri a destra per tenere, a sinistra per eliminare. Tocca per visualizzare a schermo intero. Salta quelli incerti e decidi dopo. Tutti i formati: foto, video, audio, PDF, documenti.</string>
+    <string name="onboarding_p2_title">Trova Duplicati e Simili</string>
+    <string name="onboarding_p2_desc">Rileva duplicati esatti byte per byte. Trova immagini visivamente simili con sensibilità regolabile. Seleziona ed elimina in blocco. Recupera gigabyte all\'istante.</string>
+    <string name="onboarding_p3_title">100% Privato e Offline</string>
+    <string name="onboarding_p3_desc">I tuoi file non lasciano mai il dispositivo. Niente account, nessun tracciamento, nessuna raccolta dati. I file eliminati vanno nel Cestino — recupera quando vuoi. Concedi Accesso a Tutti i File per iniziare.</string>
 
     <!-- Settings Screen -->
     <string name="search_settings_placeholder">Cerca impostazioni…</string>
@@ -651,5 +645,19 @@
     <string name="address_copied">Indirizzo copiato</string>
     <string name="copy_address_icon_desc">Copia indirizzo</string>
     <string name="funding_dialog_footer">Sentiti libero di includere il tuo nome utente GitHub nella descrizione della transazione!</string>
+
+    <!-- Empty States -->
+    <string name="empty_duplicates_title">Nessun Duplicato Trovato</string>
+    <string name="empty_duplicates_desc">La tua libreria è pulita! Non sono stati rilevati file duplicati esatti.</string>
+    <string name="empty_similar_title">Nessun File Simile</string>
+    <string name="empty_similar_desc">Nessun file visivamente simile trovato con il livello di sensibilità corrente.</string>
+    <string name="empty_recycle_bin_title">Cestino Vuoto</string>
+    <string name="empty_recycle_bin_desc">Gli elementi eliminati appaiono qui. Puoi ripristinarli entro 30 giorni.</string>
+    <string name="empty_swiper_title">Nessun Media da Recensire</string>
+    <string name="empty_swiper_desc">Aggiungi cartelle nella Configurazione Sessione per iniziare a organizzare i tuoi media.</string>
+    <string name="empty_search_title">Nessun Risultato</string>
+    <string name="empty_search_desc">Nessun file corrisponde alla tua ricerca. Prova parole chiave o filtri diversi.</string>
+    <string name="empty_generic_title">Niente Qui</string>
+    <string name="empty_generic_desc">Nessun elemento da visualizzare al momento.</string>
 
 </resources>
