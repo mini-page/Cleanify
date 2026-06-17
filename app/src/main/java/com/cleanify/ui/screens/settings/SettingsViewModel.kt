@@ -228,6 +228,14 @@ class SettingsViewModel @Inject constructor(
                 initialValue = true
             )
 
+    val hideActionButtons: StateFlow<Boolean> =
+        preferencesRepository.hideActionButtonsFlow
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = false
+            )
+
     val defaultAlbumCreationPath: StateFlow<String> =
         preferencesRepository.defaultAlbumCreationPathFlow
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
@@ -416,6 +424,13 @@ class SettingsViewModel @Inject constructor(
         )
 
     val scanDocumentEnabled: StateFlow<Boolean> = preferencesRepository.scanDocumentEnabledFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = true
+        )
+
+    val scanVideoEnabled: StateFlow<Boolean> = preferencesRepository.scanVideoEnabledFlow
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -704,6 +719,12 @@ class SettingsViewModel @Inject constructor(
     fun setHideSkipButton(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.setHideSkipButton(enabled)
+        }
+    }
+
+    fun setHideActionButtons(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.setHideActionButtons(enabled)
         }
     }
 
@@ -1185,6 +1206,12 @@ class SettingsViewModel @Inject constructor(
     fun setScanDocumentEnabled(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.setScanDocumentEnabled(enabled)
+        }
+    }
+
+    fun setScanVideoEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.setScanVideoEnabled(enabled)
         }
     }
 }

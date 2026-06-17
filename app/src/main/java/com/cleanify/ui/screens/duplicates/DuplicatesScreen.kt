@@ -340,7 +340,15 @@ fun DuplicatesScreen(
                     onToggleSimilar = viewModel::toggleScanForSimilarMedia,
                     onStartScan = startScanWithPermissionCheck,
                     onLoadCachedResults = { viewModel.loadPersistedResults(isFallback = false) },
-                    onNavigateToSettings = onNavigateToSettings
+                    onNavigateToSettings = onNavigateToSettings,
+                    scanImages = uiState.scanImages,
+                    scanVideos = uiState.scanVideos,
+                    scanAudio = uiState.scanAudio,
+                    scanDocuments = uiState.scanDocuments,
+                    onToggleScanImages = viewModel::toggleScanImages,
+                    onToggleScanVideos = viewModel::toggleScanVideos,
+                    onToggleScanAudio = viewModel::toggleScanAudio,
+                    onToggleScanDocuments = viewModel::toggleScanDocuments
                 )
                 ScanState.Scanning,
                 ScanState.Cancelling -> {
@@ -634,7 +642,15 @@ private fun IdleView(
     onToggleSimilar: () -> Unit,
     onStartScan: () -> Unit,
     onLoadCachedResults: () -> Unit,
-    onNavigateToSettings: () -> Unit
+    onNavigateToSettings: () -> Unit,
+    scanImages: Boolean = true,
+    scanVideos: Boolean = true,
+    scanAudio: Boolean = true,
+    scanDocuments: Boolean = true,
+    onToggleScanImages: () -> Unit = {},
+    onToggleScanVideos: () -> Unit = {},
+    onToggleScanAudio: () -> Unit = {},
+    onToggleScanDocuments: () -> Unit = {}
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier
         .fillMaxWidth()
@@ -667,6 +683,19 @@ private fun IdleView(
                 accentColor = duplicateTints[1],
                 onClick = onToggleSimilar
             )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(stringResource(R.string.file_types_to_scan), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            FilterChip(selected = scanImages, onClick = onToggleScanImages, label = { Text(stringResource(R.string.images)) }, modifier = Modifier.weight(1f))
+            FilterChip(selected = scanVideos, onClick = onToggleScanVideos, label = { Text(stringResource(R.string.videos)) }, modifier = Modifier.weight(1f))
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            FilterChip(selected = scanAudio, onClick = onToggleScanAudio, label = { Text(stringResource(R.string.audios)) }, modifier = Modifier.weight(1f))
+            FilterChip(selected = scanDocuments, onClick = onToggleScanDocuments, label = { Text(stringResource(R.string.documents)) }, modifier = Modifier.weight(1f))
         }
 
         if (!hasRunOnce) {

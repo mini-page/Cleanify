@@ -92,7 +92,12 @@ data class DuplicatesUiState(
     // Scan Scope properties
     val scanScope: DuplicateScanScope = DuplicateScanScope.ALL_FILES,
     val includeList: Set<String> = emptySet(),
-    val excludeList: Set<String> = emptySet()
+    val excludeList: Set<String> = emptySet(),
+    // File type scan toggles
+    val scanImages: Boolean = true,
+    val scanVideos: Boolean = true,
+    val scanAudio: Boolean = true,
+    val scanDocuments: Boolean = true
 )
 
 enum class ScanState {
@@ -350,6 +355,22 @@ class DuplicatesViewModel @Inject constructor(
         _uiState.update { it.copy(scanForSimilarMedia = !it.scanForSimilarMedia) }
     }
 
+    fun toggleScanImages() {
+        _uiState.update { it.copy(scanImages = !it.scanImages) }
+    }
+
+    fun toggleScanVideos() {
+        _uiState.update { it.copy(scanVideos = !it.scanVideos) }
+    }
+
+    fun toggleScanAudio() {
+        _uiState.update { it.copy(scanAudio = !it.scanAudio) }
+    }
+
+    fun toggleScanDocuments() {
+        _uiState.update { it.copy(scanDocuments = !it.scanDocuments) }
+    }
+
     fun toggleResultViewMode() {
         _uiState.update {
             val newMode = if (it.resultViewMode == ResultViewMode.LIST) ResultViewMode.GRID else ResultViewMode.LIST
@@ -400,6 +421,10 @@ class DuplicatesViewModel @Inject constructor(
             action = DuplicateScanService.ACTION_START_SCAN
             putExtra(DuplicateScanService.EXTRA_SCAN_EXACT, currentState.scanForExactDuplicates)
             putExtra(DuplicateScanService.EXTRA_SCAN_SIMILAR, currentState.scanForSimilarMedia)
+            putExtra(DuplicateScanService.EXTRA_SCAN_IMAGES, currentState.scanImages)
+            putExtra(DuplicateScanService.EXTRA_SCAN_VIDEOS, currentState.scanVideos)
+            putExtra(DuplicateScanService.EXTRA_SCAN_AUDIO, currentState.scanAudio)
+            putExtra(DuplicateScanService.EXTRA_SCAN_DOCUMENTS, currentState.scanDocuments)
         }
         context.startService(intent)
         Log.d(

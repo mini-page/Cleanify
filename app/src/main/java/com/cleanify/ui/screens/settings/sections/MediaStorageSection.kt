@@ -29,6 +29,7 @@ fun MediaStorageSection(
     val screenshotJpegQuality by viewModel.screenshotJpegQuality.collectAsStateWithLifecycle()
     val scanAudioEnabled by viewModel.scanAudioEnabled.collectAsStateWithLifecycle()
     val scanDocumentEnabled by viewModel.scanDocumentEnabled.collectAsStateWithLifecycle()
+    val scanVideoEnabled by viewModel.scanVideoEnabled.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Column(
@@ -44,6 +45,7 @@ fun MediaStorageSection(
         SectionHeader(R.string.scan_section_header)
         SettingSwitch(R.string.scan_audio_title, R.string.scan_audio_desc, scanAudioEnabled, viewModel::setScanAudioEnabled)
         SettingSwitch(R.string.scan_document_title, R.string.scan_document_desc, scanDocumentEnabled, viewModel::setScanDocumentEnabled)
+        SettingSwitch(R.string.scan_video_title, R.string.scan_video_desc, scanVideoEnabled, viewModel::setScanVideoEnabled)
 
         SectionHeader(R.string.video_section_header)
         SettingsPickerItem(R.string.default_video_speed_title, R.string.default_video_speed_desc, listOf(1.0f, 1.5f, 2.0f), defaultVideoSpeed, { viewModel.setDefaultVideoSpeed(it) }, { s -> "${s}x" })

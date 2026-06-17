@@ -392,6 +392,8 @@
     <string name="scan_section_header">Scan Types</string>
     <string name="scan_audio_title">Scan Audio Files</string>
     <string name="scan_audio_desc">Include MP3, WAV, FLAC, AAC, OGG, WMA in scans</string>
+    <string name="scan_video_title">Scan Video Files</string>
+    <string name="scan_video_desc">Include MP4, WebM, MKV, MOV, AVI in scans</string>
     <string name="scan_document_title">Scan Documents</string>
     <string name="scan_document_desc">Include PDF, DOCX, XLSX, PPTX, TXT in scans</string>
     <string name="video_section_header">Video</string>
@@ -487,6 +489,13 @@
     <string name="invert_swipe_desc">Invert the swipe actions: left to keep, right to delete</string>
     <string name="hide_skip_button_title">Hide Skip Button</string>
     <string name="hide_skip_button_desc">If enabled, the \'Skip\' button will be hidden from the bottom bar.</string>
+    <string name="hide_action_buttons_title">Hide Action Buttons</string>
+    <string name="hide_action_buttons_desc">If enabled, the delete and keep buttons will be hidden for a more immersive swiping experience.</string>
+    <string name="file_types_to_scan">File Types to Scan</string>
+    <string name="images">Images</string>
+    <string name="videos">Videos</string>
+    <string name="audios">Audio</string>
+    <string name="documents">Documents</string>
     <string name="add_fav_by_default_title">Add to Favorites by Default</string>
     <string name="add_fav_by_default_desc">Pre-select the \'Add to Favorites\' toggle when adding a new target folder.</string>
     <string name="unfav_removes_from_bar_title">Unfavorite Also Removes</string>

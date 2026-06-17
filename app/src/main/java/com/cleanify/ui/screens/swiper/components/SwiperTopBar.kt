@@ -119,6 +119,7 @@ internal fun SwiperTopBar(
                 text = "${currentIndex + 1} / $totalCount",
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
             )
         }
 

@@ -87,6 +87,8 @@ class DirectMediaRepositoryImpl @Inject constructor(
     private var scanAudioEnabled: Boolean = true
     @Volatile
     private var scanDocumentEnabled: Boolean = true
+    @Volatile
+    private var scanVideoEnabled: Boolean = true
 
     private val _isPerformingBackgroundRefresh = MutableStateFlow(false)
     override val isPerformingBackgroundRefresh: StateFlow<Boolean> = _isPerformingBackgroundRefresh.asStateFlow()
@@ -104,6 +106,9 @@ class DirectMediaRepositoryImpl @Inject constructor(
         }
         externalScope.launch {
             preferencesRepository.scanDocumentEnabledFlow.collect { scanDocumentEnabled = it }
+        }
+        externalScope.launch {
+            preferencesRepository.scanVideoEnabledFlow.collect { scanVideoEnabled = it }
         }
     }
 
@@ -263,6 +268,7 @@ class DirectMediaRepositoryImpl @Inject constructor(
 
     private fun isAudioScanEnabled(): Boolean = scanAudioEnabled
     private fun isDocumentScanEnabled(): Boolean = scanDocumentEnabled
+    private fun isVideoScanEnabled(): Boolean = scanVideoEnabled
 
     override suspend fun cleanupGhostFolders() { /* No-op */ }
 
@@ -594,7 +600,7 @@ class DirectMediaRepositoryImpl @Inject constructor(
     private fun isMediaFile(file: File): Boolean {
         val extension = file.extension.lowercase(Locale.ROOT)
         return supportedImageExtensions.contains(extension) ||
-                supportedVideoExtensions.contains(extension) ||
+                (isVideoScanEnabled() && supportedVideoExtensions.contains(extension)) ||
                 (isAudioScanEnabled() && supportedAudioExtensions.contains(extension)) ||
                 (isDocumentScanEnabled() && supportedDocumentExtensions.contains(extension))
     }

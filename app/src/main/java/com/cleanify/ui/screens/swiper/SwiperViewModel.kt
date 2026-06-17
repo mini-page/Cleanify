@@ -32,6 +32,7 @@ import coil.ImageLoader
 import coil.request.ImageRequest
 import com.cleanify.R
 import com.cleanify.data.model.MediaItem
+import com.cleanify.data.model.FileCategory
 import com.cleanify.data.repository.AddFolderFocusTarget
 import com.cleanify.data.repository.FolderBarLayout
 import com.cleanify.data.repository.FolderNameLayout
@@ -227,6 +228,10 @@ class SwiperViewModel @Inject constructor(
 
     val hidePreviewStrip: StateFlow<Boolean> =
         preferencesRepository.hidePreviewStripFlow
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val hideActionButtons: StateFlow<Boolean> =
+        preferencesRepository.hideActionButtonsFlow
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     val screenshotJpegQuality: StateFlow<String> =
@@ -1656,7 +1661,8 @@ class SwiperViewModel @Inject constructor(
     }
 
     fun toggleMute(hasAudio: Boolean) {
-        if (_uiState.value.currentItem?.isVideo != true) return
+        val currentItem = _uiState.value.currentItem
+        if (currentItem?.isVideo != true && currentItem?.category != FileCategory.Audio) return
 
         val currentlyMuted = _uiState.value.isVideoMuted
         if (currentlyMuted) {

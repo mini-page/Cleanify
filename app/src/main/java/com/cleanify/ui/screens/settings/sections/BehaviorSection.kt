@@ -34,6 +34,7 @@ fun BehaviorSection(
     val pathOptions = viewModel.standardAlbumDirectories
     val rememberProcessedMedia by viewModel.rememberProcessedMedia.collectAsStateWithLifecycle()
     val searchAutofocusEnabled by viewModel.searchAutofocusEnabled.collectAsStateWithLifecycle()
+    val hideActionButtons by viewModel.hideActionButtons.collectAsStateWithLifecycle()
 
     Column(
         modifier = Modifier
@@ -47,6 +48,7 @@ fun BehaviorSection(
         SettingsPickerItem(R.string.folder_selection_mode_title, getFolderSelectionModeDescriptionRes(folderSelectionMode), FolderSelectionMode.entries, folderSelectionMode, { viewModel.setFolderSelectionMode(it) }, ::getFolderSelectionModeDisplayName)
         SettingSwitch(R.string.show_favorites_setup_title, R.string.show_favorites_setup_desc, showFavoritesInSetup, { viewModel.setShowFavoritesInSetup(it) })
         SettingSwitch(R.string.hide_skip_button_title, R.string.hide_skip_button_desc, hideSkipButton, { viewModel.setHideSkipButton(it) })
+        SettingSwitch(R.string.hide_action_buttons_title, R.string.hide_action_buttons_desc, hideActionButtons, { viewModel.setHideActionButtons(it) })
         SettingSwitch(R.string.add_fav_by_default_title, R.string.add_fav_by_default_desc, addFavoriteToTargetByDefault, { viewModel.setAddFavoriteToTargetByDefault(it) })
         SettingSwitch(R.string.unfav_removes_from_bar_title, R.string.unfav_removes_from_bar_desc, unfavoriteRemovesFromBar, { viewModel.setUnfavoriteRemovesFromBar(it) })
         SettingSwitch(R.string.hint_on_existing_folder_title, R.string.hint_on_existing_folder_desc, hintOnExistingFolderName, { viewModel.setHintOnExistingFolderName(it) })

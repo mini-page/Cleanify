@@ -102,6 +102,10 @@ class DuplicateScanService : LifecycleService() {
         const val ACTION_CANCEL_SCAN = "com.cleanify.ACTION_CANCEL_SCAN"
         const val EXTRA_SCAN_EXACT = "com.cleanify.EXTRA_SCAN_EXACT"
         const val EXTRA_SCAN_SIMILAR = "com.cleanify.EXTRA_SCAN_SIMILAR"
+        const val EXTRA_SCAN_IMAGES = "com.cleanify.EXTRA_SCAN_IMAGES"
+        const val EXTRA_SCAN_VIDEOS = "com.cleanify.EXTRA_SCAN_VIDEOS"
+        const val EXTRA_SCAN_AUDIO = "com.cleanify.EXTRA_SCAN_AUDIO"
+        const val EXTRA_SCAN_DOCUMENTS = "com.cleanify.EXTRA_SCAN_DOCUMENTS"
         private const val PROGRESS_CHANNEL_ID = "DUPLICATE_SCAN_CHANNEL"
         private const val RESULT_CHANNEL_ID = "DUPLICATE_RESULT_CHANNEL"
         private const val PROGRESS_NOTIFICATION_ID = 101
@@ -132,10 +136,14 @@ class DuplicateScanService : LifecycleService() {
                 if (scanJob?.isActive != true) {
                     val scanForExact = intent.getBooleanExtra(EXTRA_SCAN_EXACT, true)
                     val scanForSimilar = intent.getBooleanExtra(EXTRA_SCAN_SIMILAR, true)
-                    Log.d("DuplicateScanService", "Received START_SCAN with exact=$scanForExact, similar=$scanForSimilar")
+                    val scanImages = intent.getBooleanExtra(EXTRA_SCAN_IMAGES, true)
+                    val scanVideos = intent.getBooleanExtra(EXTRA_SCAN_VIDEOS, true)
+                    val scanAudio = intent.getBooleanExtra(EXTRA_SCAN_AUDIO, true)
+                    val scanDocuments = intent.getBooleanExtra(EXTRA_SCAN_DOCUMENTS, true)
+                    Log.d("DuplicateScanService", "Received START_SCAN with exact=$scanForExact, similar=$scanForSimilar, images=$scanImages, videos=$scanVideos, audio=$scanAudio, documents=$scanDocuments")
                     val initialPhase = getString(R.string.scanning_preparing_phase)
                     startForeground(PROGRESS_NOTIFICATION_ID, createProgressNotification(0, stateHolder.state.value.progressPhase ?: initialPhase))
-                    startScan(scanForExact, scanForSimilar)
+                    startScan(scanForExact, scanForSimilar, scanImages, scanVideos, scanAudio, scanDocuments)
                 }
             }
             ACTION_CANCEL_SCAN -> {
@@ -228,7 +236,7 @@ class DuplicateScanService : LifecycleService() {
         return Pair(filteredPaths, ScanScopeType.SCOPED)
     }
 
-    private fun startScan(scanForExact: Boolean, scanForSimilar: Boolean) {
+    private fun startScan(scanForExact: Boolean, scanForSimilar: Boolean, scanImages: Boolean = true, scanVideos: Boolean = true, scanAudio: Boolean = true, scanDocuments: Boolean = true) {
         Log.d("DuplicateScanService", "startScan invoked.")
         scanJob = serviceScope.launch {
             val allUnreadableOrUnscannableFiles = mutableSetOf<String>()
@@ -261,17 +269,32 @@ class DuplicateScanService : LifecycleService() {
                 scanScopeType = determinedScopeType
                 Log.d("DuplicateScanService", "Scan scope is ${scanScopeType.name}. Paths after filtering: ${scopedPaths.size}/${allFileSystemPaths.size}")
 
+                // Filter by selected file types
+                val imageExtensions = setOf("jpg", "jpeg", "png", "gif", "bmp", "webp", "heic", "heif")
+                val videoExtensions = setOf("mp4", "webm", "mkv", "3gp", "mov", "avi", "mpg", "mpeg", "wmv", "flv")
+                val audioExtensions = setOf("mp3", "wav", "flac", "aac", "ogg", "wma")
+                val documentExtensions = setOf("pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "rtf")
+                val fileTypeFilteredPaths = scopedPaths.filter { path ->
+                    val ext = File(path).extension.lowercase()
+                    when {
+                        imageExtensions.contains(ext) -> scanImages
+                        videoExtensions.contains(ext) -> scanVideos
+                        audioExtensions.contains(ext) -> scanAudio
+                        documentExtensions.contains(ext) -> scanDocuments
+                        else -> true
+                    }
+                }
+                Log.d("DuplicateScanService", "After file type filter: ${fileTypeFilteredPaths.size}/${scopedPaths.size} files")
+
 
                 // Calculate dynamic timeout and acquire wakelock based on scoped paths
-                val videoExtensions = setOf(".mp4", ".mkv", ".webm", ".3gp", ".mov")
-                val videoCount = scopedPaths.count { path ->
+                val videoCount = fileTypeFilteredPaths.count { path ->
                     videoExtensions.any { ext -> path.endsWith(ext, ignoreCase = true) }
                 }
-                val audioExtensions = setOf(".mp3", ".wav", ".flac", ".aac", ".ogg", ".wma")
-                val audioCount = scopedPaths.count { path ->
+                val audioCount = fileTypeFilteredPaths.count { path ->
                     audioExtensions.any { ext -> path.endsWith(ext, ignoreCase = true) }
                 }
-                val imageCount = scopedPaths.size - videoCount - audioCount
+                val imageCount = fileTypeFilteredPaths.size - videoCount - audioCount
                 // Heuristic: 2 min base + 150ms/image + 750ms/video + 150ms/audio
                 val timeout = 120_000L + (imageCount * 150L) + (videoCount * 750L) + (audioCount * 150L)
                 acquireWakeLock(timeout)
@@ -279,14 +302,14 @@ class DuplicateScanService : LifecycleService() {
                 // Forceful cancellation check after blocking I/O
                 if (!isActive) throw CancellationException("Cancelled after gathering file paths.")
 
-                Log.d("DuplicateScanService", "Found ${scopedPaths.size} total files from file system within scope.")
+                Log.d("DuplicateScanService", "Found ${fileTypeFilteredPaths.size} total files from file system within scope.")
                 tracker.add(GATHERING_PROGRESS)
                 updateSharedProgress(tracker)
 
                 // --- Phase 2: Pre-filtering ---
                 tracker.setPhase(phasePreparing)
                 updateSharedProgress(tracker)
-                val filesToProcess = scopedPaths
+                val filesToProcess = fileTypeFilteredPaths
                     .filterNot { HiddenFileFilter.isPathExcludedFromScan(it) }
                     .map { File(it) }
                     .filter { file ->

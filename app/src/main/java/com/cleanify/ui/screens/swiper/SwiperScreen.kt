@@ -202,6 +202,7 @@ fun SwiperScreen(
     val addFavoriteToTargetByDefault by viewModel.addFavoriteToTargetByDefault.collectAsStateWithLifecycle()
     val hintOnExistingFolderName by viewModel.hintOnExistingFolderName.collectAsStateWithLifecycle()
     val immersiveMode by viewModel.immersiveMode.collectAsStateWithLifecycle()
+    val hideActionButtons by viewModel.hideActionButtons.collectAsStateWithLifecycle()
     val view = LocalView.current
     DisposableEffect(immersiveMode) {
         val window = (view.context as? android.app.Activity)?.window ?: return@DisposableEffect onDispose {}
@@ -410,7 +411,8 @@ fun SwiperScreen(
                                 onNavigateToIndex = viewModel::navigateToIndex,
                                 onDelete = viewModel::handleSwipeLeft,
                                 onKeep = viewModel::handleSwipeRight,
-                                onInfoClick = viewModel::showItemInfoSheet
+                                onInfoClick = viewModel::showItemInfoSheet,
+                                hideActionButtons = hideActionButtons
                             )
                             Box(modifier = Modifier
                                 .fillMaxHeight()
@@ -469,7 +471,8 @@ fun SwiperScreen(
                                 onNavigateToIndex = viewModel::navigateToIndex,
                                 onDelete = viewModel::handleSwipeLeft,
                                 onKeep = viewModel::handleSwipeRight,
-                                onInfoClick = viewModel::showItemInfoSheet
+                                onInfoClick = viewModel::showItemInfoSheet,
+                                hideActionButtons = hideActionButtons
                             )
                             BottomFolderBar(
                                 targetFolders = uiState.targetFolders,
@@ -581,7 +584,8 @@ fun SwiperScreen(
                 onMoveToEdit = viewModel::moveToEditFolder,
                 onShare = viewModel::shareCurrentItem,
                 onOpen = viewModel::openCurrentItem,
-                onInfo = viewModel::showItemInfoSheet
+                onInfo = viewModel::showItemInfoSheet,
+                hideFilename = uiState.hideFilename
             )
         }
         if (uiState.showSummarySheet) {
@@ -698,7 +702,8 @@ private fun MainContent(
     onNavigateToIndex: (Int) -> Unit,
     onDelete: () -> Unit,
     onKeep: () -> Unit,
-    onInfoClick: () -> Unit
+    onInfoClick: () -> Unit,
+    hideActionButtons: Boolean = false
 ) {
     val currentItem = uiState.currentItem ?: return
     val decidedIds = remember(uiState.pendingChanges) {
@@ -743,48 +748,50 @@ private fun MainContent(
                 )
             }
             // Delete / Keep round icon buttons with N/N counter between
-            val leftIsDelete = !invertSwipe
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.BottomCenter)
-                    .padding(horizontal = 24.dp)
-                    .padding(bottom = 12.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Left FAB
-                Surface(
-                    onClick = if (leftIsDelete) onDelete else onKeep,
-                    shape = CircleShape,
-                    color = if (leftIsDelete) MaterialTheme.colorScheme.errorContainer else Color(0xFF1B5E20),
-                    shadowElevation = 6.dp,
-                    modifier = Modifier.size(64.dp)
+            if (!hideActionButtons) {
+                val leftIsDelete = !invertSwipe
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.BottomCenter)
+                        .padding(horizontal = 24.dp)
+                        .padding(bottom = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = if (leftIsDelete) Icons.Default.Delete else Icons.Default.Check,
-                            contentDescription = if (leftIsDelete) "Delete" else "Keep",
-                            tint = if (leftIsDelete) MaterialTheme.colorScheme.onErrorContainer else Color.White,
-                            modifier = Modifier.size(28.dp)
-                        )
+                    // Left FAB
+                    Surface(
+                        onClick = if (leftIsDelete) onDelete else onKeep,
+                        shape = CircleShape,
+                        color = if (leftIsDelete) MaterialTheme.colorScheme.errorContainer else Color(0xFF1B5E20),
+                        shadowElevation = 6.dp,
+                        modifier = Modifier.size(64.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = if (leftIsDelete) Icons.Default.Delete else Icons.Default.Check,
+                                contentDescription = if (leftIsDelete) "Delete" else "Keep",
+                                tint = if (leftIsDelete) MaterialTheme.colorScheme.onErrorContainer else Color.White,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
                     }
-                }
-                // Right FAB
-                Surface(
-                    onClick = if (leftIsDelete) onKeep else onDelete,
-                    shape = CircleShape,
-                    color = if (leftIsDelete) Color(0xFF1B5E20) else MaterialTheme.colorScheme.errorContainer,
-                    shadowElevation = 6.dp,
-                    modifier = Modifier.size(64.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = if (leftIsDelete) Icons.Default.Check else Icons.Default.Delete,
-                            contentDescription = if (leftIsDelete) "Keep" else "Delete",
-                            tint = if (leftIsDelete) Color.White else MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.size(28.dp)
-                        )
+                    // Right FAB
+                    Surface(
+                        onClick = if (leftIsDelete) onKeep else onDelete,
+                        shape = CircleShape,
+                        color = if (leftIsDelete) Color(0xFF1B5E20) else MaterialTheme.colorScheme.errorContainer,
+                        shadowElevation = 6.dp,
+                        modifier = Modifier.size(64.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = if (leftIsDelete) Icons.Default.Check else Icons.Default.Delete,
+                                contentDescription = if (leftIsDelete) "Keep" else "Delete",
+                                tint = if (leftIsDelete) Color.White else MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
                     }
                 }
             }

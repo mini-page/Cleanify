@@ -12,6 +12,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
@@ -20,6 +21,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -31,6 +34,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Photo
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -117,7 +121,7 @@ internal fun MediaItemCard(
     val density = LocalDensity.current
     var scale by remember { mutableFloatStateOf(1f) }
     var panOffset by remember { mutableStateOf(Offset.Zero) }
-    var showVideoControls by remember { mutableStateOf(true) }
+    var showVideoControls by remember { mutableStateOf(false) }
     val videoControlsScope = rememberCoroutineScope()
     val swipeScope = rememberCoroutineScope()
 
@@ -285,16 +289,20 @@ internal fun MediaItemCard(
                                 scale = 1f
                                 panOffset = Offset.Zero
                             } else {
-                                if (item.isVideo) {
-                                    showVideoControls = !showVideoControls
-                                    if (showVideoControls) {
-                                        videoControlsScope.launch {
-                                            delay(3000)
+                                when {
+                                    item.isVideo || item.category == FileCategory.Audio -> {
+                                        if (exoPlayer.isPlaying) {
+                                            exoPlayer.pause()
+                                            showVideoControls = true
+                                        } else {
+                                            exoPlayer.play()
                                             showVideoControls = false
                                         }
                                     }
+                                    item.category == FileCategory.Image -> {
+                                        onTap(item)
+                                    }
                                 }
-                                onTap(item)
                             }
                         }
                     }
@@ -340,11 +348,25 @@ internal fun MediaItemCard(
                                 )
                             }
                             FileCategory.Audio -> {
-                                AudioPlayerCard(
-                                    exoPlayer = exoPlayer,
-                                    mediaItem = item,
-                                    modifier = Modifier.fillMaxSize()
-                                )
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color(0xFF1A1A2E)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .aspectRatio(3f / 4f)
+                                            .fillMaxHeight(0.85f)
+                                            .clip(RoundedCornerShape(16.dp))
+                                    ) {
+                                        AudioPlayerCard(
+                                            exoPlayer = exoPlayer,
+                                            mediaItem = item,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    }
+                                }
                             }
                             FileCategory.Image -> {
                                 val loader = if (item.mimeType == "image/gif") gifImageLoader else imageLoader
@@ -358,10 +380,24 @@ internal fun MediaItemCard(
                                 )
                             }
                             else -> {
-                                DocumentPreviewCard(
-                                    mediaItem = item,
-                                    modifier = Modifier.fillMaxSize()
-                                )
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color(0xFF1A1A2E)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .aspectRatio(3f / 4f)
+                                            .fillMaxHeight(0.85f)
+                                            .clip(RoundedCornerShape(16.dp))
+                                    ) {
+                                        DocumentPreviewCard(
+                                            mediaItem = item,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    }
+                                }
                             }
                         }
                         if (leftBorderAlpha > 0f) {
@@ -411,7 +447,7 @@ internal fun MediaItemCard(
                                     )
                                 }
                             }
-                            if (item.category == FileCategory.Video) {
+                            if (item.category == FileCategory.Video || item.category == FileCategory.Audio) {
                                 val muteDesc = if (isVideoMuted) stringResource(R.string.unmute_video) else stringResource(R.string.mute_video)
                                 Box(
                                     modifier = Modifier
@@ -431,30 +467,32 @@ internal fun MediaItemCard(
                                         )
                                     }
                                 }
-                                Box(
-                                    modifier = Modifier
-                                        .align(Alignment.TopEnd)
-                                        .padding(8.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.Black.copy(alpha = 0.45f))
-                                        .size(36.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    IconButton(onClick = {
-                                        val next = when (videoPlaybackSpeed) {
-                                            0.5f -> 1.0f
-                                            1.0f -> 1.5f
-                                            1.5f -> 2.0f
-                                            else -> 0.5f
+                                if (item.category == FileCategory.Video) {
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .padding(8.dp)
+                                            .clip(CircleShape)
+                                            .background(Color.Black.copy(alpha = 0.45f))
+                                            .size(36.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        IconButton(onClick = {
+                                            val next = when (videoPlaybackSpeed) {
+                                                0.5f -> 1.0f
+                                                1.0f -> 1.5f
+                                                1.5f -> 2.0f
+                                                else -> 0.5f
+                                            }
+                                            onSetVideoPlaybackSpeed(next)
+                                        }) {
+                                            Text(
+                                                text = "${videoPlaybackSpeed}x",
+                                                color = Color.White,
+                                                fontWeight = FontWeight.Bold,
+                                                style = MaterialTheme.typography.labelSmall
+                                            )
                                         }
-                                        onSetVideoPlaybackSpeed(next)
-                                    }) {
-                                        Text(
-                                            text = "${videoPlaybackSpeed}x",
-                                            color = Color.White,
-                                            fontWeight = FontWeight.Bold,
-                                            style = MaterialTheme.typography.labelSmall
-                                        )
                                     }
                                 }
                                 if (isPendingConversion && !screenshotDeletesVideo) {
@@ -474,18 +512,20 @@ internal fun MediaItemCard(
                                         )
                                     }
                                 }
-                                Column(
-                                    modifier = Modifier.align(Alignment.BottomCenter)
-                                ) {
-                                    AnimatedVisibility(
-                                        visible = showVideoControls,
-                                        enter = fadeIn(),
-                                        exit = fadeOut()
+                                if (item.isVideo) {
+                                    Column(
+                                        modifier = Modifier.align(Alignment.BottomCenter)
                                     ) {
-                                        VideoBottomBar(
-                                            exoPlayer = exoPlayer,
-                                            modifier = Modifier.fillMaxWidth()
-                                        )
+                                        AnimatedVisibility(
+                                            visible = showVideoControls,
+                                            enter = fadeIn(),
+                                            exit = fadeOut()
+                                        ) {
+                                            VideoBottomBar(
+                                                exoPlayer = exoPlayer,
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                        }
                                     }
                                 }
                             }

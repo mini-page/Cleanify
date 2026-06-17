@@ -105,7 +105,8 @@ internal fun MediaItemContextMenu(
     onMoveToEdit: () -> Unit,
     onShare: () -> Unit,
     onOpen: () -> Unit,
-    onInfo: () -> Unit
+    onInfo: () -> Unit,
+    hideFilename: Boolean = false
 ) {
     val appContext = LocalContext.current
     val copiedString = stringResource(R.string.filename_copied)
@@ -134,16 +135,18 @@ internal fun MediaItemContextMenu(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                currentItem.displayName,
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.widthIn(max = 180.dp)
-                            )
-                            Spacer(Modifier.height(2.dp))
+                            if (!hideFilename) {
+                                Text(
+                                    currentItem.displayName,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.widthIn(max = 180.dp)
+                                )
+                                Spacer(Modifier.height(2.dp))
+                            }
                             Text(
                                 stringResource(R.string.file_size_label, Formatters.fileSize(currentItem.size)),
                                 style = MaterialTheme.typography.labelSmall,
