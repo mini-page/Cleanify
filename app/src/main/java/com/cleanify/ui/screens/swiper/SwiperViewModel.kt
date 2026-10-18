@@ -129,7 +129,7 @@ data class SwiperUiState(
     val mediaItemMenuOffset: DpOffset = DpOffset.Zero,
     val videoPlaybackPosition: Long = 0L,
     val videoPlaybackSpeed: Float = 1.0f,
-    val isVideoMuted: Boolean = true,
+    val isVideoMuted: Boolean = false,
     val showRenameDialogForPath: String? = null,
     val showConfirmExitDialog: Boolean = false,
     val currentTheme: AppTheme = AppTheme.SYSTEM,
@@ -249,6 +249,8 @@ class SwiperViewModel @Inject constructor(
     private var sessionProcessedMediaIds = mutableSetOf<String>()
     private var _rememberProcessedMediaEnabled = true
     private var _defaultVideoSpeed = 1.0f
+    private var _startVideosUnmuted = true
+    private var _userToggledMuteInSession = false
     private var lastUsedTargetPath: String? = null
     private val unindexedFileCounter = AtomicInteger(0)
     private val _dialogSearchQuery = MutableStateFlow("")
@@ -315,6 +317,11 @@ class SwiperViewModel @Inject constructor(
             _rememberProcessedMediaEnabled = savedStateHandle["rememberProcessedMediaEnabled"] as Boolean? ?: true
             _defaultVideoSpeed = savedStateHandle["defaultVideoSpeed"] as Float? ?: 1.0f
             lastUsedTargetPath = savedStateHandle["lastUsedTargetPath"] as String?
+            val restoredMuted = savedStateHandle["isVideoMuted"] as Boolean?
+            if (restoredMuted != null) {
+                _userToggledMuteInSession = true
+                _uiState.update { it.copy(isVideoMuted = restoredMuted) }
+            }
         } catch (e: ClassCastException) {
             Log.e(logTag, "Error restoring session state", e)
         }
@@ -431,6 +438,14 @@ class SwiperViewModel @Inject constructor(
                 _defaultVideoSpeed = speed
                 if (_uiState.value.currentItem?.isVideo == true) {
                     _uiState.update { it.copy(videoPlaybackSpeed = speed) }
+                }
+            }
+        }
+        viewModelScope.launch {
+            preferencesRepository.startVideosUnmutedFlow.collect { unmuted ->
+                _startVideosUnmuted = unmuted
+                if (!_userToggledMuteInSession) {
+                    _uiState.update { it.copy(isVideoMuted = !unmuted) }
                 }
             }
         }
@@ -740,7 +755,7 @@ class SwiperViewModel @Inject constructor(
                     showSummarySheet = isSortingComplete && newPendingChanges.isNotEmpty(),
                     videoPlaybackPosition = 0L,
                     videoPlaybackSpeed = _defaultVideoSpeed,
-                    isVideoMuted = true,
+                    isVideoMuted = currentState.isVideoMuted,
                     isCurrentItemPendingConversion = false,
                     toDelete = summary.toDelete,
                     toKeep = summary.toKeep,
@@ -1551,7 +1566,7 @@ class SwiperViewModel @Inject constructor(
                     isSortingComplete = false,
                     error = null,
                     videoPlaybackPosition = 0L,
-                    isVideoMuted = true,
+                    isVideoMuted = currentState.isVideoMuted,
                     isCurrentItemPendingConversion = false
                 )
             }
@@ -1607,7 +1622,7 @@ class SwiperViewModel @Inject constructor(
                     sessionSkippedMediaIds = emptySet(),
                     videoPlaybackPosition = 0L,
                     videoPlaybackSpeed = _defaultVideoSpeed,
-                    isVideoMuted = true,
+                    isVideoMuted = currentState.isVideoMuted,
                     isCurrentItemPendingConversion = false
                 )
             } else {
@@ -1664,6 +1679,7 @@ class SwiperViewModel @Inject constructor(
         val currentItem = _uiState.value.currentItem
         if (currentItem?.isVideo != true && currentItem?.category != FileCategory.Audio) return
 
+        _userToggledMuteInSession = true
         val currentlyMuted = _uiState.value.isVideoMuted
         if (currentlyMuted) {
             if (hasAudio) {

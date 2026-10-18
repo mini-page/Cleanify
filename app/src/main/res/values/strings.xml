@@ -468,6 +468,10 @@
     <!-- Video & Media Settings -->
     <string name="default_video_speed_title">Default Video Speed</string>
     <string name="default_video_speed_desc">Set the default playback speed for videos.</string>
+    <string name="start_videos_unmuted_title">Start videos unmuted</string>
+    <string name="start_videos_unmuted_desc">Play videos with audio enabled by default in the swiper.</string>
+    <string name="open_fullscreen">Open Full Screen</string>
+    <string name="fullscreen_desc">Fullscreen</string>
     <string name="screenshot_deletes_video_title">Screenshot also deletes original video</string>
     <string name="screenshot_deletes_video_desc">When taking a screenshot from a video, automatically queue the video for deletion.</string>
     <string name="screenshot_quality_title">Screenshot Quality (JPEG)</string>
@@ -696,5 +700,26 @@
     <string name="empty_search_desc">No files match your search. Try different keywords or filters.</string>
     <string name="empty_generic_title">Nothing Here</string>
     <string name="empty_generic_desc">No items to display at the moment.</string>
+
+    <!-- Feedback & Support -->
+    <string name="feedback_and_support_title">Feedback &amp; Support</string>
+    <string name="feedback_and_support_desc">Report bugs, submit suggestions, or request new features.</string>
+    <string name="feedback_type_bug">Bug Report</string>
+    <string name="feedback_type_feature">Feature Request</string>
+    <string name="feedback_type_suggestion">Change Suggestion</string>
+    <string name="feedback_type_general">General Feedback</string>
+    <string name="feedback_dialog_title">Send Feedback</string>
+    <string name="feedback_category_label">Category</string>
+    <string name="feedback_subject_label">Subject</string>
+    <string name="feedback_description_label">Description</string>
+    <string name="feedback_send_button">Send via Email</string>
+    <string name="feedback_device_info_included">Device and app diagnostics will be automatically attached.</string>
+    <string name="feedback_no_email_client">No email app found on device.</string>
+
+    <!-- PDF Viewer -->
+    <string name="pdf_preview_tap_to_open">Tap to open in-app</string>
+    <string name="pdf_page_n_of_total">Page %1$d of %2$d</string>
+    <string name="pdf_pages_count">%1$d pages</string>
+    <string name="pdf_single_page">1 page</string>
 
 </resources>

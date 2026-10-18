@@ -2,6 +2,48 @@
 
 All notable changes to Cleanify are documented here.
 
+## [3.0.0] — 2026-10-18
+
+### 🚀 Major Release Highlights
+Cleanify 3.0.0 introduces a complete overhaul of the media and document experience: a unified media playback engine for Audio and Video, native document viewing (PDF, DOCX, PPTX, XLSX, Archives, Text), modern bottom-left format badges, smart mute persistence across sessions, high-resolution PNG branding, and a native multi-alias bug/feedback reporting system.
+
+### 🐛 Bug Fixes
+- **Video Mute Logic & Persistence**: Fixed an issue where videos always started muted. The app now preserves your session mute/unmute state across cards and respects the user preference.
+- **Video Scrubbing & Duration Bug**: Fixed the video progress bar stuck at 100% white due to uninitialized duration. `VideoBottomBar` now reactively reads duration directly from ExoPlayer and supports smooth scrubbing.
+- **Fullscreen Preview for Videos**: Fixed an issue where tapping a video only toggled playback without offering fullscreen viewing. `MediaPreviewDialog` now provides an in-app fullscreen player with timeline scrubbing, speed control, and skip buttons.
+- **Accidental Fullscreen on Documents/Media**: Eliminated unwanted fullscreen triggers on non-image cards. Only image cards open fullscreen on card tap; Audio/Video toggle play/pause on tap, while documents require the dedicated top-right fullscreen button.
+
+### ✨ New Features
+- **Unified Audio & Video Playback Engine**:
+  - Full-card audio playback experience matching video cards.
+  - Minimal animated waveform visualizer with extracted album art and ambient blur background.
+  - Autoplay in sync with global mute/unmute setting (`isVideoMuted`).
+  - Tap card to toggle play/pause and reveal/hide bottom timeline seekbar with timestamps.
+- **Modern File Type Badges**:
+  - Crisp, frosted format badge in the bottom-left corner of every preview card.
+  - Tailored color accents and icons for PDF (Red), Video (Purple), Audio (Cyan), Image (Emerald), Word DOCX (Blue), PowerPoint PPTX (Orange), Excel XLSX (Green), Archives/APK (Amber), and Text/Code (Slate).
+  - Automatically animates out when seekbar controls are displayed.
+- **Top-Right Dedicated Fullscreen Button**:
+  - Universal fullscreen button in the top-right corner across all file types.
+- **Native Document & File Engine**:
+  - **PDF Preview**: First-page rendering with page count indicator and multi-page full viewer.
+  - **DOCX**: Native paragraph extractor with clean reading layout.
+  - **PPTX**: Slide text reader with slide counters.
+  - **XLSX**: Spreadsheet grid reader with formatted cells.
+  - **Archive & APK Inspector**: File tree browser with uncompressed size and embedded APK icon/version extraction.
+  - **Code & Text**: Highlighting viewer with monospace formatting and character counts.
+- **Native Feedback & Bug Submission**:
+  - Built-in Feedback Dialog with category selection routing to dedicated developer aliases:
+    - 🐞 Bug Reports: `raghavans5711+Cleanify_bugReport@gmail.com`
+    - 💡 Feature Requests: `raghavans5711+Cleanify_featureReq@gmail.com`
+    - ✏️ Change Suggestions: `raghavans5711+Cleanify_suggestion@gmail.com`
+    - 💬 General Feedback: `raghavans5711+Cleanify@gmail.com`
+  - Automatically attaches device diagnostics (OS, Model, Version, ABIs).
+
+### 🎨 Design & Polish
+- **Branding Assets**: Upgraded website and documentation logos from WebP to PNG (`logo.png`).
+- **Media Controls Polish**: Removed duplicate fullscreen buttons from seekbar and small cards. Seamless layout and lifecycle management for ExoPlayer.
+
 ## [2.7.0] — 2026-06-11
 
 ### Added

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/logo.webp" width="140" alt="Cleanify Logo" />
+  <img src="docs/images/logo.png" width="140" alt="Cleanify Logo" />
 </p>
 
 <h1 align="center">Cleanify</h1>

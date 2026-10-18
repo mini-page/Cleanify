@@ -52,4 +52,14 @@ object Formatters {
         val displayParent = if (parentPath.length > 30) "...${parentPath.takeLast(27)}" else parentPath
         return Pair(name, displayParent)
     }
+
+    /**
+     * Formats a epoch timestamp into a readable date string.
+     */
+    fun date(timestamp: Long): String {
+        if (timestamp <= 0) return "Unknown"
+        val millis = if (timestamp < 100_000_000_000L) timestamp * 1000 else timestamp
+        val sdf = java.text.SimpleDateFormat("MMM dd, yyyy HH:mm", java.util.Locale.getDefault())
+        return sdf.format(java.util.Date(millis))
+    }
 }

@@ -225,18 +225,6 @@ fun SwiperScreen(
     val focusRequester = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
 
-    var previewItem by remember { mutableStateOf<MediaItem?>(null) }
-    previewItem?.let { item ->
-        MediaPreviewDialog(
-            uri = item.uri,
-            displayName = item.displayName,
-            fileSize = item.size,
-            dateModified = item.dateModified,
-            mimeType = item.mimeType,
-            onDismiss = { previewItem = null }
-        )
-    }
-
     BackHandler {
         if (uiState.isSortingComplete && uiState.pendingChanges.isEmpty()) {
             onNavigateUpAndReset()
@@ -264,6 +252,23 @@ fun SwiperScreen(
     LaunchedEffect(uiState.isVideoMuted) {
         exoPlayer.volume = if (uiState.isVideoMuted) 0f else 1f
     }
+
+    var previewItem by remember { mutableStateOf<MediaItem?>(null) }
+    LaunchedEffect(previewItem) {
+        if (previewItem != null && exoPlayer.isPlaying) {
+            exoPlayer.pause()
+        }
+    }
+    previewItem?.let { item ->
+        MediaPreviewDialog(
+            uri = item.uri,
+            displayName = item.displayName,
+            fileSize = item.size,
+            dateModified = item.dateModified,
+            mimeType = item.mimeType,
+            onDismiss = { previewItem = null }
+        )
+    }
     uiState.showRenameDialogForPath?.let { path ->
         val folderName = uiState.targetFolders.find { it.first == path }?.second
         if (folderName != null) {
@@ -286,7 +291,7 @@ fun SwiperScreen(
                     }
                 }
                 Lifecycle.Event.ON_RESUME -> {
-                    if (uiState.currentItem?.isVideo == true) {
+                    if (uiState.currentItem?.isVideo == true || uiState.currentItem?.isAudio == true) {
                         exoPlayer.play()
                     }
                 }
@@ -304,7 +309,7 @@ fun SwiperScreen(
         exoPlayer.playWhenReady = false
         exoPlayer.stop()
         exoPlayer.clearMediaItems()
-        if (currentItem != null && (currentItem.isVideo || currentItem.category == FileCategory.Audio)) {
+        if (currentItem != null && (currentItem.isVideo || currentItem.isAudio)) {
             val exoMediaItem = ExoMediaItem.fromUri(currentItem.uri)
             exoPlayer.setMediaItem(exoMediaItem)
             exoPlayer.prepare()
@@ -585,7 +590,13 @@ fun SwiperScreen(
                 onShare = viewModel::shareCurrentItem,
                 onOpen = viewModel::openCurrentItem,
                 onInfo = viewModel::showItemInfoSheet,
-                hideFilename = uiState.hideFilename
+                hideFilename = uiState.hideFilename,
+                onOpenFullScreen = {
+                    uiState.currentItem?.let { item ->
+                        if (exoPlayer.isPlaying) exoPlayer.pause()
+                        previewItem = item
+                    }
+                }
             )
         }
         if (uiState.showSummarySheet) {
@@ -744,7 +755,11 @@ private fun MainContent(
                     onTap = onTap,
                     isPendingConversion = isPendingConversion,
                     screenshotDeletesVideo = screenshotDeletesVideo,
-                    fullScreenSwipe = uiState.fullScreenSwipe
+                    fullScreenSwipe = uiState.fullScreenSwipe,
+                    onOpenFullScreen = { item ->
+                        if (exoPlayer.isPlaying) exoPlayer.pause()
+                        onTap(item)
+                    }
                 )
             }
             // Delete / Keep round icon buttons with N/N counter between

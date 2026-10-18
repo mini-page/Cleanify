@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Share
@@ -106,7 +107,8 @@ internal fun MediaItemContextMenu(
     onShare: () -> Unit,
     onOpen: () -> Unit,
     onInfo: () -> Unit,
-    hideFilename: Boolean = false
+    hideFilename: Boolean = false,
+    onOpenFullScreen: (() -> Unit)? = null
 ) {
     val appContext = LocalContext.current
     val copiedString = stringResource(R.string.filename_copied)
@@ -182,6 +184,16 @@ internal fun MediaItemContextMenu(
                                 onScreenshot(timestampMicros)
                             },
                             enabled = !isPendingConversion
+                        )
+                    }
+                    if (onOpenFullScreen != null) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.open_fullscreen)) },
+                            leadingIcon = { Icon(Icons.Default.Fullscreen, contentDescription = "Fullscreen") },
+                            onClick = {
+                                onOpenFullScreen()
+                                onDismiss()
+                            }
                         )
                     }
                     DropdownMenuItem(

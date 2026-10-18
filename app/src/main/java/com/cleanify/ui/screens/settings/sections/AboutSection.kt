@@ -29,6 +29,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.cleanify.R
+import com.cleanify.ui.components.FeedbackDialog
 import com.cleanify.ui.screens.settings.SettingsViewModel
 import com.cleanify.util.UpdateChecker
 import com.cleanify.util.UpdateCheckState
@@ -45,6 +46,7 @@ fun AboutSection(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var updateState by remember { mutableStateOf<UpdateCheckState>(UpdateCheckState.Idle) }
+    var showFeedbackDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -161,6 +163,53 @@ fun AboutSection(
             else -> {}
         }
 
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { showFeedbackDialog = true },
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f))
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(44.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.BugReport,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                }
+                Spacer(Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.feedback_and_support_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        stringResource(R.string.feedback_and_support_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                )
+            }
+        }
+
         Text(stringResource(R.string.social_section_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
 
         val socialLinks = remember {
@@ -171,7 +220,7 @@ fun AboutSection(
                 Triple(Icons.Default.CameraAlt, "Instagram", "https://www.instagram.com/ug_5711"),
                 Triple(Icons.AutoMirrored.Filled.Send, "Telegram", "https://t.me/ug_5711"),
                 Triple(Icons.Default.Mood, "Snapchat", "https://www.snapchat.com/add/rg_5711"),
-                Triple(Icons.Default.Email, "Email", "mailto:raghavans5711+Support@gmail.com")
+                Triple(Icons.Default.Email, "Feedback", "feedback_action")
             )
         }
 
@@ -179,7 +228,13 @@ fun AboutSection(
             items(socialLinks.size) { index ->
                 val (icon, label, url) = socialLinks[index]
                 Surface(
-                    onClick = { uriHandler.openUri(url) },
+                    onClick = {
+                        if (url == "feedback_action") {
+                            showFeedbackDialog = true
+                        } else {
+                            uriHandler.openUri(url)
+                        }
+                    },
                     shape = RoundedCornerShape(16.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerHigh
                 ) {
@@ -264,6 +319,13 @@ fun AboutSection(
         SettingsItem(stringResource(R.string.open_source_licenses_title), stringResource(R.string.open_source_licenses_desc), onClick = onNavigateToLibraries)
 
         Spacer(Modifier.height(32.dp))
+    }
+
+    if (showFeedbackDialog) {
+        FeedbackDialog(
+            appVersion = viewModel.appVersion,
+            onDismiss = { showFeedbackDialog = false }
+        )
     }
 }
 

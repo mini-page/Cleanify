@@ -368,6 +368,14 @@ class SettingsViewModel @Inject constructor(
                 initialValue = false
             )
 
+    val startVideosUnmuted: StateFlow<Boolean> =
+        preferencesRepository.startVideosUnmutedFlow
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = true
+            )
+
     val screenshotJpegQuality: StateFlow<String> =
         preferencesRepository.screenshotJpegQualityFlow
             .stateIn(
@@ -834,6 +842,12 @@ class SettingsViewModel @Inject constructor(
     fun setScreenshotDeletesVideo(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.setScreenshotDeletesVideo(enabled)
+        }
+    }
+
+    fun setStartVideosUnmuted(unmuted: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.setStartVideosUnmuted(unmuted)
         }
     }
 

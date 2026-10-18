@@ -25,6 +25,7 @@ fun MediaStorageSection(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val defaultVideoSpeed by viewModel.defaultVideoSpeed.collectAsStateWithLifecycle()
+    val startVideosUnmuted by viewModel.startVideosUnmuted.collectAsStateWithLifecycle()
     val screenshotDeletesVideo by viewModel.screenshotDeletesVideo.collectAsStateWithLifecycle()
     val screenshotJpegQuality by viewModel.screenshotJpegQuality.collectAsStateWithLifecycle()
     val scanAudioEnabled by viewModel.scanAudioEnabled.collectAsStateWithLifecycle()
@@ -48,6 +49,7 @@ fun MediaStorageSection(
         SettingSwitch(R.string.scan_video_title, R.string.scan_video_desc, scanVideoEnabled, viewModel::setScanVideoEnabled)
 
         SectionHeader(R.string.video_section_header)
+        SettingSwitch(R.string.start_videos_unmuted_title, R.string.start_videos_unmuted_desc, startVideosUnmuted, { viewModel.setStartVideosUnmuted(it) })
         SettingsPickerItem(R.string.default_video_speed_title, R.string.default_video_speed_desc, listOf(1.0f, 1.5f, 2.0f), defaultVideoSpeed, { viewModel.setDefaultVideoSpeed(it) }, { s -> "${s}x" })
         SettingSwitch(R.string.screenshot_deletes_video_title, R.string.screenshot_deletes_video_desc, screenshotDeletesVideo, { viewModel.setScreenshotDeletesVideo(it) })
         SettingsPickerItem(R.string.screenshot_quality_title, R.string.screenshot_quality_desc, listOf("90", "75"), screenshotJpegQuality, { viewModel.setScreenshotJpegQuality(it) }, { q -> when (q) { "90" -> stringResource(R.string.quality_high); "75" -> stringResource(R.string.quality_low); else -> q } })

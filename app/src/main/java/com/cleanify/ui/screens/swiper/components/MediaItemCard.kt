@@ -17,24 +17,37 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.forEachGesture
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Article
+import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Photo
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Slideshow
+import androidx.compose.material.icons.filled.TableChart
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -114,7 +127,8 @@ internal fun MediaItemCard(
     onToggleMute: () -> Unit,
     isPendingConversion: Boolean,
     screenshotDeletesVideo: Boolean,
-    fullScreenSwipe: Boolean
+    fullScreenSwipe: Boolean,
+    onOpenFullScreen: ((MediaItem) -> Unit)? = null
 ) {
     val swipeOffsetX = remember { Animatable(0f) }
     val swipeOffsetY = remember { Animatable(0f) }
@@ -290,7 +304,7 @@ internal fun MediaItemCard(
                                 panOffset = Offset.Zero
                             } else {
                                 when {
-                                    item.isVideo || item.category == FileCategory.Audio -> {
+                                    item.isVideo || item.isAudio -> {
                                         if (exoPlayer.isPlaying) {
                                             exoPlayer.pause()
                                             showVideoControls = true
@@ -299,8 +313,12 @@ internal fun MediaItemCard(
                                             showVideoControls = false
                                         }
                                     }
-                                    item.category == FileCategory.Image -> {
+                                    item.isImage -> {
                                         onTap(item)
+                                    }
+                                    else -> {
+                                        // Documents/archives do NOT open on tap/swipe gesture;
+                                        // only the dedicated top-right fullscreen button triggers in-app view.
                                     }
                                 }
                             }
@@ -340,35 +358,21 @@ internal fun MediaItemCard(
                         .fillMaxSize()
                         .background(Color.Transparent)
                         .clip(MaterialTheme.shapes.medium)) {
-                        when (item.category) {
-                            FileCategory.Video -> {
+                        when {
+                            item.isVideo -> {
                                 VideoPlayer(
                                     exoPlayer = exoPlayer,
                                     modifier = Modifier.fillMaxSize()
                                 )
                             }
-                            FileCategory.Audio -> {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(Color(0xFF1A1A2E)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .aspectRatio(3f / 4f)
-                                            .fillMaxHeight(0.85f)
-                                            .clip(RoundedCornerShape(16.dp))
-                                    ) {
-                                        AudioPlayerCard(
-                                            exoPlayer = exoPlayer,
-                                            mediaItem = item,
-                                            modifier = Modifier.fillMaxSize()
-                                        )
-                                    }
-                                }
+                            item.isAudio -> {
+                                AudioPlayerCard(
+                                    exoPlayer = exoPlayer,
+                                    mediaItem = item,
+                                    modifier = Modifier.fillMaxSize()
+                                )
                             }
-                            FileCategory.Image -> {
+                            item.isImage -> {
                                 val loader = if (item.mimeType == "image/gif") gifImageLoader else imageLoader
                                 AsyncImage(
                                     model = ImageRequest.Builder(LocalContext.current).data(item.uri).crossfade(true).build(),
@@ -380,24 +384,11 @@ internal fun MediaItemCard(
                                 )
                             }
                             else -> {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(Color(0xFF1A1A2E)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .aspectRatio(3f / 4f)
-                                            .fillMaxHeight(0.85f)
-                                            .clip(RoundedCornerShape(16.dp))
-                                    ) {
-                                        DocumentPreviewCard(
-                                            mediaItem = item,
-                                            modifier = Modifier.fillMaxSize()
-                                        )
-                                    }
-                                }
+                                DocumentPreviewCard(
+                                    mediaItem = item,
+                                    modifier = Modifier.fillMaxSize(),
+                                    onOpenInApp = { (onOpenFullScreen ?: onTap).invoke(item) }
+                                )
                             }
                         }
                         if (leftBorderAlpha > 0f) {
@@ -447,31 +438,62 @@ internal fun MediaItemCard(
                                     )
                                 }
                             }
-                            if (item.category == FileCategory.Video || item.category == FileCategory.Audio) {
-                                val muteDesc = if (isVideoMuted) stringResource(R.string.unmute_video) else stringResource(R.string.mute_video)
-                                Box(
-                                    modifier = Modifier
-                                        .align(Alignment.TopStart)
-                                        .padding(8.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.Black.copy(alpha = 0.45f))
-                                        .size(36.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    IconButton(onClick = onToggleMute) {
+                            // Top-Start Controls: Mute/Unmute for Video & Audio, plus Pending Conversion indicator
+                            Row(
+                                modifier = Modifier
+                                    .align(Alignment.TopStart)
+                                    .padding(8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (item.isVideo || item.isAudio) {
+                                    val muteDesc = if (isVideoMuted) stringResource(R.string.unmute_video) else stringResource(R.string.mute_video)
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(CircleShape)
+                                            .background(Color.Black.copy(alpha = 0.45f))
+                                            .size(36.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        IconButton(onClick = onToggleMute) {
+                                            Icon(
+                                                imageVector = if (isVideoMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
+                                                contentDescription = muteDesc,
+                                                tint = Color.White,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                                if (isPendingConversion && !screenshotDeletesVideo) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(CircleShape)
+                                            .background(Color.Black.copy(alpha = 0.5f))
+                                            .size(36.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
                                         Icon(
-                                            imageVector = if (isVideoMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
-                                            contentDescription = muteDesc,
+                                            imageVector = Icons.Default.Photo,
+                                            contentDescription = stringResource(R.string.pending_conversion_desc),
                                             tint = Color.White,
-                                            modifier = Modifier.size(18.dp)
+                                            modifier = Modifier.size(20.dp)
                                         )
                                     }
                                 }
-                                if (item.category == FileCategory.Video) {
+                            }
+
+                            // Top-End Controls: Speed (for Video) & Dedicated Fullscreen Button for ALL file types
+                            Row(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (item.isVideo) {
                                     Box(
                                         modifier = Modifier
-                                            .align(Alignment.TopEnd)
-                                            .padding(8.dp)
                                             .clip(CircleShape)
                                             .background(Color.Black.copy(alpha = 0.45f))
                                             .size(36.dp),
@@ -495,39 +517,52 @@ internal fun MediaItemCard(
                                         }
                                     }
                                 }
-                                if (isPendingConversion && !screenshotDeletesVideo) {
-                                    Box(
-                                        modifier = Modifier
-                                            .align(Alignment.TopStart)
-                                            .padding(8.dp)
-                                            .clip(CircleShape)
-                                            .background(Color.Black.copy(alpha = 0.5f))
-                                            .padding(8.dp)
-                                    ) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(CircleShape)
+                                        .background(Color.Black.copy(alpha = 0.45f))
+                                        .size(36.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    IconButton(onClick = { (onOpenFullScreen ?: onTap).invoke(item) }) {
                                         Icon(
-                                            imageVector = Icons.Default.Photo,
-                                            contentDescription = stringResource(R.string.pending_conversion_desc),
+                                            imageVector = Icons.Default.Fullscreen,
+                                            contentDescription = stringResource(R.string.fullscreen_desc),
                                             tint = Color.White,
-                                            modifier = Modifier.size(24.dp)
+                                            modifier = Modifier.size(20.dp)
                                         )
                                     }
                                 }
-                                if (item.isVideo) {
-                                    Column(
-                                        modifier = Modifier.align(Alignment.BottomCenter)
+                            }
+
+                            // Bottom Seekbar: Revealed on Tap for Video and Audio
+                            if (item.isVideo || item.isAudio) {
+                                Column(
+                                    modifier = Modifier.align(Alignment.BottomCenter)
+                                ) {
+                                    AnimatedVisibility(
+                                        visible = showVideoControls,
+                                        enter = fadeIn(),
+                                        exit = fadeOut()
                                     ) {
-                                        AnimatedVisibility(
-                                            visible = showVideoControls,
-                                            enter = fadeIn(),
-                                            exit = fadeOut()
-                                        ) {
-                                            VideoBottomBar(
-                                                exoPlayer = exoPlayer,
-                                                modifier = Modifier.fillMaxWidth()
-                                            )
-                                        }
+                                        VideoBottomBar(
+                                            exoPlayer = exoPlayer,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
                                     }
                                 }
+                            }
+
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible = !showVideoControls || (!item.isVideo && !item.isAudio),
+                                enter = fadeIn(),
+                                exit = fadeOut(),
+                                modifier = Modifier.align(Alignment.BottomStart)
+                            ) {
+                                FileTypeBadge(
+                                    item = item,
+                                    modifier = Modifier.padding(12.dp)
+                                )
                             }
 
 
@@ -535,6 +570,51 @@ internal fun MediaItemCard(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+internal fun FileTypeBadge(
+    item: MediaItem,
+    modifier: Modifier = Modifier
+) {
+    val (icon, label, accentColor) = when {
+        item.isPdf -> Triple(Icons.Default.PictureAsPdf, "PDF", Color(0xFFEF4444))
+        item.isVideo -> Triple(Icons.Default.Videocam, if (item.extension.isNotEmpty()) item.extension.uppercase() else "VIDEO", Color(0xFFA855F7))
+        item.isAudio -> Triple(Icons.Default.MusicNote, if (item.extension.isNotEmpty()) item.extension.uppercase() else "AUDIO", Color(0xFF06B6D4))
+        item.isImage -> Triple(Icons.Default.Photo, if (item.extension.isNotEmpty()) item.extension.uppercase() else "IMAGE", Color(0xFF10B981))
+        item.isDocx -> Triple(Icons.Default.Description, "DOCX", Color(0xFF3B82F6))
+        item.isPptx -> Triple(Icons.Default.Slideshow, "PPTX", Color(0xFFF97316))
+        item.isXlsx -> Triple(Icons.Default.TableChart, "XLSX", Color(0xFF22C55E))
+        item.isArchive -> Triple(Icons.Default.Archive, if (item.extension.isNotEmpty()) item.extension.uppercase() else "ARCHIVE", Color(0xFFF59E0B))
+        item.isText -> Triple(Icons.AutoMirrored.Filled.Article, if (item.extension.isNotEmpty()) item.extension.uppercase() else "TEXT", Color(0xFF94A3B8))
+        else -> Triple(Icons.AutoMirrored.Filled.InsertDriveFile, if (item.extension.isNotEmpty()) item.extension.uppercase() else "FILE", Color(0xFF64748B))
+    }
+
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = Color.Black.copy(alpha = 0.65f),
+        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.45f)),
+        modifier = modifier
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = accentColor,
+                modifier = Modifier.size(14.dp)
+            )
+            Text(
+                text = label,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.labelSmall
+            )
         }
     }
 }

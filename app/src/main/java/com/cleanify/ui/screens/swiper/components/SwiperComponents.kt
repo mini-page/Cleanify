@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CreateNewFolder
+import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Visibility
@@ -56,6 +57,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.cleanify.R
@@ -198,36 +200,61 @@ internal fun VideoBottomBar(
     exoPlayer: ExoPlayer,
     modifier: Modifier = Modifier
 ) {
-    var currentPosition by remember { mutableLongStateOf(0L) }
-    var duration by remember { mutableLongStateOf(1L) }
+    val initialDuration = exoPlayer.duration.takeIf { it > 0 && it != C.TIME_UNSET } ?: 1L
+    var currentPosition by remember(exoPlayer) { mutableLongStateOf(exoPlayer.currentPosition) }
+    var duration by remember(exoPlayer) { mutableLongStateOf(initialDuration) }
     var isSeeking by remember { mutableStateOf(false) }
     var seekValue by remember { mutableFloatStateOf(0f) }
 
     DisposableEffect(exoPlayer) {
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
-                if (state == Player.STATE_READY) duration = exoPlayer.duration.coerceAtLeast(1L)
+                val d = exoPlayer.duration
+                if (d > 0 && d != C.TIME_UNSET) {
+                    duration = d
+                }
+            }
+
+            override fun onTimelineChanged(timeline: androidx.media3.common.Timeline, reason: Int) {
+                val d = exoPlayer.duration
+                if (d > 0 && d != C.TIME_UNSET) {
+                    duration = d
+                }
             }
         }
         exoPlayer.addListener(listener)
+        val d = exoPlayer.duration
+        if (d > 0 && d != C.TIME_UNSET) {
+            duration = d
+        }
         onDispose { exoPlayer.removeListener(listener) }
     }
-    LaunchedEffect(Unit) {
+
+    LaunchedEffect(exoPlayer) {
         while (true) {
-            if (!isSeeking) currentPosition = exoPlayer.currentPosition
-            delay(250)
+            val d = exoPlayer.duration
+            if (d > 0 && d != C.TIME_UNSET) {
+                duration = d
+            }
+            if (!isSeeking) {
+                currentPosition = exoPlayer.currentPosition
+            }
+            delay(200)
         }
     }
 
-    val progress = if (isSeeking) seekValue else
-        if (duration > 0) currentPosition.toFloat() / duration else 0f
+    val progress = if (isSeeking) {
+        seekValue.coerceIn(0f, 1f)
+    } else {
+        if (duration > 0) (currentPosition.toFloat() / duration).coerceIn(0f, 1f) else 0f
+    }
 
     Box(
         modifier = modifier
             .fillMaxWidth()
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.65f))
+                    colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.75f))
                 )
             )
             .padding(horizontal = 12.dp, vertical = 6.dp)
@@ -238,9 +265,12 @@ internal fun VideoBottomBar(
                 onValueChange = { value ->
                     isSeeking = true
                     seekValue = value
+                    currentPosition = (value.coerceIn(0f, 1f) * duration).toLong()
                 },
                 onValueChangeFinished = {
-                    exoPlayer.seekTo((seekValue * duration).toLong())
+                    val target = (seekValue.coerceIn(0f, 1f) * duration).toLong()
+                    exoPlayer.seekTo(target)
+                    currentPosition = target
                     isSeeking = false
                 },
                 modifier = Modifier.fillMaxWidth(),

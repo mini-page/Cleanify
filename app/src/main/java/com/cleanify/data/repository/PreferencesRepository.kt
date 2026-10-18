@@ -196,6 +196,7 @@ class PreferencesRepository @Inject constructor(
         val RECYCLE_BIN_STORAGE_LOCATION = stringPreferencesKey("recycle_bin_storage_location")
         val RECYCLE_BIN_SKIP_TRASH_JUNK = booleanPreferencesKey("recycle_bin_skip_trash_junk")
         val IMMERSIVE_MODE = booleanPreferencesKey("immersive_mode")
+        val START_VIDEOS_UNMUTED = booleanPreferencesKey("start_videos_unmuted")
     }
 
     // ── Boolean Preference instances ─────────────────────────────────────────
@@ -240,6 +241,7 @@ class PreferencesRepository @Inject constructor(
     private val recycleBinEnabledPref = Preference(context.dataStore, PreferencesKeys.RECYCLE_BIN_ENABLED, true)
     private val recycleBinSkipTrashJunkPref = Preference(context.dataStore, PreferencesKeys.RECYCLE_BIN_SKIP_TRASH_JUNK, false)
     private val immersiveModePref = Preference(context.dataStore, PreferencesKeys.IMMERSIVE_MODE, false)
+    private val startVideosUnmutedPref = Preference(context.dataStore, PreferencesKeys.START_VIDEOS_UNMUTED, true)
 
     // ── Enum Preference instances ────────────────────────────────────────────
     // Each replaces ~10 lines of flow+setter boilerplate with 1 line.
@@ -433,6 +435,7 @@ class PreferencesRepository @Inject constructor(
     val recycleBinEnabledFlow: Flow<Boolean> = recycleBinEnabledPref.flow
     val recycleBinSkipTrashJunkFlow: Flow<Boolean> = recycleBinSkipTrashJunkPref.flow
     val immersiveModeFlow: Flow<Boolean> = immersiveModePref.flow
+    val startVideosUnmutedFlow: Flow<Boolean> = startVideosUnmutedPref.flow
 
     // ── Non-boolean setters (unchanged) ──────────────────────────────────────
 
@@ -754,6 +757,7 @@ class PreferencesRepository @Inject constructor(
     suspend fun setRecycleBinEnabled(enabled: Boolean) = recycleBinEnabledPref.set(enabled)
     suspend fun setRecycleBinSkipTrashJunk(enabled: Boolean) = recycleBinSkipTrashJunkPref.set(enabled)
     suspend fun setImmersiveMode(enabled: Boolean) = immersiveModePref.set(enabled)
+    suspend fun setStartVideosUnmuted(unmuted: Boolean) = startVideosUnmutedPref.set(unmuted)
 
     // ── Dialog confirmation setters ──────────────────────────────────────────
 

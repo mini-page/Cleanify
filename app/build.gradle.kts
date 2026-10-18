@@ -56,8 +56,8 @@ android {
         applicationId = "com.cleanify"
         minSdk = 29
         targetSdk = 36
-        versionCode = 17
-        versionName = "2.9.2"
+        versionCode = 18
+        versionName = "3.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
