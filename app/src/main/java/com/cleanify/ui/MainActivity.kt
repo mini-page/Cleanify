@@ -43,6 +43,7 @@ import com.cleanify.util.ProactiveIndexer
 import com.cleanify.util.RecycleBinManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import androidx.core.graphics.drawable.toDrawable
@@ -104,6 +105,12 @@ class MainActivity : BaseActivity() {
         RecycleBinPurgeWorker.scheduleDailyPurge(this)
         lifecycleScope.launch {
             recycleBinManager.purgeExpired()
+        }
+
+        // Schedule periodic update checking based on user preference
+        lifecycleScope.launch {
+            val interval = mainViewModel.updateCheckInterval.first()
+            com.cleanify.util.AppUpdateWorker.scheduleOrCancel(this@MainActivity, interval)
         }
 
         setContent {

@@ -36,6 +36,8 @@ import com.cleanify.data.repository.SwipeDownAction
 import com.cleanify.data.repository.SwipeSensitivity
 import com.cleanify.data.repository.TapAction
 import com.cleanify.data.repository.UnselectScanScope
+import com.cleanify.data.repository.UpdateCheckInterval
+import com.cleanify.util.AppUpdateWorker
 import com.cleanify.domain.bus.AppLifecycleEventBus
 import com.cleanify.domain.bus.FolderUpdateEvent
 import com.cleanify.domain.bus.FolderUpdateEventBus
@@ -447,6 +449,21 @@ class SettingsViewModel @Inject constructor(
 
     val immersiveMode: StateFlow<Boolean> = preferencesRepository.immersiveModeFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val updateCheckInterval: StateFlow<UpdateCheckInterval> =
+        preferencesRepository.updateCheckIntervalFlow
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = UpdateCheckInterval.DAILY
+            )
+
+    fun setUpdateCheckInterval(interval: UpdateCheckInterval) {
+        viewModelScope.launch {
+            preferencesRepository.setUpdateCheckInterval(interval)
+            AppUpdateWorker.scheduleOrCancel(context, interval)
+        }
+    }
 
 
     val standardAlbumDirectories: List<Pair<String, String>> = listOf(

@@ -106,56 +106,79 @@ fun <T> SettingsPickerItem(titleRes: Int, description: String, options: List<T>,
                 Spacer(Modifier.height(2.dp))
                 Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Surface(
-                shape = MaterialTheme.shapes.extraLarge,
-                color = accentColor.copy(alpha = 0.12f),
-                border = BorderStroke(1.dp, accentColor.copy(alpha = 0.3f)),
-                modifier = Modifier
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
-                    .clickable { showDropdown = true }
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
+            Box(modifier = Modifier.padding(start = 8.dp, end = 4.dp)) {
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = accentColor.copy(alpha = 0.14f),
+                    border = BorderStroke(1.dp, accentColor.copy(alpha = 0.35f)),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .clickable { showDropdown = true }
                 ) {
-                    Text(displayValue, style = MaterialTheme.typography.bodyMedium, color = accentColor)
-                    Spacer(Modifier.width(6.dp))
-                    Icon(imageVector = Icons.Default.UnfoldMore, contentDescription = null, tint = accentColor.copy(alpha = 0.7f), modifier = Modifier.size(16.dp))
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = displayValue,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = accentColor
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Icon(
+                            imageVector = Icons.Default.UnfoldMore,
+                            contentDescription = null,
+                            tint = accentColor.copy(alpha = 0.8f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
-            }
-        }
-        DropdownMenu(
-            expanded = showDropdown,
-            onDismissRequest = { showDropdown = false },
-            shape = RoundedCornerShape(16.dp),
-            offset = DpOffset(x = (-280).dp, y = 8.dp)
-        ) {
-            options.forEach { option ->
-                val isSelected = option == selectedOption
-                DropdownMenuItem(
-                    text = {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                getDisplayName(option),
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isSelected) accentColor else MaterialTheme.colorScheme.onSurface,
-                            )
-                            if (isSelected) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = null,
-                                    tint = accentColor,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-                    },
-                    onClick = { onOptionSelected(option); showDropdown = false }
-                )
+
+                DropdownMenu(
+                    expanded = showDropdown,
+                    onDismissRequest = { showDropdown = false },
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier
+                        .widthIn(min = 250.dp, max = 340.dp)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                    offset = DpOffset(x = (-100).dp, y = 8.dp)
+                ) {
+                    options.forEach { option ->
+                        val isSelected = option == selectedOption
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 4.dp, vertical = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = getDisplayName(option),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isSelected) accentColor else MaterialTheme.colorScheme.onSurface,
+                                    )
+                                    if (isSelected) {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = null,
+                                            tint = accentColor,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            },
+                            onClick = {
+                                onOptionSelected(option)
+                                showDropdown = false
+                            },
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                    }
+                }
             }
         }
     }

@@ -115,6 +115,15 @@ enum class AppLocale(val tag: String?) {
     ITALIAN("it")
 }
 
+enum class UpdateCheckInterval(val days: Long, val label: String) {
+    NEVER(0L, "Never"),
+    DAILY(1L, "Every day"),
+    EVERY_2_DAYS(2L, "Every 2 days"),
+    EVERY_3_DAYS(3L, "Every 3 days"),
+    EVERY_5_DAYS(5L, "Every 5 days"),
+    WEEKLY(7L, "Every 7 days (Weekly)")
+}
+
 
 @Singleton
 class PreferencesRepository @Inject constructor(
@@ -197,6 +206,7 @@ class PreferencesRepository @Inject constructor(
         val RECYCLE_BIN_SKIP_TRASH_JUNK = booleanPreferencesKey("recycle_bin_skip_trash_junk")
         val IMMERSIVE_MODE = booleanPreferencesKey("immersive_mode")
         val START_VIDEOS_UNMUTED = booleanPreferencesKey("start_videos_unmuted")
+        val UPDATE_CHECK_INTERVAL = stringPreferencesKey("update_check_interval")
     }
 
     // ── Boolean Preference instances ─────────────────────────────────────────
@@ -260,12 +270,15 @@ class PreferencesRepository @Inject constructor(
     private val similarityThresholdLevelPref = EnumPreference(context.dataStore, PreferencesKeys.SIMILARITY_THRESHOLD_LEVEL, SimilarityThresholdLevel.BALANCED, SimilarityThresholdLevel::class.java)
     private val duplicateScanScopePref = EnumPreference(context.dataStore, PreferencesKeys.DUPLICATE_SCAN_SCOPE, DuplicateScanScope.ALL_FILES, DuplicateScanScope::class.java)
     private val unselectAllInSearchScopePref = EnumPreference(context.dataStore, PreferencesKeys.UNSELECT_ALL_IN_SEARCH_SCOPE, UnselectScanScope.GLOBAL, UnselectScanScope::class.java)
+    private val updateCheckIntervalPref = EnumPreference(context.dataStore, PreferencesKeys.UPDATE_CHECK_INTERVAL, UpdateCheckInterval.DAILY, UpdateCheckInterval::class.java)
 
     // ── Non-boolean flows (unchanged) ────────────────────────────────────────
 
     val themeFlow: Flow<AppTheme> = themePref.flow
 
     val appLocaleFlow: Flow<AppLocale> = appLocalePref.flow
+
+    val updateCheckIntervalFlow: Flow<UpdateCheckInterval> = updateCheckIntervalPref.flow
 
     val accentColorKeyFlow: Flow<String> = context.dataStore.data
         .map { preferences ->
@@ -758,6 +771,7 @@ class PreferencesRepository @Inject constructor(
     suspend fun setRecycleBinSkipTrashJunk(enabled: Boolean) = recycleBinSkipTrashJunkPref.set(enabled)
     suspend fun setImmersiveMode(enabled: Boolean) = immersiveModePref.set(enabled)
     suspend fun setStartVideosUnmuted(unmuted: Boolean) = startVideosUnmutedPref.set(unmuted)
+    suspend fun setUpdateCheckInterval(interval: UpdateCheckInterval) = updateCheckIntervalPref.set(interval)
 
     // ── Dialog confirmation setters ──────────────────────────────────────────
 

@@ -88,6 +88,13 @@ class MainViewModel @Inject constructor(
             initialValue = predefinedAccentColors.first().key
         )
 
+    val updateCheckInterval: StateFlow<com.cleanify.data.repository.UpdateCheckInterval> = preferencesRepository.updateCheckIntervalFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = com.cleanify.data.repository.UpdateCheckInterval.DAILY
+        )
+
     val isOnboardingCompleted: StateFlow<Boolean?> = preferencesRepository.isOnboardingCompletedFlow
         .onStart { emit(null) }
         .stateIn(

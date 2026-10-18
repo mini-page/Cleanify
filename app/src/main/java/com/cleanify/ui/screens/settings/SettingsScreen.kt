@@ -6,12 +6,14 @@ import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -209,34 +211,50 @@ fun SettingsScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-            when (currentPage) {
-                null -> SettingsMainMenu(
-                    categories = categories,
-                    searchQuery = debouncedSearchQuery,
-                    viewModel = viewModel,
-                    onCategoryClick = { currentPage = it },
-                    onCleanerClick = onNavigateToCleanerSettings
-                )
-                "appearance" -> AppearanceSection(
-                    viewModel = viewModel,
-                    onNavigateUp = { if (initialPage != null) onNavigateUp() else currentPage = null }
-                )
-                "sorting" -> SortingSection(viewModel = viewModel)
-                "behavior" -> BehaviorSection(viewModel = viewModel)
-                "duplicates" -> DuplicatesSection(viewModel = viewModel)
-                "media_storage" -> MediaStorageSection(viewModel = viewModel)
-                "contact_cleaner" -> ContactCleanerSection(viewModel = viewModel)
-                "help" -> HelpSection(
-                    viewModel = viewModel,
-                    exportFavoritesLauncher = exportFavoritesLauncher,
-                    importFavoritesLauncher = importFavoritesLauncher,
-                    defaultExportFilename = defaultExportFilename
-                )
-                "about" -> AboutSection(
-                    viewModel = viewModel,
-                    onNavigateToLibraries = onNavigateToLibraries,
-                    onShowFunding = { showFundingDialog = true }
-                )
+            AnimatedContent(
+                targetState = currentPage,
+                transitionSpec = {
+                    if (targetState != null && initialState == null) {
+                        (slideInHorizontally(animationSpec = tween(220)) { width -> width / 4 } + fadeIn(animationSpec = tween(220)))
+                            .togetherWith(slideOutHorizontally(animationSpec = tween(180)) { width -> -width / 4 } + fadeOut(animationSpec = tween(180)))
+                    } else if (targetState == null && initialState != null) {
+                        (slideInHorizontally(animationSpec = tween(220)) { width -> -width / 4 } + fadeIn(animationSpec = tween(220)))
+                            .togetherWith(slideOutHorizontally(animationSpec = tween(180)) { width -> width / 4 } + fadeOut(animationSpec = tween(180)))
+                    } else {
+                        fadeIn(animationSpec = tween(200)).togetherWith(fadeOut(animationSpec = tween(200)))
+                    }
+                },
+                label = "SettingsPageTransition"
+            ) { page ->
+                when (page) {
+                    null -> SettingsMainMenu(
+                        categories = categories,
+                        searchQuery = debouncedSearchQuery,
+                        viewModel = viewModel,
+                        onCategoryClick = { currentPage = it },
+                        onCleanerClick = onNavigateToCleanerSettings
+                    )
+                    "appearance" -> AppearanceSection(
+                        viewModel = viewModel,
+                        onNavigateUp = { if (initialPage != null) onNavigateUp() else currentPage = null }
+                    )
+                    "sorting" -> SortingSection(viewModel = viewModel)
+                    "behavior" -> BehaviorSection(viewModel = viewModel)
+                    "duplicates" -> DuplicatesSection(viewModel = viewModel)
+                    "media_storage" -> MediaStorageSection(viewModel = viewModel)
+                    "contact_cleaner" -> ContactCleanerSection(viewModel = viewModel)
+                    "help" -> HelpSection(
+                        viewModel = viewModel,
+                        exportFavoritesLauncher = exportFavoritesLauncher,
+                        importFavoritesLauncher = importFavoritesLauncher,
+                        defaultExportFilename = defaultExportFilename
+                    )
+                    "about" -> AboutSection(
+                        viewModel = viewModel,
+                        onNavigateToLibraries = onNavigateToLibraries,
+                        onShowFunding = { showFundingDialog = true }
+                    )
+                }
             }
         }
     }

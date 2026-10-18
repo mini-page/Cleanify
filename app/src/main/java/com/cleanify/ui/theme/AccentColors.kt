@@ -85,5 +85,41 @@ val predefinedAccentColors = listOf(
         displayName = "Amber Gold",
         lightColor = Color(0xFF7D5800),
         darkColor = Color(0xFFFABD1B)
+    ),
+    AccentColor(
+        key = "ELECTRIC_VIOLET",
+        displayName = "Electric Violet",
+        lightColor = Color(0xFF7C3AED),
+        darkColor = Color(0xFFA78BFA)
+    ),
+    AccentColor(
+        key = "CYAN_NEON",
+        displayName = "Neon Cyan",
+        lightColor = Color(0xFF00838F),
+        darkColor = Color(0xFF26C6DA)
+    ),
+    AccentColor(
+        key = "EMERALD_MINT",
+        displayName = "Emerald Mint",
+        lightColor = Color(0xFF059669),
+        darkColor = Color(0xFF34D399)
+    ),
+    AccentColor(
+        key = "ROSE_CORAL",
+        displayName = "Rose Coral",
+        lightColor = Color(0xFFE11D48),
+        darkColor = Color(0xFFFB7185)
+    ),
+    AccentColor(
+        key = "DEEP_INDIGO",
+        displayName = "Deep Indigo",
+        lightColor = Color(0xFF4338CA),
+        darkColor = Color(0xFF818CF8)
+    ),
+    AccentColor(
+        key = "LIME_ZEST",
+        displayName = "Lime Zest",
+        lightColor = Color(0xFF65A30D),
+        darkColor = Color(0xFFA3E635)
     )
 )

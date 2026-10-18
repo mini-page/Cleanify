@@ -722,4 +722,14 @@
     <string name="pdf_pages_count">%1$d pages</string>
     <string name="pdf_single_page">1 page</string>
 
+    <!-- Auto Update Check -->
+    <string name="auto_update_check_title">Auto Check for Updates</string>
+    <string name="auto_update_check_desc">Check GitHub periodically for newer versions</string>
+    <string name="update_interval_never">Never</string>
+    <string name="update_interval_daily">Every day</string>
+    <string name="update_interval_2_days">Every 2 days</string>
+    <string name="update_interval_3_days">Every 3 days</string>
+    <string name="update_interval_5_days">Every 5 days</string>
+    <string name="update_interval_weekly">Every 7 days (Weekly)</string>
+
 </resources>

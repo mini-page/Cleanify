@@ -1,3 +1,20 @@
+/*
+ * Cleanify
+ * Copyright (c) 2025 LoopOtto
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package com.cleanify.ui.screens.settings.sections
 
 import android.Manifest
@@ -14,19 +31,21 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import com.cleanify.ui.components.FeedbackDialog
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.cleanify.R
+import com.cleanify.ui.components.FeedbackDialog
 import com.cleanify.ui.screens.settings.SettingsViewModel
 import com.cleanify.util.PermissionManager
 
@@ -43,160 +62,374 @@ fun HelpSection(
     ) { _ -> /* re-composition handles refreshed state */ }
     var showFeedbackDialog by remember { mutableStateOf(false) }
 
+    val permissionEntries = remember {
+        listOf(
+            PermissionEntry(
+                name = "All Files Access",
+                desc = "Read and manage files across storage",
+                icon = Icons.Default.Storage,
+                isGranted = PermissionManager.hasAllFilesAccess(),
+                settingsAction = PermissionManager::createAllFilesAccessIntent
+            ),
+            PermissionEntry(
+                name = "Notifications",
+                desc = "Update alerts and scan status",
+                icon = Icons.Default.Notifications,
+                isGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+                    checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+                else true,
+                requestPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+                    Manifest.permission.POST_NOTIFICATIONS else null
+            ),
+            PermissionEntry(
+                name = "Contacts (Read)",
+                desc = "Scan duplicate contacts",
+                icon = Icons.Default.Contacts,
+                isGranted = checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED,
+                requestPermission = Manifest.permission.READ_CONTACTS
+            ),
+            PermissionEntry(
+                name = "Contacts (Write)",
+                desc = "Merge and clean contacts",
+                icon = Icons.Default.Edit,
+                isGranted = checkSelfPermission(context, Manifest.permission.WRITE_CONTACTS) == PackageManager.PERMISSION_GRANTED,
+                requestPermission = Manifest.permission.WRITE_CONTACTS
+            ),
+            PermissionEntry(
+                name = "Foreground Service",
+                desc = "Background scan execution",
+                icon = Icons.Default.History,
+                isGranted = true,
+                grantedNote = "Auto"
+            ),
+            PermissionEntry(
+                name = "Boot Completed",
+                desc = "Scheduled background maintenance",
+                icon = Icons.Default.RestartAlt,
+                isGranted = true,
+                grantedNote = "Auto"
+            ),
+            PermissionEntry(
+                name = "Query All Packages",
+                desc = "Detect orphaned app folders",
+                icon = Icons.Default.Apps,
+                isGranted = true,
+                grantedNote = "Auto"
+            )
+        )
+    }
+
+    val grantedCount = permissionEntries.count { it.isGranted }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
-        SectionHeader(R.string.onboarding_section_header)
-        Column {
-            Text(stringResource(R.string.onboarding_tutorial_title), style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(2.dp))
-            Text(stringResource(R.string.onboarding_tutorial_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(8.dp))
-            OutlinedButton(onClick = { viewModel.resetOnboarding() }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.replay_tutorial_button)) }
-        }
-
-        HorizontalDivider(Modifier.padding(vertical = 4.dp))
-        SectionHeader(R.string.data_section_header)
-
-        SettingsItem(stringResource(R.string.export_target_favorites_title), stringResource(R.string.export_target_favorites_desc), onClick = { exportFavoritesLauncher.launch(defaultExportFilename) })
-        SettingsItem(stringResource(R.string.import_target_favorites_title), stringResource(R.string.import_target_favorites_desc), onClick = { importFavoritesLauncher.launch(arrayOf("application/json", "text/plain")) })
-
+        // Group 1: Support & Guidance
         Card(
-            modifier = Modifier.fillMaxWidth().clickable { viewModel.resetDialogWarnings() },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
         ) {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.reset_dialog_warnings_title), style = MaterialTheme.typography.titleMedium)
-                    Spacer(Modifier.height(2.dp))
-                    Text(stringResource(R.string.reset_dialog_warnings_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                // Tutorial Row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { viewModel.resetOnboarding() }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Default.School,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.width(14.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.onboarding_tutorial_title),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            stringResource(R.string.onboarding_tutorial_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    FilledTonalButton(
+                        onClick = { viewModel.resetOnboarding() },
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Replay", style = MaterialTheme.typography.labelMedium)
+                    }
                 }
-                Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+                // Feedback Row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showFeedbackDialog = true }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.tertiaryContainer,
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Default.BugReport,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.width(14.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.feedback_dialog_title),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            stringResource(R.string.feedback_and_support_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
+                }
             }
         }
 
-        HorizontalDivider(Modifier.padding(vertical = 4.dp))
-        SectionHeader(R.string.feedback_and_support_title)
-
+        // Group 2: Data Backup & Reset
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { showFeedbackDialog = true },
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f))
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
         ) {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(40.dp)
+            Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                // Export Favorites
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { exportFavoritesLauncher.launch(defaultExportFilename) }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            Icons.Default.BugReport,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(20.dp)
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Default.FileUpload,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.width(14.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.export_target_favorites_title),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            stringResource(R.string.export_target_favorites_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+                // Import Favorites
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { importFavoritesLauncher.launch(arrayOf("application/json", "text/plain")) }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Default.FileDownload,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.width(14.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.import_target_favorites_title),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            stringResource(R.string.import_target_favorites_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+                // Reset Warnings
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { viewModel.resetDialogWarnings() }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Default.RestartAlt,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.width(14.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.reset_dialog_warnings_title),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            stringResource(R.string.reset_dialog_warnings_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
-                Spacer(Modifier.width(14.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.feedback_dialog_title), style = MaterialTheme.typography.titleMedium)
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        stringResource(R.string.feedback_and_support_desc),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Icon(
-                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
         }
 
-        HorizontalDivider(Modifier.padding(vertical = 4.dp))
-        SectionHeader(R.string.permission_manager_header)
+        // Group 3: Permissions & System Diagnostics Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+        ) {
+            Column(modifier = Modifier.padding(vertical = 12.dp)) {
+                // Header inside the card
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.Security,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            text = stringResource(R.string.permission_manager_header),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
 
-        val permissionEntries = remember {
-            listOf(
-                PermissionEntry(
-                    name = "All Files Access",
-                    desc = "Read and manage files on device storage",
-                    icon = Icons.Default.Storage,
-                    isGranted = PermissionManager.hasAllFilesAccess(),
-                    settingsAction = PermissionManager::createAllFilesAccessIntent
-                ),
-                PermissionEntry(
-                    name = "Notifications",
-                    desc = "Show scan progress notifications",
-                    icon = Icons.Default.Notifications,
-                    isGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
-                        checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-                    else true,
-                    requestPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
-                        Manifest.permission.POST_NOTIFICATIONS else null
-                ),
-                PermissionEntry(
-                    name = "Contacts (Read)",
-                    desc = "Scan and clean duplicate contacts",
-                    icon = Icons.Default.Contacts,
-                    isGranted = checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED,
-                    requestPermission = Manifest.permission.READ_CONTACTS
-                ),
-                PermissionEntry(
-                    name = "Contacts (Write)",
-                    desc = "Merge and update cleaned contacts",
-                    icon = Icons.Default.Edit,
-                    isGranted = checkSelfPermission(context, Manifest.permission.WRITE_CONTACTS) == PackageManager.PERMISSION_GRANTED,
-                    requestPermission = Manifest.permission.WRITE_CONTACTS
-                ),
-                PermissionEntry(
-                    name = "Foreground Service",
-                    desc = "Run duplicate scans in the background",
-                    icon = Icons.Default.History,
-                    isGranted = true,
-                    grantedNote = "Auto-granted"
-                ),
-                PermissionEntry(
-                    name = "Boot Completed",
-                    desc = "Run cleaner automatically after device restart",
-                    icon = Icons.Default.RestartAlt,
-                    isGranted = true,
-                    grantedNote = "Auto-granted"
-                ),
-                PermissionEntry(
-                    name = "Query All Packages",
-                    desc = "Detect orphaned folders from uninstalled apps",
-                    icon = Icons.Default.Apps,
-                    isGranted = true,
-                    grantedNote = "Auto-granted"
-                )
-            )
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (grantedCount == permissionEntries.size)
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        else
+                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
+                    ) {
+                        Text(
+                            text = "$grantedCount/${permissionEntries.size} Granted",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = if (grantedCount == permissionEntries.size)
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                permissionEntries.forEachIndexed { index, entry ->
+                    if (index > 0) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+                        )
+                    }
+                    PermissionRowItem(
+                        entry = entry,
+                        context = context,
+                        onRequest = { perm -> requestPermissionLauncher.launch(perm) },
+                        onOpenSettings = { intent -> intent?.let { context.startActivity(it) } }
+                    )
+                }
+            }
         }
 
-        permissionEntries.forEach { entry ->
-            PermissionRow(
-                entry = entry,
-                context = context,
-                onRequest = { perm -> requestPermissionLauncher.launch(perm) },
-                onOpenSettings = { intent -> intent?.let { context.startActivity(it) } }
-            )
-        }
-
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(24.dp))
     }
 
     if (showFeedbackDialog) {
@@ -208,72 +441,74 @@ fun HelpSection(
 }
 
 @Composable
-private fun PermissionRow(
+private fun PermissionRowItem(
     entry: PermissionEntry,
     context: Context,
     onRequest: (String) -> Unit,
     onOpenSettings: (Intent) -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Icon(
+            imageVector = entry.icon,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = if (entry.isGranted) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(entry.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+            Text(entry.desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Spacer(Modifier.width(8.dp))
+
+        if (entry.isGranted) {
             Surface(
-                shape = CircleShape,
-                color = if (entry.isGranted) MaterialTheme.colorScheme.primaryContainer
-                    else MaterialTheme.colorScheme.errorContainer,
-                modifier = Modifier.size(40.dp)
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
             ) {
-                Box(contentAlignment = Alignment.Center) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Icon(
-                        imageVector = entry.icon,
+                        Icons.Default.Check,
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                        tint = if (entry.isGranted) MaterialTheme.colorScheme.onPrimaryContainer
-                            else MaterialTheme.colorScheme.onErrorContainer
+                        modifier = Modifier.size(12.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = entry.grantedNote ?: "Granted",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(entry.name, style = MaterialTheme.typography.titleMedium)
-                Text(entry.desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Spacer(Modifier.width(8.dp))
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = if (entry.isGranted) MaterialTheme.colorScheme.primaryContainer
-                    else MaterialTheme.colorScheme.errorContainer
-            ) {
-                Text(
-                    text = if (entry.isGranted) (entry.grantedNote ?: "Granted") else "Denied",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = if (entry.isGranted) MaterialTheme.colorScheme.onPrimaryContainer
-                        else MaterialTheme.colorScheme.onErrorContainer,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                )
-            }
-            Spacer(Modifier.width(8.dp))
-            if (!entry.isGranted) {
-                if (entry.settingsAction != null) {
-                    FilledTonalButton(
-                        onClick = { entry.settingsAction(context)?.let(onOpenSettings) },
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-                    ) {
-                        Text("Settings", style = MaterialTheme.typography.labelMedium)
-                    }
-                } else if (entry.requestPermission != null) {
-                    FilledTonalButton(
-                        onClick = { onRequest(entry.requestPermission) },
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-                    ) {
-                        Text("Grant", style = MaterialTheme.typography.labelMedium)
-                    }
+        } else {
+            if (entry.settingsAction != null) {
+                FilledTonalButton(
+                    onClick = { entry.settingsAction(context)?.let(onOpenSettings) },
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.height(30.dp)
+                ) {
+                    Text("Settings", style = MaterialTheme.typography.labelSmall)
+                }
+            } else if (entry.requestPermission != null) {
+                FilledTonalButton(
+                    onClick = { onRequest(entry.requestPermission) },
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.height(30.dp)
+                ) {
+                    Text("Grant", style = MaterialTheme.typography.labelSmall)
                 }
             }
         }
