@@ -21,12 +21,16 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -84,6 +88,7 @@ import com.cleanify.ui.theme.AppTheme
 import com.cleanify.ui.theme.LocalAppTheme
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cleanify.util.Formatters
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 import java.text.DecimalFormat
@@ -97,6 +102,11 @@ fun SessionSetupScreen(
     onStartSession: (List<String>) -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToTools: () -> Unit,
+    onNavigateToDuplicates: () -> Unit = {},
+    onNavigateToEmptyCleaner: () -> Unit = {},
+    onNavigateToRecycleBin: () -> Unit = {},
+    onNavigateToContactCleaner: () -> Unit = {},
+    onNavigateToStorageAnalysis: () -> Unit = {},
     viewModel: SessionSetupViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -111,6 +121,7 @@ fun SessionSetupScreen(
     val pullToRefreshState = rememberPullToRefreshState()
     val logTag ="SessionSetupScreen"
     var showSortMenu by remember { mutableStateOf(false) }
+    var isSearchExpanded by remember { mutableStateOf(false) }
 
     BackHandler(enabled = uiState.isContextualSelectionMode) {
         viewModel.exitContextualSelectionMode()
@@ -201,6 +212,14 @@ fun SessionSetupScreen(
 
     LaunchedEffect(searchAutofocusEnabled) {
         if (searchAutofocusEnabled) {
+            isSearchExpanded = true
+            focusRequester.requestFocus()
+        }
+    }
+
+    LaunchedEffect(isSearchExpanded) {
+        if (isSearchExpanded) {
+            delay(150)
             focusRequester.requestFocus()
         }
     }
@@ -224,7 +243,13 @@ fun SessionSetupScreen(
             } else {
                 DefaultTopAppBar(
                     uiState = uiState,
-                    onNavigateToTools = onNavigateToTools,
+                    isSearchExpanded = isSearchExpanded || uiState.searchQuery.isNotEmpty(),
+                    onToggleSearch = {
+                        isSearchExpanded = !isSearchExpanded
+                        if (!isSearchExpanded && uiState.searchQuery.isNotEmpty()) {
+                            viewModel.updateSearchQuery("")
+                        }
+                    },
                     onNavigateToSettings = onNavigateToSettings
                 )
             }
@@ -260,133 +285,253 @@ fun SessionSetupScreen(
         Column(modifier = Modifier
             .fillMaxSize()
             .padding(paddingValues)) {
+            // Horizontal tool chips row
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(28.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentAlignment = Alignment.CenterStart
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                FilterChip(
+                    selected = true,
+                    onClick = { /* Home folders view */ },
+                    label = { Text("Folders") },
+                    leadingIcon = {
                         Icon(
-                            Icons.Default.Search,
-                            contentDescription = stringResource(R.string.search_hint),
-                            modifier = Modifier.padding(start = 8.dp, end = 4.dp).size(20.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            Icons.Default.Folder,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
                         )
-                        Box(modifier = Modifier.weight(1f)) {
-                            if (uiState.searchQuery.isEmpty()) {
-                                Text(
-                                    stringResource(R.string.search_hint),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.fillMaxWidth()
+                    },
+                    shape = RoundedCornerShape(20.dp),
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                )
+
+                FilterChip(
+                    selected = false,
+                    onClick = onNavigateToEmptyCleaner,
+                    label = { Text("Empty Cleaner") },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.CleaningServices,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    },
+                    shape = RoundedCornerShape(20.dp)
+                )
+
+                FilterChip(
+                    selected = false,
+                    onClick = onNavigateToDuplicates,
+                    label = { Text("Duplicates") },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.ControlPointDuplicate,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    },
+                    shape = RoundedCornerShape(20.dp)
+                )
+
+                FilterChip(
+                    selected = false,
+                    onClick = onNavigateToContactCleaner,
+                    label = { Text("Contacts") },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Contacts,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    },
+                    shape = RoundedCornerShape(20.dp)
+                )
+
+                FilterChip(
+                    selected = false,
+                    onClick = onNavigateToStorageAnalysis,
+                    label = { Text("Storage") },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Storage,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    },
+                    shape = RoundedCornerShape(20.dp)
+                )
+
+                FilterChip(
+                    selected = false,
+                    onClick = onNavigateToRecycleBin,
+                    label = { Text("Recycle Bin") },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.DeleteSweep,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    },
+                    shape = RoundedCornerShape(20.dp)
+                )
+
+                FilterChip(
+                    selected = false,
+                    onClick = onNavigateToTools,
+                    label = { Text("All Tools") },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Build,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    },
+                    shape = RoundedCornerShape(20.dp)
+                )
+            }
+
+            // Animated collapsible search bar
+            AnimatedVisibility(
+                visible = isSearchExpanded || uiState.searchQuery.isNotEmpty(),
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(28.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Search,
+                                contentDescription = stringResource(R.string.search_hint),
+                                modifier = Modifier.padding(start = 8.dp, end = 4.dp).size(20.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Box(modifier = Modifier.weight(1f)) {
+                                if (uiState.searchQuery.isEmpty()) {
+                                    Text(
+                                        stringResource(R.string.search_hint),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                                BasicTextField(
+                                    value = uiState.searchQuery,
+                                    onValueChange = { viewModel.updateSearchQuery(it) },
+                                    modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
+                                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                    keyboardActions = KeyboardActions(
+                                        onSearch = {
+                                            keyboardController?.hide()
+                                            focusManager.clearFocus()
+                                        }
+                                    )
                                 )
                             }
-                            BasicTextField(
-                                value = uiState.searchQuery,
-                                onValueChange = { viewModel.updateSearchQuery(it) },
-                                modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
-                                textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                                keyboardActions = KeyboardActions(
-                                    onSearch = {
-                                        keyboardController?.hide()
-                                        focusManager.clearFocus()
-                                    }
-                                )
+                            if (uiState.searchQuery.isNotEmpty()) {
+                                IconButton(
+                                    onClick = { viewModel.updateSearchQuery("") },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.clear_search), modifier = Modifier.size(18.dp))
+                                }
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Box {
+                        TooltipBox(
+                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
+                            tooltip = { PlainTooltip { Text(stringResource(R.string.sort)) } },
+                            state = rememberTooltipState()
+                        ) {
+                            IconButton(onClick = { showSortMenu = true }) {
+                                Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = stringResource(R.string.sort))
+                            }
+                        }
+                        DropdownMenu(
+                            expanded = showSortMenu,
+                            onDismissRequest = { showSortMenu = false },
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            SortMenuItem(
+                                icon = Icons.Default.TextFields,
+                                label = stringResource(R.string.sort_name_az),
+                                isSelected = uiState.currentSortOption == FolderSortOption.ALPHABETICAL_ASC,
+                                onClick = {
+                                    viewModel.changeSortOption(FolderSortOption.ALPHABETICAL_ASC)
+                                    showSortMenu = false
+                                }
+                            )
+                            SortMenuItem(
+                                icon = Icons.Default.TextFields,
+                                label = stringResource(R.string.sort_name_za),
+                                isSelected = uiState.currentSortOption == FolderSortOption.ALPHABETICAL_DESC,
+                                onClick = {
+                                    viewModel.changeSortOption(FolderSortOption.ALPHABETICAL_DESC)
+                                    showSortMenu = false
+                                }
+                            )
+                            SortMenuItem(
+                                icon = Icons.Default.Storage,
+                                label = stringResource(R.string.sort_size_largest),
+                                isSelected = uiState.currentSortOption == FolderSortOption.SIZE_DESC,
+                                onClick = {
+                                    viewModel.changeSortOption(FolderSortOption.SIZE_DESC)
+                                    showSortMenu = false
+                                }
+                            )
+                            SortMenuItem(
+                                icon = Icons.Default.Storage,
+                                label = stringResource(R.string.sort_size_smallest),
+                                isSelected = uiState.currentSortOption == FolderSortOption.SIZE_ASC,
+                                onClick = {
+                                    viewModel.changeSortOption(FolderSortOption.SIZE_ASC)
+                                    showSortMenu = false
+                                }
+                            )
+                            SortMenuItem(
+                                icon = Icons.Default.Folder,
+                                label = stringResource(R.string.sort_count_most),
+                                isSelected = uiState.currentSortOption == FolderSortOption.ITEM_COUNT_DESC,
+                                onClick = {
+                                    viewModel.changeSortOption(FolderSortOption.ITEM_COUNT_DESC)
+                                    showSortMenu = false
+                                }
+                            )
+                            SortMenuItem(
+                                icon = Icons.Default.Folder,
+                                label = stringResource(R.string.sort_count_fewest),
+                                isSelected = uiState.currentSortOption == FolderSortOption.ITEM_COUNT_ASC,
+                                onClick = {
+                                    viewModel.changeSortOption(FolderSortOption.ITEM_COUNT_ASC)
+                                    showSortMenu = false
+                                }
                             )
                         }
-                        if (uiState.searchQuery.isNotEmpty()) {
-                            IconButton(
-                                onClick = { viewModel.updateSearchQuery("") },
-                                modifier = Modifier.size(32.dp)
-                            ) {
-                                Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.clear_search), modifier = Modifier.size(18.dp))
-                            }
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Box {
-                    TooltipBox(
-                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
-                        tooltip = { PlainTooltip { Text(stringResource(R.string.sort)) } },
-                        state = rememberTooltipState()
-                    ) {
-                        IconButton(onClick = { showSortMenu = true }) {
-                            Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = stringResource(R.string.sort))
-                        }
-                    }
-                    DropdownMenu(
-                        expanded = showSortMenu,
-                        onDismissRequest = { showSortMenu = false },
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        SortMenuItem(
-                            icon = Icons.Default.TextFields,
-                            label = stringResource(R.string.sort_name_az),
-                            isSelected = uiState.currentSortOption == FolderSortOption.ALPHABETICAL_ASC,
-                            onClick = {
-                                viewModel.changeSortOption(FolderSortOption.ALPHABETICAL_ASC)
-                                showSortMenu = false
-                            }
-                        )
-                        SortMenuItem(
-                            icon = Icons.Default.TextFields,
-                            label = stringResource(R.string.sort_name_za),
-                            isSelected = uiState.currentSortOption == FolderSortOption.ALPHABETICAL_DESC,
-                            onClick = {
-                                viewModel.changeSortOption(FolderSortOption.ALPHABETICAL_DESC)
-                                showSortMenu = false
-                            }
-                        )
-                        SortMenuItem(
-                            icon = Icons.Default.Storage,
-                            label = stringResource(R.string.sort_size_largest),
-                            isSelected = uiState.currentSortOption == FolderSortOption.SIZE_DESC,
-                            onClick = {
-                                viewModel.changeSortOption(FolderSortOption.SIZE_DESC)
-                                showSortMenu = false
-                            }
-                        )
-                        SortMenuItem(
-                            icon = Icons.Default.Storage,
-                            label = stringResource(R.string.sort_size_smallest),
-                            isSelected = uiState.currentSortOption == FolderSortOption.SIZE_ASC,
-                            onClick = {
-                                viewModel.changeSortOption(FolderSortOption.SIZE_ASC)
-                                showSortMenu = false
-                            }
-                        )
-                        SortMenuItem(
-                            icon = Icons.Default.Folder,
-                            label = stringResource(R.string.sort_count_most),
-                            isSelected = uiState.currentSortOption == FolderSortOption.ITEM_COUNT_DESC,
-                            onClick = {
-                                viewModel.changeSortOption(FolderSortOption.ITEM_COUNT_DESC)
-                                showSortMenu = false
-                            }
-                        )
-                        SortMenuItem(
-                            icon = Icons.Default.Folder,
-                            label = stringResource(R.string.sort_count_fewest),
-                            isSelected = uiState.currentSortOption == FolderSortOption.ITEM_COUNT_ASC,
-                            onClick = {
-                                viewModel.changeSortOption(FolderSortOption.ITEM_COUNT_ASC)
-                                showSortMenu = false
-                            }
-                        )
                     }
                 }
             }
@@ -554,7 +699,8 @@ fun SessionSetupScreen(
 @Composable
 private fun DefaultTopAppBar(
     uiState: SessionSetupUiState,
-    onNavigateToTools: () -> Unit,
+    isSearchExpanded: Boolean,
+    onToggleSearch: () -> Unit,
     onNavigateToSettings: () -> Unit
 ) {
     TopAppBar(
@@ -567,11 +713,15 @@ private fun DefaultTopAppBar(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     TooltipBox(
                         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
-                        tooltip = { PlainTooltip { Text("Tools") } },
+                        tooltip = { PlainTooltip { Text(if (isSearchExpanded) "Close search" else stringResource(R.string.search_hint)) } },
                         state = rememberTooltipState()
                     ) {
-                        IconButton(onClick = onNavigateToTools) {
-                            Icon(Icons.Default.Build, contentDescription = "Tools")
+                        IconButton(onClick = onToggleSearch) {
+                            Icon(
+                                if (isSearchExpanded) Icons.Default.SearchOff else Icons.Default.Search,
+                                contentDescription = stringResource(R.string.search_hint),
+                                tint = if (isSearchExpanded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                     Box(

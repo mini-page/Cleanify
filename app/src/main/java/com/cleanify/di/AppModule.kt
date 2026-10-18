@@ -25,6 +25,7 @@ import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
+import coil.decode.VideoFrameDecoder
 import com.cleanify.domain.bus.FileModificationEventBus
 import com.cleanify.util.ProactiveIndexer
 import dagger.Module
@@ -65,6 +66,9 @@ object AppModule {
     fun provideImageLoader(@ApplicationContext context: Context): ImageLoader {
         val diskCacheSize = 200 * 1024 * 1024 // 200MB
         return ImageLoader.Builder(context)
+            .components {
+                add(VideoFrameDecoder.Factory())
+            }
             .memoryCache {
                 MemoryCache.Builder(context).maxSizePercent(0.25).build()
             }

@@ -15,6 +15,8 @@ import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.horizontalScroll
@@ -37,6 +39,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -44,6 +49,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
@@ -51,25 +58,34 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Forward10
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay10
+import androidx.compose.material.icons.filled.Replay5
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Slideshow
 import androidx.compose.material.icons.filled.TableChart
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -103,8 +119,10 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.media3.common.MediaItem as ExoMediaItem
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
@@ -300,6 +318,7 @@ fun MediaPreviewDialog(
 /* =========================================================================
  * 1. VIDEO VIEWER
  * ========================================================================= */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun VideoPlayerInAppContent(
     uri: Uri,
@@ -318,20 +337,443 @@ private fun VideoPlayerInAppContent(
         onDispose { exoPlayer.release() }
     }
 
-    AndroidView(
-        factory = { ctx ->
-            PlayerView(ctx).apply {
-                player = exoPlayer
-                useController = true
-                setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
-                layoutParams = ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
+    var isPlaying by remember { mutableStateOf(exoPlayer.isPlaying) }
+    var currentPosition by remember { mutableLongStateOf(0L) }
+    var duration by remember { mutableLongStateOf(1L) }
+    var isUserScrubbing by remember { mutableStateOf(false) }
+    var scrubPosition by remember { mutableFloatStateOf(0f) }
+    var controlsVisible by remember { mutableStateOf(true) }
+    var showSettings by remember { mutableStateOf(false) }
+    var playbackSpeed by remember { mutableFloatStateOf(1.0f) }
+    var isLooping by remember { mutableStateOf(true) }
+    var isMuted by remember { mutableStateOf(false) }
+    var resizeMode by remember { mutableIntStateOf(AspectRatioFrameLayout.RESIZE_MODE_FIT) }
+
+    DisposableEffect(exoPlayer) {
+        val listener = object : Player.Listener {
+            override fun onIsPlayingChanged(playing: Boolean) {
+                isPlaying = playing
+            }
+            override fun onPlaybackStateChanged(state: Int) {
+                if (state == Player.STATE_READY) {
+                    val d = exoPlayer.duration
+                    if (d > 0) duration = d
+                }
+            }
+        }
+        exoPlayer.addListener(listener)
+        onDispose { exoPlayer.removeListener(listener) }
+    }
+
+    LaunchedEffect(exoPlayer) {
+        while (true) {
+            if (!isUserScrubbing) {
+                currentPosition = exoPlayer.currentPosition
+                val d = exoPlayer.duration
+                if (d > 0) duration = d
+            }
+            delay(200)
+        }
+    }
+
+    // Auto-hide controls after 3.5s
+    LaunchedEffect(controlsVisible, isPlaying, isUserScrubbing) {
+        if (controlsVisible && isPlaying && !isUserScrubbing && !showSettings) {
+            delay(3500)
+            controlsVisible = false
+        }
+    }
+
+    val displayPos = if (isUserScrubbing) (scrubPosition * duration).toLong() else currentPosition
+    val progress = if (duration > 0) (displayPos.toFloat() / duration).coerceIn(0f, 1f) else 0f
+
+    var playerViewRef by remember { mutableStateOf<PlayerView?>(null) }
+    LaunchedEffect(resizeMode) {
+        playerViewRef?.resizeMode = resizeMode
+    }
+
+    Box(
+        modifier = modifier
+            .background(Color.Black)
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }
+            ) {
+                controlsVisible = !controlsVisible
+            }
+    ) {
+        AndroidView(
+            factory = { ctx ->
+                PlayerView(ctx).apply {
+                    player = exoPlayer
+                    useController = false
+                    this.resizeMode = resizeMode
+                    setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+                    layoutParams = ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                    playerViewRef = this
+                }
+            },
+            update = { pv ->
+                pv.resizeMode = resizeMode
+                playerViewRef = pv
+            },
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // Center 5-button controls
+        AnimatedVisibility(
+            visible = controlsVisible,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.Center)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(32.dp))
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .padding(horizontal = 18.dp, vertical = 10.dp)
+            ) {
+                // 1. Skip Previous
+                IconButton(
+                    onClick = { exoPlayer.seekTo(0) },
+                    modifier = Modifier.size(44.dp)
+                ) {
+                    Icon(
+                        Icons.Default.SkipPrevious,
+                        contentDescription = "Restart / Previous",
+                        tint = Color.White,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+
+                // 2. Rewind 5s
+                IconButton(
+                    onClick = {
+                        val newPos = (exoPlayer.currentPosition - 5000L).coerceAtLeast(0L)
+                        exoPlayer.seekTo(newPos)
+                    },
+                    modifier = Modifier.size(44.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Replay5,
+                        contentDescription = "Rewind 5s",
+                        tint = Color.White,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+
+                // 3. Play / Pause (Large Center Circle)
+                Surface(
+                    shape = CircleShape,
+                    color = Color.White.copy(alpha = 0.25f),
+                    modifier = Modifier.size(64.dp)
+                ) {
+                    IconButton(
+                        onClick = {
+                            if (isPlaying) exoPlayer.pause() else exoPlayer.play()
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Icon(
+                            if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = if (isPlaying) "Pause" else "Play",
+                            tint = Color.White,
+                            modifier = Modifier.size(38.dp)
+                        )
+                    }
+                }
+
+                // 4. Forward 10s
+                IconButton(
+                    onClick = {
+                        val newPos = (exoPlayer.currentPosition + 10000L).coerceAtMost(duration)
+                        exoPlayer.seekTo(newPos)
+                    },
+                    modifier = Modifier.size(44.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Forward10,
+                        contentDescription = "Forward 10s",
+                        tint = Color.White,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+
+                // 5. Skip Next
+                IconButton(
+                    onClick = {
+                        exoPlayer.seekTo(duration)
+                    },
+                    modifier = Modifier.size(44.dp)
+                ) {
+                    Icon(
+                        Icons.Default.SkipNext,
+                        contentDescription = "Skip Next",
+                        tint = Color.White,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
+        }
+
+        // Bottom scrubber bar + timestamps + Settings Gear
+        AnimatedVisibility(
+            visible = controlsVisible,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f))
+                        )
+                    )
+                    .padding(horizontal = 20.dp, vertical = 16.dp)
+            ) {
+                // Time & Settings
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "${Formatters.duration(displayPos)} · ${Formatters.duration(duration)}",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.White.copy(alpha = 0.9f)
+                    )
+
+                    IconButton(
+                        onClick = { showSettings = true },
+                        modifier = Modifier
+                            .background(Color.White.copy(alpha = 0.15f), CircleShape)
+                            .size(36.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Settings,
+                            contentDescription = "Video Settings",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(4.dp))
+
+                Slider(
+                    value = progress,
+                    onValueChange = {
+                        isUserScrubbing = true
+                        scrubPosition = it
+                    },
+                    onValueChangeFinished = {
+                        val target = (scrubPosition * duration).toLong()
+                        exoPlayer.seekTo(target)
+                        isUserScrubbing = false
+                    },
+                    colors = SliderDefaults.colors(
+                        thumbColor = MaterialTheme.colorScheme.primary,
+                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                        inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
-        },
-        modifier = modifier
-    )
+        }
+
+        // Settings Sheet with Rounded Corner Shape (24.dp)
+        if (showSettings) {
+            VideoPlayerSettingsSheet(
+                playbackSpeed = playbackSpeed,
+                onSpeedChange = { speed ->
+                    playbackSpeed = speed
+                    exoPlayer.playbackParameters = PlaybackParameters(speed)
+                },
+                resizeMode = resizeMode,
+                onResizeModeChange = { mode ->
+                    resizeMode = mode
+                },
+                isLooping = isLooping,
+                onLoopChange = { loop ->
+                    isLooping = loop
+                    exoPlayer.repeatMode = if (loop) Player.REPEAT_MODE_ALL else Player.REPEAT_MODE_OFF
+                },
+                isMuted = isMuted,
+                onMuteChange = { muted ->
+                    isMuted = muted
+                    exoPlayer.volume = if (muted) 0f else 1f
+                },
+                onDismiss = { showSettings = false }
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun VideoPlayerSettingsSheet(
+    playbackSpeed: Float,
+    onSpeedChange: (Float) -> Unit,
+    resizeMode: Int,
+    onResizeModeChange: (Int) -> Unit,
+    isLooping: Boolean,
+    onLoopChange: (Boolean) -> Unit,
+    isMuted: Boolean,
+    onMuteChange: (Boolean) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        containerColor = Color(0xFF1E1E2E),
+        dragHandle = null
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Player Settings",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White.copy(alpha = 0.7f))
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // Playback Speed
+            Text(
+                text = "Playback Speed",
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.White.copy(alpha = 0.7f)
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val speeds = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
+                speeds.forEach { speed ->
+                    val isSelected = (playbackSpeed == speed)
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { onSpeedChange(speed) }
+                    ) {
+                        Text(
+                            text = "${speed}x",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else Color.White,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            // Screen Fit
+            Text(
+                text = "Screen Fit",
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.White.copy(alpha = 0.7f)
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val modes = listOf(
+                    "Fit" to AspectRatioFrameLayout.RESIZE_MODE_FIT,
+                    "Zoom / Fill" to AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
+                    "Stretch" to AspectRatioFrameLayout.RESIZE_MODE_FILL
+                )
+                modes.forEach { (label, mode) ->
+                    val isSelected = (resizeMode == mode)
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { onResizeModeChange(mode) }
+                    ) {
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else Color.White,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(vertical = 10.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            // Loop Video Toggle
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Loop Video",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White
+                )
+                Switch(
+                    checked = isLooping,
+                    onCheckedChange = onLoopChange
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // Mute Audio Toggle
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Mute Audio",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White
+                )
+                Switch(
+                    checked = isMuted,
+                    onCheckedChange = onMuteChange
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+        }
+    }
 }
 
 /* =========================================================================
@@ -1319,18 +1761,31 @@ private fun TextInAppViewer(
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color.White.copy(alpha = 0.15f))
 
-                SelectionContainer(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    Text(
-                        text = content!!,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 13.sp,
-                        color = Color(0xFFE2E8F0),
-                        lineHeight = 20.sp
+                val isMarkdown = remember(displayName) {
+                    displayName.endsWith(".md", ignoreCase = true) || displayName.endsWith(".markdown", ignoreCase = true)
+                }
+
+                if (isMarkdown) {
+                    MarkdownViewer(
+                        markdown = content!!,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
                     )
+                } else {
+                    SelectionContainer(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        Text(
+                            text = content!!,
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 13.sp,
+                            color = Color(0xFFE2E8F0),
+                            lineHeight = 20.sp
+                        )
+                    }
                 }
             }
         }

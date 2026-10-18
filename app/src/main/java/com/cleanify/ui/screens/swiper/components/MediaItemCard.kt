@@ -284,7 +284,7 @@ internal fun MediaItemCard(
                                     }
                                     onSwipeRight()
                                 }
-                                swipeOffsetY.value > swipeDownThreshold || (isFlingY && vy > 0) -> {
+                                swipeDownAction != SwipeDownAction.NONE && (swipeOffsetY.value > swipeDownThreshold || (isFlingY && vy > 0)) -> {
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     swipeScope.launch {
                                         swipeOffsetY.animateTo(cardHeight.toPx() * 1.5f, flyAwaySpec)

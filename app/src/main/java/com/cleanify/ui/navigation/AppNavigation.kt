@@ -154,6 +154,11 @@ fun AppNavigation(
                 },
                 onNavigateToSettings = { navController.navigate(Screen.Settings.createRoute()) },
                 onNavigateToTools = { navController.navigate(Screen.Tools.route) },
+                onNavigateToDuplicates = { navController.navigate(DUPLICATES_GRAPH_ROUTE) },
+                onNavigateToEmptyCleaner = { navController.navigate(Screen.EmptyCleaner.route) },
+                onNavigateToRecycleBin = { navController.navigate(Screen.RecycleBin.route) },
+                onNavigateToContactCleaner = { navController.navigate(Screen.ContactCleaner.route) },
+                onNavigateToStorageAnalysis = { navController.navigate(Screen.StorageAnalysis.route) },
                 viewModel = viewModel
             )
         }
