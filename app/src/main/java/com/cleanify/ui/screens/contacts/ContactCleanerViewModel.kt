@@ -72,15 +72,33 @@ class ContactCleanerViewModel @Inject constructor(
         }
     }
 
-    init {
-        context.contentResolver.registerContentObserver(
-            ContactsContract.AUTHORITY_URI, true, contentObserver
-        )
+    private var isObserverRegistered = false
+
+    private fun registerObserverIfPermitted() {
+        if (isObserverRegistered) return
+        val hasRead = ContextCompat.checkSelfPermission(context, android.Manifest.permission.READ_CONTACTS) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (hasRead) {
+            try {
+                context.contentResolver.registerContentObserver(
+                    ContactsContract.AUTHORITY_URI, true, contentObserver
+                )
+                isObserverRegistered = true
+            } catch (e: Exception) {
+                Log.w(logTag, "Could not register Contacts observer: ${e.message}")
+            }
+        }
     }
 
     override fun onCleared() {
         super.onCleared()
-        context.contentResolver.unregisterContentObserver(contentObserver)
+        if (isObserverRegistered) {
+            try {
+                context.contentResolver.unregisterContentObserver(contentObserver)
+            } catch (e: Exception) {
+                Log.w(logTag, "Could not unregister Contacts observer: ${e.message}")
+            }
+            isObserverRegistered = false
+        }
     }
 
     fun checkPermissions(): Boolean {
@@ -89,6 +107,9 @@ class ContactCleanerViewModel @Inject constructor(
         val granted = hasRead == android.content.pm.PackageManager.PERMISSION_GRANTED
                 && hasWrite == android.content.pm.PackageManager.PERMISSION_GRANTED
         _uiState.value = _uiState.value.copy(hasPermissions = granted)
+        if (granted) {
+            registerObserverIfPermitted()
+        }
         return granted
     }
 
@@ -110,9 +131,17 @@ class ContactCleanerViewModel @Inject constructor(
 
     fun loadContacts() {
         if (!_uiState.value.hasPermissions) return
+        registerObserverIfPermitted()
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
-            val contacts = withContext(Dispatchers.IO) { fetchContacts() }
+            val contacts = withContext(Dispatchers.IO) {
+                try {
+                    fetchContacts()
+                } catch (e: Exception) {
+                    Log.e(logTag, "Error querying contacts: ${e.message}", e)
+                    emptyList()
+                }
+            }
             val (duplicates, issues) = withContext(Dispatchers.Default) {
                 detectDuplicates(contacts) to findIssues(contacts)
             }

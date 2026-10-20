@@ -112,16 +112,16 @@ class AppUpdateWorker(
 
         fun scheduleOrCancel(context: Context, interval: UpdateCheckInterval) {
             val workManager = WorkManager.getInstance(context)
-            if (interval == UpdateCheckInterval.NEVER || interval.days <= 0L) {
+            if (!interval.isEnabled || interval.hours <= 0L) {
                 Log.d(TAG, "Cancelling periodic update check")
                 workManager.cancelUniqueWork(UNIQUE_WORK_NAME)
             } else {
-                Log.d(TAG, "Scheduling periodic update check every ${interval.days} days")
+                Log.d(TAG, "Scheduling periodic update check every ${interval.hours} hours")
                 val constraints = Constraints.Builder()
                     .setRequiredNetworkType(NetworkType.CONNECTED)
                     .build()
 
-                val request = PeriodicWorkRequestBuilder<AppUpdateWorker>(interval.days, TimeUnit.DAYS)
+                val request = PeriodicWorkRequestBuilder<AppUpdateWorker>(interval.hours, TimeUnit.HOURS)
                     .setConstraints(constraints)
                     .build()
 

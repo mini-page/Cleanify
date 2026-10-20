@@ -40,6 +40,7 @@ import com.cleanify.data.repository.PreferencesRepository
 import com.cleanify.data.repository.SummaryViewMode
 import com.cleanify.data.repository.DoubleTapAction
 import com.cleanify.data.repository.SwipeDownAction
+import com.cleanify.data.repository.SwipeUpAction
 import com.cleanify.data.repository.SwipeSensitivity
 import com.cleanify.data.repository.TapAction
 import com.cleanify.di.AppModule
@@ -194,6 +195,14 @@ class SwiperViewModel @Inject constructor(
 
     val swipeDownAction: StateFlow<SwipeDownAction> = preferencesRepository.swipeDownActionFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SwipeDownAction.NONE)
+
+    val swipeUpAction: StateFlow<SwipeUpAction> = preferencesRepository.swipeUpActionFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SwipeUpAction.NONE)
+
+    val swiperBatchSize: StateFlow<Int> = preferencesRepository.swiperBatchSizeFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 30)
+
+    private var batchDecidedCount = 0
 
     val rememberProcessedMedia: StateFlow<Boolean> = preferencesRepository.rememberProcessedMediaFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
@@ -699,6 +708,9 @@ class SwiperViewModel @Inject constructor(
         change?.let { coilPreloader.preload(listOf(it.item)) }
         prewarmNextImages()
 
+        batchDecidedCount++
+        val batchLimit = swiperBatchSize.value
+
         viewModelScope.launch {
             _uiState.update { currentState ->
                 val itemToProcess = currentState.currentItem ?: return@update currentState
@@ -745,6 +757,23 @@ class SwiperViewModel @Inject constructor(
                 // Step 3: Recalculate summary lists
                 val summary = processSummaryLists(newPendingChanges, currentState.folderIdToNameMap)
 
+                val shouldShowReview = (batchDecidedCount >= batchLimit && newPendingChanges.isNotEmpty()) || (isSortingComplete && newPendingChanges.isNotEmpty())
+                if (batchDecidedCount >= batchLimit) {
+                    batchDecidedCount = 0
+                }
+
+                if (bucketIds.isNotEmpty()) {
+                    if (isSortingComplete) {
+                        preferencesRepository.clearResumeSession()
+                    } else {
+                        val remainingCount = (currentState.allMediaItems.size - allProcessedIds.size).coerceAtLeast(0)
+                        val folderName = currentState.folderIdToNameMap[bucketIds.firstOrNull()]
+                            ?: currentState.allMediaItems.firstOrNull()?.let { File(it.id).parentFile?.name }
+                            ?: "Swiper Session"
+                        preferencesRepository.saveResumeSession(bucketIds, folderName, remainingCount)
+                    }
+                }
+
                 // Step 4: Return the new, fully-formed state
                 currentState.copy(
                     pendingChanges = newPendingChanges,
@@ -752,7 +781,7 @@ class SwiperViewModel @Inject constructor(
                     currentIndex = nextIndex,
                     currentItem = nextItem,
                     isSortingComplete = isSortingComplete,
-                    showSummarySheet = isSortingComplete && newPendingChanges.isNotEmpty(),
+                    showSummarySheet = shouldShowReview,
                     videoPlaybackPosition = 0L,
                     videoPlaybackSpeed = _defaultVideoSpeed,
                     isVideoMuted = currentState.isVideoMuted,
@@ -776,6 +805,38 @@ class SwiperViewModel @Inject constructor(
         val currentItem = _uiState.value.currentItem ?: return
         val change = PendingChange(currentItem, if (_invertSwipe) SwiperAction.Delete(currentItem) else SwiperAction.Keep(currentItem))
         processAndAdvance(change)
+    }
+
+    fun handleSwipeUp() {
+        val currentItem = _uiState.value.currentItem ?: return
+        viewModelScope.launch {
+            when (swipeUpAction.first()) {
+                SwipeUpAction.NONE -> { /* Do nothing */ }
+                SwipeUpAction.SKIP -> handleSkip()
+                SwipeUpAction.FAVORITE -> moveToFavoritesFolder(currentItem)
+            }
+        }
+    }
+
+    private fun moveToFavoritesFolder(item: MediaItem) {
+        viewModelScope.launch {
+            val parentPath = withContext(Dispatchers.IO) {
+                try {
+                    File(item.id).parent ?: _uiState.value.defaultCreationPath
+                } catch (e: Exception) {
+                    _uiState.value.defaultCreationPath
+                }
+            }
+            val favoritesPath = File(parentPath, "Favorites").absolutePath
+            if (!_uiState.value.folderIdToNameMap.containsKey(favoritesPath)) {
+                _uiState.update {
+                    it.copy(folderIdToNameMap = it.folderIdToNameMap + (favoritesPath to "Favorites"))
+                }
+            }
+            preferencesRepository.addFavoriteMediaItem(item.id)
+            _uiState.update { it.copy(favoriteItemIds = it.favoriteItemIds + item.id) }
+            moveToFolder(favoritesPath)
+        }
     }
 
     fun handleSwipeDown() {

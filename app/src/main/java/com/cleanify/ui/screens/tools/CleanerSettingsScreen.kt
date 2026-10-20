@@ -5,10 +5,14 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Refresh
@@ -21,6 +25,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.cleanify.ui.components.BackNavigationIcon
 import com.cleanify.data.cleaner.CleanerPreferences
+import com.cleanify.ui.screens.settings.sections.FrostedSettingsGroup
+import com.cleanify.ui.screens.settings.sections.ToolAboutCard
 import kotlin.math.roundToInt
 import org.json.JSONObject
 import org.json.JSONTokener
@@ -101,57 +107,61 @@ fun CleanerSettingsScreen(
             )
         }
     ) { padding ->
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            contentPadding = PaddingValues(vertical = 8.dp)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item {
-                Text(
-                    text = "Scan Filters",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
-                )
-            }
-            item {
-                SettingsSwitchRow(
+            // ── Scan Filters ──
+            FrostedSettingsGroup(title = "Scan Filters") {
+                CleanerSwitchRow(
                     title = "Empty Files (0 bytes)",
                     subtitle = "Delete files with size 0",
                     checked = cleanEmptyFile,
                     onCheckedChange = { v -> cleanEmptyFile = v; prefs.cleanEmptyFile = v }
                 )
-            }
-            item {
-                SettingsSwitchRow(
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 14.dp),
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+                )
+                CleanerSwitchRow(
                     title = "Empty Folders",
                     subtitle = "Delete directories containing no files",
                     checked = cleanEmptyFolder,
                     onCheckedChange = { v -> cleanEmptyFolder = v; prefs.cleanEmptyFolder = v }
                 )
-            }
-            item {
-                SettingsSwitchRow(
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 14.dp),
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+                )
+                CleanerSwitchRow(
                     title = "Generic Junk",
-                    subtitle = "Delete .tmp, .log files and temp folders",
+                    subtitle = "Delete .tmp, .log files and temporary folders",
                     checked = cleanGeneric,
                     onCheckedChange = { v -> cleanGeneric = v; prefs.cleanGeneric = v }
                 )
-            }
-            item {
-                SettingsSwitchRow(
-                    title = "APK Files",
-                    subtitle = "Delete .apk, .apks, .apkm, .aab files",
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 14.dp),
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+                )
+                CleanerSwitchRow(
+                    title = "APK Packages",
+                    subtitle = "Delete cached .apk, .apks, .apkm, .aab files",
                     checked = cleanApk,
                     onCheckedChange = { v -> cleanApk = v; prefs.cleanApk = v }
                 )
-            }
-            item {
-                SettingsSwitchRow(
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 14.dp),
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+                )
+                CleanerSwitchRow(
                     title = "Corpse Files",
                     subtitle = "Delete orphaned app data folders in Android/data",
                     checked = cleanCorpse,
@@ -159,125 +169,85 @@ fun CleanerSettingsScreen(
                 )
             }
 
-            item {
-                Text(
-                    text = "Scan Behavior",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
+            // ── Scan Behavior & Automation ──
+            FrostedSettingsGroup(title = "Scan Behavior & Automation") {
+                CleanerSliderRow(
+                    title = "Double-checker (multi-run)",
+                    subtitle = "Repeat scan passes: $multiRun time${if (multiRun != 1) "s" else ""}",
+                    value = multiRun.toFloat(),
+                    onValueChange = { v ->
+                        val stepped = (v / 1f).roundToInt().coerceIn(1, 10)
+                        multiRun = stepped
+                        prefs.multiRun = stepped
+                    },
+                    valueRange = 1f..10f,
+                    steps = 8,
+                    startLabel = "1x",
+                    endLabel = "10x"
                 )
-            }
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-                ) {
-                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Refresh, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Spacer(Modifier.width(12.dp))
-                            Text("Double-checker (multi-run)", style = MaterialTheme.typography.bodyLarge)
-                        }
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            "Repeat scan this many times: $multiRun",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Slider(
-                            value = multiRun.toFloat(),
-                            onValueChange = { v ->
-                                val stepped = (v / 1f).roundToInt().coerceIn(1, 10)
-                                multiRun = stepped
-                                prefs.multiRun = stepped
-                            },
-                            valueRange = 1f..10f,
-                            steps = 8,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("1", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("10", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                }
-            }
-            item {
-                SettingsSwitchRow(
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 14.dp),
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+                )
+                CleanerSwitchRow(
                     title = "Auto-whitelist",
                     subtitle = "Auto-whitelist paths containing 'backup', 'important', etc.",
                     checked = autoWhite,
                     onCheckedChange = { v -> autoWhite = v; prefs.autoWhite = v }
                 )
-            }
-            item {
-                SettingsSwitchRow(
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 14.dp),
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+                )
+                CleanerSwitchRow(
                     title = "Clear Clipboard",
                     subtitle = "Clear system clipboard after each clean",
                     checked = cleanClipboard,
                     onCheckedChange = { v -> cleanClipboard = v; prefs.cleanClipboard = v }
                 )
-            }
-            item {
-                SettingsSwitchRow(
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 14.dp),
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+                )
+                CleanerSwitchRow(
                     title = "Clean on Boot",
                     subtitle = "Run a full clean automatically after device restart",
                     checked = cleanOnBoot,
                     onCheckedChange = { v -> cleanOnBoot = v; prefs.cleanOnBoot = v }
                 )
-            }
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-                ) {
-                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Refresh, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Spacer(Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("Scheduled Clean", style = MaterialTheme.typography.bodyLarge)
-                                Text(
-                                    if (cleanEvery <= 0) "Disabled" else "Every $cleanEvery hour${if (cleanEvery != 1) "s" else ""}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 14.dp),
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+                )
+                CleanerSliderRow(
+                    title = "Scheduled Clean",
+                    subtitle = if (cleanEvery <= 0) "Disabled" else "Every $cleanEvery hour${if (cleanEvery != 1) "s" else ""}",
+                    value = if (cleanEvery <= 0) 0f else cleanEvery.toFloat(),
+                    onValueChange = { v ->
+                        val stepped = v.roundToInt().coerceIn(0, 24)
+                        cleanEvery = stepped
+                        prefs.cleanEvery = stepped
+                        if (stepped > 0) {
+                            com.cleanify.data.cleaner.CleanerWorker.scheduleHourlyClean(ctx, stepped)
+                        } else {
+                            com.cleanify.data.cleaner.CleanerWorker.cancelHourlyClean(ctx)
                         }
-                        Spacer(Modifier.height(8.dp))
-                        Slider(
-                            value = if (cleanEvery <= 0) 0f else cleanEvery.toFloat(),
-                            onValueChange = { v ->
-                                val stepped = v.roundToInt().coerceIn(0, 24)
-                                cleanEvery = stepped
-                                prefs.cleanEvery = stepped
-                                if (stepped > 0) {
-                                    com.cleanify.data.cleaner.CleanerWorker.scheduleHourlyClean(ctx, stepped)
-                                } else {
-                                    com.cleanify.data.cleaner.CleanerWorker.cancelHourlyClean(ctx)
-                                }
-                            },
-                            valueRange = 0f..24f,
-                            steps = 23,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("Off", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("24h", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                }
-            }
-            item {
-                SettingsSwitchRow(
+                    },
+                    valueRange = 0f..24f,
+                    steps = 23,
+                    startLabel = "Off",
+                    endLabel = "24h"
+                )
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 14.dp),
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+                )
+                CleanerSwitchRow(
                     title = "Stop Background Apps",
                     subtitle = "Kill background processes of non-system apps after clean",
                     checked = stopBackgroundApps,
@@ -285,91 +255,59 @@ fun CleanerSettingsScreen(
                 )
             }
 
-            item {
-                Text(
-                    text = "Filter Lists",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
-                )
-            }
-            item {
-                SettingsClickRow(
+            // ── Filter Lists ──
+            FrostedSettingsGroup(title = "Filter Lists") {
+                CleanerNavigationRow(
                     title = "Blacklist",
-                    subtitle = "Paths/patterns excluded from cleaning",
-                    icon = { Icon(Icons.Default.Block, contentDescription = null) },
+                    subtitle = "Paths and patterns excluded from cleaning",
+                    icon = Icons.Default.Block,
                     onClick = onNavigateToBlacklist
                 )
-            }
-            item {
-                SettingsClickRow(
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 14.dp),
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+                )
+                CleanerNavigationRow(
                     title = "Whitelist",
                     subtitle = "Paths protected from cleaning",
-                    icon = { Icon(Icons.Default.CheckCircle, contentDescription = null) },
+                    icon = Icons.Default.CheckCircle,
                     onClick = onNavigateToWhitelist
                 )
             }
 
-            item {
-                Text(
-                    text = "Import / Export",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
-                )
-            }
-            item {
-                SettingsClickRow(
+            // ── Import / Export ──
+            FrostedSettingsGroup(title = "Import / Export") {
+                CleanerNavigationRow(
                     title = "Export Cleaner Settings",
                     subtitle = "Save all cleaner preferences to a JSON file",
-                    icon = { Icon(Icons.Default.FileUpload, contentDescription = null) },
+                    icon = Icons.Default.FileUpload,
                     onClick = { exportLauncher.launch("cleaner_settings.json") }
                 )
-            }
-            item {
-                SettingsClickRow(
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 14.dp),
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+                )
+                CleanerNavigationRow(
                     title = "Import Cleaner Settings",
                     subtitle = "Restore cleaner preferences from a JSON file",
-                    icon = { Icon(Icons.Default.FileDownload, contentDescription = null) },
+                    icon = Icons.Default.FileDownload,
                     onClick = { importLauncher.launch(arrayOf("application/json")) }
                 )
             }
 
-            item {
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    text = "About this tool",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+            // ── About Tool ──
+            FrostedSettingsGroup(title = "About Empty Cleaner") {
+                ToolAboutCard(
+                    icon = Icons.Default.CleaningServices,
+                    title = "Empty Cleaner",
+                    description = "The Empty File Cleaner scans your device for junk files — empty files, empty folders, temporary files, APKs, and orphaned app data. It supports scheduled cleanups, auto-whitelisting, blacklist/whitelist filters, and can stop background apps after cleaning.",
+                    warning = "Files deleted during cleaning cannot be recovered. Be sure to check your whitelist before running deep scans."
                 )
-            }
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f))
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            "The Empty File Cleaner scans your device for junk files — " +
-                            "empty files, empty folders, temporary files, APKs, and orphaned app data. " +
-                            "It supports scheduled cleanups, auto-whitelisting, blacklist/whitelist filters, " +
-                            "and can stop background apps after cleaning.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-            item {
-                Spacer(Modifier.height(16.dp))
             }
         }
     }
-
 }
 
 private fun exportCleanerSettings(ctx: android.content.Context, prefs: CleanerPreferences, uri: Uri) {
@@ -436,72 +374,103 @@ private fun importCleanerSettings(ctx: android.content.Context, prefs: CleanerPr
 }
 
 @Composable
-private fun SettingsSwitchRow(
+private fun CleanerSwitchRow(
     title: String,
     subtitle: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) }
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = title, style = MaterialTheme.typography.bodyLarge)
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
+        Spacer(Modifier.width(8.dp))
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 
 @Composable
-private fun SettingsClickRow(
+private fun CleanerNavigationRow(
     title: String,
     subtitle: String,
-    icon: @Composable () -> Unit,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     onClick: () -> Unit
 ) {
-    Card(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.primaryContainer,
+            modifier = Modifier.size(40.dp)
         ) {
-            Surface(
-                shape = MaterialTheme.shapes.small,
-                color = MaterialTheme.colorScheme.secondaryContainer,
-                modifier = Modifier.size(40.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                    icon()
-                }
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(20.dp))
             }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = title, style = MaterialTheme.typography.bodyLarge)
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+        }
+        Spacer(modifier = Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+        )
+    }
+}
+
+@Composable
+private fun CleanerSliderRow(
+    title: String,
+    subtitle: String,
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float>,
+    steps: Int,
+    startLabel: String,
+    endLabel: String
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp)) {
+        Text(text = title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+        Spacer(Modifier.height(2.dp))
+        Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(8.dp))
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = valueRange,
+            steps = steps,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(startLabel, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(endLabel, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

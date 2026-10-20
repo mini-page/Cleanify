@@ -25,6 +25,7 @@ import androidx.lifecycle.viewModelScope
 import com.cleanify.R
 import com.cleanify.data.repository.FolderSelectionMode
 import com.cleanify.data.repository.PreferencesRepository
+import com.cleanify.data.repository.ResumeSessionInfo
 import com.cleanify.data.repository.UnselectScanScope
 import com.cleanify.domain.bus.FolderUpdateEvent
 import com.cleanify.domain.bus.FolderUpdateEventBus
@@ -109,6 +110,28 @@ class SessionSetupViewModel @Inject constructor(
                 started = SharingStarted.WhileSubscribed(5000),
                 initialValue = false
             )
+
+    val recycleBinEnabled: StateFlow<Boolean> =
+        preferencesRepository.recycleBinEnabledFlow
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = true
+            )
+
+    val resumeSession: StateFlow<ResumeSessionInfo?> =
+        preferencesRepository.resumeSessionFlow
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = null
+            )
+
+    fun clearResumeSession() {
+        viewModelScope.launch {
+            preferencesRepository.clearResumeSession()
+        }
+    }
 
     private var hasInitializedSelection = false
     private val _isManualRefreshing = MutableStateFlow(false)

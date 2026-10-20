@@ -48,6 +48,8 @@ google-services.json
 .claude/
 .gitnexus/
 .planning/
+graphify-out/
+/*.png
 AGENTS.md
 CLAUDE.md
 /.xml

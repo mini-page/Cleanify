@@ -1,17 +1,25 @@
 package com.cleanify.ui.screens.storage
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Environment
 import android.os.StatFs
 import android.os.storage.StorageManager
 import android.os.storage.StorageVolume
 import android.text.format.Formatter
+import android.webkit.MimeTypeMap
+import android.widget.Toast
+import androidx.core.content.FileProvider
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -20,10 +28,20 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SdCard
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.FolderDelete
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.MusicNote
+import androidx.compose.material.icons.outlined.OpenInNew
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.VideoFile
+import androidx.compose.material.icons.outlined.Warning
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -43,6 +61,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.cleanify.ui.components.BackNavigationIcon
+import com.cleanify.ui.components.MediaPreviewDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -102,7 +121,12 @@ private val categoryColors = listOf(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StorageAnalysisScreen(
-    onNavigateUp: () -> Unit
+    onNavigateUp: () -> Unit = {},
+    onNavigateToEmptyCleaner: () -> Unit = {},
+    onNavigateToDuplicates: () -> Unit = {},
+    onNavigateToRecycleBin: () -> Unit = {},
+    onNavigateToContactCleaner: () -> Unit = {},
+    embedded: Boolean = false
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -224,15 +248,17 @@ fun StorageAnalysisScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Storage Analysis") },
-                navigationIcon = { BackNavigationIcon(onClick = onNavigateUp, contentDescription = "Back") },
-                actions = {
-                    IconButton(onClick = { refresh() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+            if (!embedded) {
+                TopAppBar(
+                    title = { Text("Storage Analysis") },
+                    navigationIcon = { BackNavigationIcon(onClick = onNavigateUp, contentDescription = "Back") },
+                    actions = {
+                        IconButton(onClick = { refresh() }) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                        }
                     }
-                }
-            )
+                )
+            }
         }
     ) { padding ->
         if (state.isScanning) {
@@ -249,13 +275,30 @@ fun StorageAnalysisScreen(
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 item {
                     StorageDonutChart(
                         totalBytes = totalBytes,
                         usedBytes = usedBytes,
                         freeBytes = freeBytes
+                    )
+                }
+
+                item {
+                    StorageHealthBanner(
+                        totalBytes = totalBytes,
+                        usedBytes = usedBytes,
+                        freeBytes = freeBytes
+                    )
+                }
+
+                item {
+                    QuickCleanupToolsRow(
+                        onNavigateToEmptyCleaner = onNavigateToEmptyCleaner,
+                        onNavigateToDuplicates = onNavigateToDuplicates,
+                        onNavigateToRecycleBin = onNavigateToRecycleBin,
+                        onNavigateToContactCleaner = onNavigateToContactCleaner
                     )
                 }
 
@@ -330,11 +373,43 @@ fun StorageAnalysisScreen(
         }
     }
 
+    var previewFile by remember { mutableStateOf<File?>(null) }
+
     selectedFile?.let { file ->
         FileInfoDialog(
             file = file,
             context = context,
-            onDismiss = { selectedFile = null }
+            onPreview = {
+                previewFile = it
+                selectedFile = null
+            },
+            onDismiss = { selectedFile = null },
+            onDelete = { refresh() }
+        )
+    }
+
+    previewFile?.let { file ->
+        val ext = file.extension.lowercase()
+        val mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext) ?: when (ext) {
+            in listOf("jpg", "jpeg", "png", "webp", "gif", "bmp") -> "image/$ext"
+            in listOf("mp4", "mkv", "webm", "avi", "mov", "3gp") -> "video/$ext"
+            in listOf("mp3", "wav", "flac", "ogg", "m4a", "aac", "opus") -> "audio/$ext"
+            "pdf" -> "application/pdf"
+            in listOf("txt", "log", "json", "xml", "csv", "md") -> "text/plain"
+            else -> "*/*"
+        }
+        MediaPreviewDialog(
+            uri = Uri.fromFile(file),
+            displayName = file.name,
+            fileSize = file.length(),
+            dateModified = file.lastModified(),
+            mimeType = mimeType,
+            onDelete = {
+                file.delete()
+                previewFile = null
+                refresh()
+            },
+            onDismiss = { previewFile = null }
         )
     }
 }
@@ -607,20 +682,171 @@ private fun LargeFileRow(
 }
 
 @Composable
+private fun StorageHealthBanner(
+    totalBytes: Long,
+    usedBytes: Long,
+    freeBytes: Long
+) {
+    val usedFraction = if (totalBytes > 0) usedBytes.toFloat() / totalBytes else 0f
+    val (statusTitle, statusDesc, bannerColor, icon) = when {
+        usedFraction >= 0.90f -> listOf(
+            "Storage Space Critical",
+            "Over 90% full. System apps and performance may lag. Reclaim space now.",
+            MaterialTheme.colorScheme.error,
+            Icons.Outlined.Warning
+        )
+        usedFraction >= 0.75f -> listOf(
+            "Storage Space Moderate",
+            "Over 75% full. Consider cleaning duplicate photos and empty folders.",
+            MaterialTheme.colorScheme.tertiary,
+            Icons.Outlined.Warning
+        )
+        else -> listOf(
+            "Storage Space Healthy",
+            "Plenty of storage remaining. Keep your device organized with Cleanify tools.",
+            MaterialTheme.colorScheme.primary,
+            Icons.Outlined.CheckCircle
+        )
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = (bannerColor as Color).copy(alpha = 0.12f)),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .background(bannerColor.copy(alpha = 0.2f), shape = RoundedCornerShape(12.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon as ImageVector,
+                    contentDescription = null,
+                    tint = bannerColor,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = statusTitle as String,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = bannerColor
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = statusDesc as String,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuickCleanupToolsRow(
+    onNavigateToEmptyCleaner: () -> Unit,
+    onNavigateToDuplicates: () -> Unit,
+    onNavigateToRecycleBin: () -> Unit,
+    onNavigateToContactCleaner: () -> Unit
+) {
+    Column {
+        Text(
+            "Quick Cleanup Tools",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            SuggestionChip(
+                onClick = onNavigateToEmptyCleaner,
+                label = { Text("Empty Folders") },
+                icon = { Icon(Icons.Outlined.FolderDelete, contentDescription = null, modifier = Modifier.size(18.dp)) }
+            )
+            SuggestionChip(
+                onClick = onNavigateToDuplicates,
+                label = { Text("Duplicates") },
+                icon = { Icon(Icons.Outlined.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp)) }
+            )
+            SuggestionChip(
+                onClick = onNavigateToRecycleBin,
+                label = { Text("Recycle Bin") },
+                icon = { Icon(Icons.Outlined.DeleteOutline, contentDescription = null, modifier = Modifier.size(18.dp)) }
+            )
+            SuggestionChip(
+                onClick = onNavigateToContactCleaner,
+                label = { Text("Contacts") },
+                icon = { Icon(Icons.Outlined.Person, contentDescription = null, modifier = Modifier.size(18.dp)) }
+            )
+        }
+    }
+}
+
+@Composable
 private fun FileInfoDialog(
     file: LargeFile,
     context: Context,
-    onDismiss: () -> Unit
+    onPreview: (File) -> Unit,
+    onDismiss: () -> Unit,
+    onDelete: () -> Unit
 ) {
     val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy  hh:mm a", Locale.getDefault()) }
     val sizeFormat = DecimalFormat("#.##")
     val kib: Long = 1024
     val mib: Long = 1048576
 
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
+
     val sizeStr = when {
         file.size > mib -> "${sizeFormat.format(file.size.toDouble() / mib)} MB"
         file.size > kib -> "${sizeFormat.format(file.size.toDouble() / kib)} KB"
         else -> "${file.size} B"
+    }
+
+    if (showDeleteConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmation = false },
+            title = { Text("Delete File?") },
+            text = { Text("Are you sure you want to permanently delete \"${file.file.name}\"? This action cannot be undone.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteConfirmation = false
+                        try {
+                            if (file.file.delete()) {
+                                Toast.makeText(context, "File deleted", Toast.LENGTH_SHORT).show()
+                                onDelete()
+                                onDismiss()
+                            } else {
+                                Toast.makeText(context, "Could not delete file", Toast.LENGTH_SHORT).show()
+                            }
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.onError)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmation = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     Dialog(
@@ -629,8 +855,9 @@ private fun FileInfoDialog(
     ) {
         Card(
             modifier = Modifier
-                .fillMaxWidth(0.9f)
-                .padding(16.dp)
+                .fillMaxWidth(0.92f)
+                .padding(16.dp),
+            shape = RoundedCornerShape(20.dp)
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Row(
@@ -654,11 +881,92 @@ private fun FileInfoDialog(
 
                 Spacer(Modifier.height(16.dp))
 
-                Text(
-                    "This file is on your device's storage. Use the Swiper or Empty Cleaner tools to manage it.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                // Primary Internal Preview Button
+                Button(
+                    onClick = { onPreview(file.file) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.Visibility, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Preview File Internally")
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            try {
+                                val uri = FileProvider.getUriForFile(
+                                    context,
+                                    "${context.packageName}.provider",
+                                    file.file
+                                )
+                                val mimeType = MimeTypeMap.getSingleton()
+                                    .getMimeTypeFromExtension(file.file.extension.lowercase()) ?: "*/*"
+                                val intent = Intent(Intent.ACTION_VIEW).apply {
+                                    setDataAndType(uri, mimeType)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(Intent.createChooser(intent, "Open with"))
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "Cannot open: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
+                    ) {
+                        Icon(Icons.Outlined.OpenInNew, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Open with", maxLines = 1)
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            try {
+                                val uri = FileProvider.getUriForFile(
+                                    context,
+                                    "${context.packageName}.provider",
+                                    file.file
+                                )
+                                val mimeType = MimeTypeMap.getSingleton()
+                                    .getMimeTypeFromExtension(file.file.extension.lowercase()) ?: "*/*"
+                                val intent = Intent(Intent.ACTION_SEND).apply {
+                                    type = mimeType
+                                    putExtra(Intent.EXTRA_STREAM, uri)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(Intent.createChooser(intent, "Share file"))
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "Cannot share: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
+                    ) {
+                        Icon(Icons.Outlined.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Share", maxLines = 1)
+                    }
+
+                    Button(
+                        onClick = { showDeleteConfirmation = true },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer
+                        ),
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
+                    ) {
+                        Icon(Icons.Outlined.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Delete", maxLines = 1)
+                    }
+                }
             }
         }
     }

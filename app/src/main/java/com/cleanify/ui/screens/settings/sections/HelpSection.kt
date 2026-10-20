@@ -24,8 +24,14 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -39,6 +45,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -48,6 +55,7 @@ import com.cleanify.R
 import com.cleanify.ui.components.FeedbackDialog
 import com.cleanify.ui.screens.settings.SettingsViewModel
 import com.cleanify.util.PermissionManager
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun HelpSection(
@@ -61,6 +69,7 @@ fun HelpSection(
         contract = ActivityResultContracts.RequestPermission()
     ) { _ -> /* re-composition handles refreshed state */ }
     var showFeedbackDialog by remember { mutableStateOf(false) }
+    var showAppTourDialog by remember { mutableStateOf(false) }
 
     val permissionEntries = remember {
         listOf(
@@ -129,11 +138,7 @@ fun HelpSection(
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         // Group 1: Support & Guidance
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-        ) {
+        FrostedSettingsGroup(title = "Support & Guidance") {
             Column(modifier = Modifier.padding(vertical = 4.dp)) {
                 // Tutorial Row
                 Row(
@@ -181,6 +186,52 @@ fun HelpSection(
 
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
+                // App Tour Row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showAppTourDialog = true }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Default.Explore,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.width(14.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Quick App Tour",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = "Explore key features: Tools, Batch Swiping, Gestures, & Feedback",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    FilledTonalButton(
+                        onClick = { showAppTourDialog = true },
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Start", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+
                 // Feedback Row
                 Row(
                     modifier = Modifier
@@ -222,15 +273,124 @@ fun HelpSection(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                     )
                 }
+
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+                // Shake to Feedback & Screenshot to Feedback Toggles
+                val highlightedId = LocalHighlightedSettingId.current
+                val isFeedbackHighlighted = highlightedId in listOf("shake_to_feedback", "screenshot_to_feedback", "feedback_toggles")
+                val feedbackBringIntoViewRequester = remember { BringIntoViewRequester() }
+                LaunchedEffect(isFeedbackHighlighted) {
+                    if (isFeedbackHighlighted) {
+                        kotlinx.coroutines.delay(150)
+                        feedbackBringIntoViewRequester.bringIntoView()
+                    }
+                }
+
+                val shakeToFeedback by viewModel.shakeToFeedbackEnabled.collectAsStateWithLifecycle()
+                val screenshotToFeedback by viewModel.screenshotToFeedbackEnabled.collectAsStateWithLifecycle()
+
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .bringIntoViewRequester(feedbackBringIntoViewRequester),
+                    shape = RoundedCornerShape(16.dp),
+                    color = if (isFeedbackHighlighted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f) else Color.Transparent,
+                    border = if (isFeedbackHighlighted) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
+                ) {
+                    Column {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.setShakeToFeedbackEnabled(!shakeToFeedback) }
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                modifier = Modifier.size(38.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        Icons.Default.Vibration,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.width(14.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Shake to Feedback",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = "Shake your phone anytime to open feedback",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = shakeToFeedback,
+                                onCheckedChange = viewModel::setShakeToFeedbackEnabled
+                            )
+                        }
+
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                        )
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.setScreenshotToFeedbackEnabled(!screenshotToFeedback) }
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                modifier = Modifier.size(38.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        Icons.Default.Screenshot,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.width(14.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Screenshot to Feedback",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = "Taking a screenshot prompts for feedback",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = screenshotToFeedback,
+                                onCheckedChange = viewModel::setScreenshotToFeedbackEnabled
+                            )
+                        }
+                    }
+                }
             }
         }
 
         // Group 2: Data Backup & Reset
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-        ) {
+        FrostedSettingsGroup(title = "Data & Reset") {
             Column(modifier = Modifier.padding(vertical = 4.dp)) {
                 // Export Favorites
                 Row(
@@ -359,12 +519,8 @@ fun HelpSection(
             }
         }
 
-        // Group 3: Permissions & System Diagnostics Card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-        ) {
+        // Group 3: Permissions & System Diagnostics
+        FrostedSettingsGroup(title = "Permissions & System Diagnostics") {
             Column(modifier = Modifier.padding(vertical = 12.dp)) {
                 // Header inside the card
                 Row(
@@ -436,6 +592,12 @@ fun HelpSection(
         FeedbackDialog(
             appVersion = viewModel.appVersion,
             onDismiss = { showFeedbackDialog = false }
+        )
+    }
+
+    if (showAppTourDialog) {
+        com.cleanify.ui.components.AppTourDialog(
+            onDismiss = { showAppTourDialog = false }
         )
     }
 }

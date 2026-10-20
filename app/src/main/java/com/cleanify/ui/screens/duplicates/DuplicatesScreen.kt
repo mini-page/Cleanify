@@ -107,9 +107,10 @@ private val duplicateTints = listOf(
 @Composable
 fun DuplicatesScreen(
     viewModel: DuplicatesViewModel,
-    onNavigateUp: () -> Unit,
-    onNavigateToGroup: (String) -> Unit,
-    onNavigateToSettings: () -> Unit,
+    onNavigateUp: () -> Unit = {},
+    onNavigateToGroup: (String) -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
+    embedded: Boolean = false,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val haptic = LocalHapticFeedback.current
@@ -231,29 +232,31 @@ fun DuplicatesScreen(
     Scaffold(
         topBar = {
             Column {
-                // Primary header
-                TopAppBar(
-                    title = {
-                        Text(
-                            when (uiState.scanState) {
-                                ScanState.Idle -> stringResource(R.string.duplicate_finder_title)
-                                ScanState.Scanning, ScanState.Cancelling -> stringResource(R.string.scanning_phase)
-                                ScanState.Complete -> "Scan Results"
+                if (!embedded) {
+                    // Primary header
+                    TopAppBar(
+                        title = {
+                            Text(
+                                when (uiState.scanState) {
+                                    ScanState.Idle -> stringResource(R.string.duplicate_finder_title)
+                                    ScanState.Scanning, ScanState.Cancelling -> stringResource(R.string.scanning_phase)
+                                    ScanState.Complete -> "Scan Results"
+                                }
+                            )
+                        },
+                        navigationIcon = {
+                            BackNavigationIcon(
+                                onClick = onNavigateUp,
+                                contentDescription = stringResource(R.string.navigate_back)
+                            )
+                        },
+                        actions = {
+                            IconButton(onClick = onNavigateToSettings) {
+                                Icon(Icons.Default.Settings, contentDescription = "Settings")
                             }
-                        )
-                    },
-                    navigationIcon = {
-                        BackNavigationIcon(
-                            onClick = onNavigateUp,
-                            contentDescription = stringResource(R.string.navigate_back)
-                        )
-                    },
-                    actions = {
-                        IconButton(onClick = onNavigateToSettings) {
-                            Icon(Icons.Default.Settings, contentDescription = "Settings")
                         }
-                    }
-                )
+                    )
+                }
                 // Secondary sub-header
                 if (uiState.scanState == ScanState.Complete && uiState.resultGroups.isNotEmpty()) {
                     HorizontalDivider()

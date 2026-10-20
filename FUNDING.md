@@ -2,7 +2,13 @@
 
 Thank you for considering a donation! Your support helps keep Cleanify ad-free and continuously improved.
 
-If you find the app useful, you can support development via the following crypto addresses:
+If you find the app useful, you can support development via UPI or cryptocurrency:
+
+### UPI (Google Pay, PhonePe, Paytm, BHIM)
+- **UPI ID**: `raghavans5711@okicici`
+- **Recipient**: Cleanify Development
+
+### Cryptocurrency
 
 | Currency     | Network     | Address                                                                                           |
 |:-------------|:------------|:--------------------------------------------------------------------------------------------------|

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -37,32 +38,65 @@ fun DuplicatesSection(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        SettingsPickerItem(R.string.similarity_level_title, getSimilarityLevelDescriptionRes(similarityThresholdLevel), SimilarityThresholdLevel.entries, similarityThresholdLevel, { viewModel.setSimilarityThresholdLevel(it) }, ::getSimilarityLevelDisplayName)
-        SettingsPickerItem(R.string.scan_scope_title, getScanScopeDescription(duplicateScanScope, duplicateScanIncludeList, duplicateScanExcludeList), DuplicateScanScope.entries, duplicateScanScope, { viewModel.setDuplicateScanScope(it) }, ::getScanScopeDisplayName)
-        AnimatedVisibility(visible = duplicateScanScope != DuplicateScanScope.ALL_FILES, enter = fadeIn(), exit = fadeOut()) {
-            val title = if (duplicateScanScope == DuplicateScanScope.INCLUDE_LIST) stringResource(R.string.manage_include_list) else stringResource(R.string.manage_exclude_list)
-            val listSize = if (duplicateScanScope == DuplicateScanScope.INCLUDE_LIST) duplicateScanIncludeList.size else duplicateScanExcludeList.size
-            Column {
-                Spacer(Modifier.height(8.dp))
-                OutlinedButton(onClick = { viewModel.showDuplicateScanScopeDialog() }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.manage_list_format, title, listSize)) }
+        FrostedSettingsGroup(title = "Detection & Scope") {
+            SettingsPickerItem(
+                titleRes = R.string.similarity_level_title,
+                descriptionRes = getSimilarityLevelDescriptionRes(similarityThresholdLevel),
+                options = SimilarityThresholdLevel.entries,
+                selectedOption = similarityThresholdLevel,
+                onOptionSelected = { viewModel.setSimilarityThresholdLevel(it) },
+                getDisplayName = { getSimilarityLevelDisplayName(it) },
+                settingId = "similarity_level"
+            )
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 14.dp),
+                thickness = 0.5.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+            )
+            SettingsPickerItem(
+                titleRes = R.string.scan_scope_title,
+                description = getScanScopeDescription(duplicateScanScope, duplicateScanIncludeList, duplicateScanExcludeList),
+                options = DuplicateScanScope.entries,
+                selectedOption = duplicateScanScope,
+                onOptionSelected = { viewModel.setDuplicateScanScope(it) },
+                getDisplayName = { getScanScopeDisplayName(it) },
+                settingId = "duplicate_scan_scope"
+            )
+            AnimatedVisibility(
+                visible = duplicateScanScope != DuplicateScanScope.ALL_FILES,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                val title = if (duplicateScanScope == DuplicateScanScope.INCLUDE_LIST) stringResource(R.string.manage_include_list) else stringResource(R.string.manage_exclude_list)
+                val listSize = if (duplicateScanScope == DuplicateScanScope.INCLUDE_LIST) duplicateScanIncludeList.size else duplicateScanExcludeList.size
+                Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
+                    FilledTonalButton(
+                        onClick = { viewModel.showDuplicateScanScopeDialog() },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.manage_list_format, title, listSize))
+                    }
+                }
             }
         }
-        Spacer(Modifier.height(16.dp))
 
-        HorizontalDivider()
-
-        ToolAboutCard(
-            icon = Icons.Default.ContentCopy,
-            title = "Duplicate Finder",
-            description = "Finds duplicate files across your device using content-based similarity checks. " +
-                "Supports adjustable similarity thresholds, include/exclude folder scoping, " +
-                "and batch management of duplicate groups.",
-            warning = "Review duplicates carefully before deleting. Some files may share the same content " +
-                "but be needed by different apps. Use the preview and selective deletion features."
-        )
+        FrostedSettingsGroup(title = "About Duplicate Finder") {
+            ToolAboutCard(
+                icon = Icons.Default.ContentCopy,
+                title = "Duplicate Finder",
+                description = "Finds duplicate files across your device using content-based similarity checks. " +
+                    "Supports adjustable similarity thresholds, include/exclude folder scoping, " +
+                    "and batch management of duplicate groups.",
+                warning = "Review duplicates carefully before deleting. Some files may share the same content " +
+                    "but be needed by different apps. Use the preview and selective deletion features."
+            )
+        }
 
         Spacer(Modifier.height(16.dp))
     }

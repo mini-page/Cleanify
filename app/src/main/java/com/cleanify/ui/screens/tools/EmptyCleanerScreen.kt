@@ -37,37 +37,48 @@ import java.text.DecimalFormat
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EmptyCleanerScreen(
-    onNavigateUp: () -> Unit,
+    onNavigateUp: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
+    embedded: Boolean = false,
     viewModel: CleanerViewModel = viewModel()
+) {
+    if (embedded) {
+        EmptyCleanerBody(viewModel = viewModel, modifier = Modifier.padding(16.dp))
+    } else {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Empty Cleaner") },
+                    navigationIcon = { BackNavigationIcon(onClick = onNavigateUp) },
+                    actions = {
+                        IconButton(onClick = onNavigateToSettings) {
+                            Icon(Icons.Default.Settings, contentDescription = "Settings")
+                        }
+                    }
+                )
+            }
+        ) { padding ->
+            EmptyCleanerBody(viewModel = viewModel, modifier = Modifier.padding(padding).padding(16.dp))
+        }
+    }
+}
+
+@Composable
+fun EmptyCleanerBody(
+    viewModel: CleanerViewModel,
+    modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val volumes = viewModel.storageVolumes
     var selectedVolumeIndex by remember { mutableIntStateOf(-1) }
     val hasMultipleVolumes = volumes.size > 1
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Empty Cleaner") },
-                navigationIcon = { BackNavigationIcon(onClick = onNavigateUp) },
-                actions = {
-                    IconButton(onClick = onNavigateToSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings")
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            if (!uiState.scanComplete && !uiState.isScanning && !uiState.deleteComplete) {
-                OptionsSection(
+    Column(
+        modifier = modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        if (!uiState.scanComplete && !uiState.isScanning && !uiState.deleteComplete) {
+            OptionsSection(
                     scanEmptyFile = uiState.scanEmptyFile,
                     scanEmptyFolder = uiState.scanEmptyFolder,
                     scanGeneric = uiState.scanGeneric,
@@ -137,7 +148,6 @@ fun EmptyCleanerScreen(
             }
         }
     }
-}
 
 @Composable
 private fun OptionsSection(

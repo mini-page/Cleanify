@@ -11,6 +11,7 @@ import com.cleanify.data.repository.FolderNameLayout
 import com.cleanify.data.repository.FolderSelectionMode
 import com.cleanify.data.repository.SimilarityThresholdLevel
 import com.cleanify.data.repository.SwipeDownAction
+import com.cleanify.data.repository.SwipeUpAction
 import com.cleanify.data.repository.SwipeSensitivity
 import com.cleanify.data.repository.TapAction
 import com.cleanify.ui.theme.AppTheme
@@ -37,6 +38,13 @@ fun getSwipeDownActionDisplayName(a: SwipeDownAction): String = when (a) {
     SwipeDownAction.ADD_TARGET_FOLDER -> stringResource(R.string.add_target_folder)
     SwipeDownAction.SHARE -> stringResource(R.string.share)
     SwipeDownAction.OPEN_WITH -> stringResource(R.string.open_with)
+}
+
+@Composable
+fun getSwipeUpActionDisplayName(a: SwipeUpAction): String = when (a) {
+    SwipeUpAction.NONE -> stringResource(R.string.swipe_up_action_none)
+    SwipeUpAction.SKIP -> stringResource(R.string.swipe_up_action_skip)
+    SwipeUpAction.FAVORITE -> stringResource(R.string.swipe_up_action_favorite)
 }
 
 @Composable

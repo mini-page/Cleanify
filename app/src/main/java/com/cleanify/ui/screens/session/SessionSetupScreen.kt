@@ -20,11 +20,20 @@ package com.cleanify.ui.screens.session
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.cleanify.ui.screens.tools.EmptyCleanerScreen
+import com.cleanify.ui.screens.duplicates.DuplicatesScreen
+import com.cleanify.ui.screens.duplicates.DuplicatesViewModel
+import com.cleanify.ui.screens.contacts.ContactCleanerScreen
+import com.cleanify.ui.screens.storage.StorageAnalysisScreen
+import com.cleanify.ui.screens.recyclebin.RecycleBinScreen
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.border
@@ -38,6 +47,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -58,6 +68,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
+import com.cleanify.ui.components.CleanifySearchBar
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -95,14 +106,26 @@ import java.text.DecimalFormat
 import kotlin.math.log10
 import kotlin.math.pow
 
+enum class HomeTool {
+    FOLDERS,
+    EMPTY_CLEANER,
+    DUPLICATES,
+    CONTACTS,
+    STORAGE,
+    RECYCLE_BIN
+}
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun SessionSetupScreen(
     windowSizeClass: WindowSizeClass,
     onStartSession: (List<String>) -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToSettingsForTool: (String?) -> Unit = { onNavigateToSettings() },
+    onNavigateToCleanerSettings: () -> Unit = {},
     onNavigateToTools: () -> Unit,
     onNavigateToDuplicates: () -> Unit = {},
+    onNavigateToDuplicatesGroup: (String) -> Unit = {},
     onNavigateToEmptyCleaner: () -> Unit = {},
     onNavigateToRecycleBin: () -> Unit = {},
     onNavigateToContactCleaner: () -> Unit = {},
@@ -116,18 +139,31 @@ fun SessionSetupScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
     val searchAutofocusEnabled by viewModel.searchAutofocusEnabled.collectAsStateWithLifecycle()
+    val recycleBinEnabled by viewModel.recycleBinEnabled.collectAsStateWithLifecycle()
+    val resumeSession by viewModel.resumeSession.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val isExpandedScreen = windowSizeClass.widthSizeClass > WindowWidthSizeClass.Compact
     val pullToRefreshState = rememberPullToRefreshState()
     val logTag ="SessionSetupScreen"
     var showSortMenu by remember { mutableStateOf(false) }
     var isSearchExpanded by remember { mutableStateOf(false) }
+    var activeTool by rememberSaveable { mutableStateOf(HomeTool.FOLDERS) }
+
+    LaunchedEffect(recycleBinEnabled) {
+        if (!recycleBinEnabled && activeTool == HomeTool.RECYCLE_BIN) {
+            activeTool = HomeTool.FOLDERS
+        }
+    }
+
+    BackHandler(enabled = activeTool != HomeTool.FOLDERS) {
+        activeTool = HomeTool.FOLDERS
+    }
 
     BackHandler(enabled = uiState.isContextualSelectionMode) {
         viewModel.exitContextualSelectionMode()
     }
 
-    BackHandler(enabled = uiState.searchQuery.isNotEmpty() && !uiState.isContextualSelectionMode) {
+    BackHandler(enabled = uiState.searchQuery.isNotEmpty() && !uiState.isContextualSelectionMode && activeTool == HomeTool.FOLDERS) {
         viewModel.updateSearchQuery("")
     }
 
@@ -243,6 +279,7 @@ fun SessionSetupScreen(
             } else {
                 DefaultTopAppBar(
                     uiState = uiState,
+                    activeTool = activeTool,
                     isSearchExpanded = isSearchExpanded || uiState.searchQuery.isNotEmpty(),
                     onToggleSearch = {
                         isSearchExpanded = !isSearchExpanded
@@ -250,13 +287,23 @@ fun SessionSetupScreen(
                             viewModel.updateSearchQuery("")
                         }
                     },
-                    onNavigateToSettings = onNavigateToSettings
+                    onNavigateToSettings = {
+                        when (activeTool) {
+                            HomeTool.FOLDERS -> onNavigateToSettings()
+                            HomeTool.EMPTY_CLEANER -> onNavigateToCleanerSettings()
+                            HomeTool.DUPLICATES -> onNavigateToSettingsForTool("duplicates")
+                            HomeTool.CONTACTS -> onNavigateToSettingsForTool("contact_cleaner")
+                            HomeTool.STORAGE -> onNavigateToSettings()
+                            HomeTool.RECYCLE_BIN -> onNavigateToSettings()
+                        }
+
+                    }
                 )
             }
         },
         floatingActionButton = {
             AnimatedVisibility(
-                visible = !uiState.isContextualSelectionMode,
+                visible = activeTool == HomeTool.FOLDERS && !uiState.isContextualSelectionMode,
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
@@ -295,8 +342,8 @@ fun SessionSetupScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 FilterChip(
-                    selected = true,
-                    onClick = { /* Home folders view */ },
+                    selected = activeTool == HomeTool.FOLDERS,
+                    onClick = { activeTool = HomeTool.FOLDERS },
                     label = { Text("Folders") },
                     leadingIcon = {
                         Icon(
@@ -314,8 +361,8 @@ fun SessionSetupScreen(
                 )
 
                 FilterChip(
-                    selected = false,
-                    onClick = onNavigateToEmptyCleaner,
+                    selected = activeTool == HomeTool.EMPTY_CLEANER,
+                    onClick = { activeTool = HomeTool.EMPTY_CLEANER },
                     label = { Text("Empty Cleaner") },
                     leadingIcon = {
                         Icon(
@@ -324,12 +371,17 @@ fun SessionSetupScreen(
                             modifier = Modifier.size(18.dp)
                         )
                     },
-                    shape = RoundedCornerShape(20.dp)
+                    shape = RoundedCornerShape(20.dp),
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
                 )
 
                 FilterChip(
-                    selected = false,
-                    onClick = onNavigateToDuplicates,
+                    selected = activeTool == HomeTool.DUPLICATES,
+                    onClick = { activeTool = HomeTool.DUPLICATES },
                     label = { Text("Duplicates") },
                     leadingIcon = {
                         Icon(
@@ -338,12 +390,17 @@ fun SessionSetupScreen(
                             modifier = Modifier.size(18.dp)
                         )
                     },
-                    shape = RoundedCornerShape(20.dp)
+                    shape = RoundedCornerShape(20.dp),
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
                 )
 
                 FilterChip(
-                    selected = false,
-                    onClick = onNavigateToContactCleaner,
+                    selected = activeTool == HomeTool.CONTACTS,
+                    onClick = { activeTool = HomeTool.CONTACTS },
                     label = { Text("Contacts") },
                     leadingIcon = {
                         Icon(
@@ -352,12 +409,17 @@ fun SessionSetupScreen(
                             modifier = Modifier.size(18.dp)
                         )
                     },
-                    shape = RoundedCornerShape(20.dp)
+                    shape = RoundedCornerShape(20.dp),
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
                 )
 
                 FilterChip(
-                    selected = false,
-                    onClick = onNavigateToStorageAnalysis,
+                    selected = activeTool == HomeTool.STORAGE,
+                    onClick = { activeTool = HomeTool.STORAGE },
                     label = { Text("Storage") },
                     leadingIcon = {
                         Icon(
@@ -366,40 +428,48 @@ fun SessionSetupScreen(
                             modifier = Modifier.size(18.dp)
                         )
                     },
-                    shape = RoundedCornerShape(20.dp)
+                    shape = RoundedCornerShape(20.dp),
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
                 )
 
-                FilterChip(
-                    selected = false,
-                    onClick = onNavigateToRecycleBin,
-                    label = { Text("Recycle Bin") },
-                    leadingIcon = {
-                        Icon(
-                            Icons.Default.DeleteSweep,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
+                if (recycleBinEnabled) {
+                    FilterChip(
+                        selected = activeTool == HomeTool.RECYCLE_BIN,
+                        onClick = { activeTool = HomeTool.RECYCLE_BIN },
+                        label = { Text("Recycle Bin") },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.DeleteSweep,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        },
+                        shape = RoundedCornerShape(20.dp),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer
                         )
-                    },
-                    shape = RoundedCornerShape(20.dp)
-                )
-
-                FilterChip(
-                    selected = false,
-                    onClick = onNavigateToTools,
-                    label = { Text("All Tools") },
-                    leadingIcon = {
-                        Icon(
-                            Icons.Default.Build,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    },
-                    shape = RoundedCornerShape(20.dp)
-                )
+                    )
+                }
             }
 
-            // Animated collapsible search bar
-            AnimatedVisibility(
+            AnimatedContent(
+                targetState = activeTool,
+                label = "HomeToolBodyTransition",
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) { tool ->
+                when (tool) {
+                    HomeTool.FOLDERS -> {
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            // Animated collapsible search bar
+                            AnimatedVisibility(
                 visible = isSearchExpanded || uiState.searchQuery.isNotEmpty(),
                 enter = expandVertically() + fadeIn(),
                 exit = shrinkVertically() + fadeOut()
@@ -410,57 +480,13 @@ fun SessionSetupScreen(
                         .padding(horizontal = 16.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(28.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                        contentAlignment = Alignment.CenterStart
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Default.Search,
-                                contentDescription = stringResource(R.string.search_hint),
-                                modifier = Modifier.padding(start = 8.dp, end = 4.dp).size(20.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Box(modifier = Modifier.weight(1f)) {
-                                if (uiState.searchQuery.isEmpty()) {
-                                    Text(
-                                        stringResource(R.string.search_hint),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                }
-                                BasicTextField(
-                                    value = uiState.searchQuery,
-                                    onValueChange = { viewModel.updateSearchQuery(it) },
-                                    modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
-                                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
-                                    singleLine = true,
-                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                                    keyboardActions = KeyboardActions(
-                                        onSearch = {
-                                            keyboardController?.hide()
-                                            focusManager.clearFocus()
-                                        }
-                                    )
-                                )
-                            }
-                            if (uiState.searchQuery.isNotEmpty()) {
-                                IconButton(
-                                    onClick = { viewModel.updateSearchQuery("") },
-                                    modifier = Modifier.size(32.dp)
-                                ) {
-                                    Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.clear_search), modifier = Modifier.size(18.dp))
-                                }
-                            }
-                        }
-                    }
+                    CleanifySearchBar(
+                        query = uiState.searchQuery,
+                        onQueryChange = { viewModel.updateSearchQuery(it) },
+                        placeholder = stringResource(R.string.search_hint),
+                        focusRequester = focusRequester,
+                        modifier = Modifier.weight(1f)
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                     Box {
                         TooltipBox(
@@ -622,6 +648,16 @@ fun SessionSetupScreen(
                                 ),
                                 verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
+                                val currentResumeSession = resumeSession
+                                if (currentResumeSession != null) {
+                                    item(key = "resume_session_card") {
+                                        ResumeSessionCard(
+                                            sessionInfo = currentResumeSession,
+                                            onResume = { onStartSession(currentResumeSession.bucketIds) },
+                                            onDismiss = viewModel::clearResumeSession
+                                        )
+                                    }
+                                }
                                 uiState.folderCategories.forEach { category ->
                                     if (category.folders.isNotEmpty()) {
                                         item {
@@ -692,6 +728,48 @@ fun SessionSetupScreen(
             }
         }
     }
+    HomeTool.EMPTY_CLEANER -> {
+        EmptyCleanerScreen(
+            embedded = true,
+            onNavigateToSettings = onNavigateToCleanerSettings
+        )
+    }
+    HomeTool.DUPLICATES -> {
+        DuplicatesScreen(
+            viewModel = hiltViewModel<DuplicatesViewModel>(),
+            onNavigateUp = { activeTool = HomeTool.FOLDERS },
+            onNavigateToGroup = onNavigateToDuplicatesGroup,
+            onNavigateToSettings = { onNavigateToSettingsForTool("duplicates") },
+            embedded = true
+        )
+    }
+    HomeTool.CONTACTS -> {
+        ContactCleanerScreen(
+            onNavigateUp = { activeTool = HomeTool.FOLDERS },
+            onNavigateToSettings = { onNavigateToSettingsForTool("contact_cleaner") },
+            embedded = true
+        )
+    }
+    HomeTool.STORAGE -> {
+        StorageAnalysisScreen(
+            onNavigateUp = { activeTool = HomeTool.FOLDERS },
+            onNavigateToEmptyCleaner = { activeTool = HomeTool.EMPTY_CLEANER },
+            onNavigateToDuplicates = { activeTool = HomeTool.DUPLICATES },
+            onNavigateToRecycleBin = { activeTool = HomeTool.RECYCLE_BIN },
+            onNavigateToContactCleaner = { activeTool = HomeTool.CONTACTS },
+            embedded = true
+        )
+    }
+    HomeTool.RECYCLE_BIN -> {
+        RecycleBinScreen(
+            onNavigateUp = { activeTool = HomeTool.FOLDERS },
+            embedded = true
+        )
+    }
+}
+            }
+        }
+    }
 }
 
 
@@ -699,37 +777,72 @@ fun SessionSetupScreen(
 @Composable
 private fun DefaultTopAppBar(
     uiState: SessionSetupUiState,
+    activeTool: HomeTool,
     isSearchExpanded: Boolean,
     onToggleSearch: () -> Unit,
     onNavigateToSettings: () -> Unit
 ) {
     TopAppBar(
-        title = { Text(stringResource(R.string.app_name)) },
-        actions = {
-            Surface(
-                shape = MaterialTheme.shapes.extraLarge,
-                color = MaterialTheme.colorScheme.surfaceVariant
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    TooltipBox(
-                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
-                        tooltip = { PlainTooltip { Text(if (isSearchExpanded) "Close search" else stringResource(R.string.search_hint)) } },
-                        state = rememberTooltipState()
-                    ) {
-                        IconButton(onClick = onToggleSearch) {
-                            Icon(
-                                if (isSearchExpanded) Icons.Default.SearchOff else Icons.Default.Search,
-                                contentDescription = stringResource(R.string.search_hint),
-                                tint = if (isSearchExpanded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                androidx.compose.foundation.Image(
+                    painter = androidx.compose.ui.res.painterResource(R.drawable.app_logo),
+                    contentDescription = null,
+                    modifier = Modifier.size(32.dp),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                )
+                Text(
+                    text = stringResource(R.string.app_name),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        actions = {
+            if (activeTool == HomeTool.FOLDERS) {
+                Surface(
+                    shape = MaterialTheme.shapes.extraLarge,
+                    color = MaterialTheme.colorScheme.surfaceVariant
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TooltipBox(
+                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
+                            tooltip = { PlainTooltip { Text(if (isSearchExpanded) "Close search" else stringResource(R.string.search_hint)) } },
+                            state = rememberTooltipState()
+                        ) {
+                            IconButton(onClick = onToggleSearch) {
+                                Icon(
+                                    if (isSearchExpanded) Icons.Default.SearchOff else Icons.Default.Search,
+                                    contentDescription = stringResource(R.string.search_hint),
+                                    tint = if (isSearchExpanded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Box(
+                            modifier = Modifier
+                                .width(1.dp)
+                                .height(20.dp)
+                                .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+                        )
+                        TooltipBox(
+                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
+                            tooltip = { PlainTooltip { Text(stringResource(R.string.settings)) } },
+                            state = rememberTooltipState()
+                        ) {
+                            IconButton(onClick = onNavigateToSettings) {
+                                Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.settings))
+                            }
                         }
                     }
-                    Box(
-                        modifier = Modifier
-                            .width(1.dp)
-                            .height(20.dp)
-                            .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-                    )
+                }
+            } else {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surfaceVariant
+                ) {
                     TooltipBox(
                         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
                         tooltip = { PlainTooltip { Text(stringResource(R.string.settings)) } },
@@ -1035,4 +1148,79 @@ private fun SortMenuItem(
             }
         }
     )
+}
+
+@Composable
+private fun ResumeSessionCard(
+    sessionInfo: com.cleanify.data.repository.ResumeSessionInfo,
+    onResume: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(42.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.resume_swiping_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = stringResource(R.string.resume_swiping_desc, sessionInfo.folderName, sessionInfo.remainingCount),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Dismiss",
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(Modifier.width(4.dp))
+            Button(
+                onClick = onResume,
+                shape = RoundedCornerShape(16.dp),
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.resume_action),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+    }
 }

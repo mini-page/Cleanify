@@ -2,6 +2,7 @@ package com.cleanify.ui.screens.settings
 
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -9,15 +10,22 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
+import androidx.core.graphics.drawable.toBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -54,6 +62,13 @@ import com.cleanify.ui.components.AppDialog
 import com.cleanify.ui.components.BackNavigationIcon
 import com.cleanify.ui.components.FolderSearchDialog
 import com.cleanify.ui.screens.settings.sections.*
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextOverflow
+import com.cleanify.ui.components.CleanifySearchBar
 import com.cleanify.util.Formatters
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
@@ -69,9 +84,7 @@ private data class SettingsCategory(
 private val categories = listOf(
     SettingsCategory("appearance", R.string.appearance_section_title, R.string.appearance_section_desc, Icons.Default.Palette),
     SettingsCategory("sorting", R.string.gestures_section_title, R.string.gestures_section_desc, Icons.AutoMirrored.Filled.Sort),
-    SettingsCategory("behavior", R.string.behavior_section_title, R.string.behavior_section_desc, Icons.Default.TouchApp),
     SettingsCategory("duplicates", R.string.duplicate_finder_section_title, R.string.duplicate_finder_section_desc, Icons.Default.ContentCopy),
-    SettingsCategory("media_storage", R.string.media_storage_section_title, R.string.media_storage_section_desc, Icons.Default.Storage),
     SettingsCategory("cleaner", R.string.cleaner_section_title, R.string.cleaner_section_desc, Icons.Default.CleaningServices),
     SettingsCategory("contact_cleaner", R.string.contact_cleaner_section_title, R.string.contact_cleaner_section_desc, Icons.Default.Contacts),
     SettingsCategory("help", R.string.help_support_section_title, R.string.help_support_section_desc, Icons.AutoMirrored.Filled.HelpOutline),
@@ -85,6 +98,7 @@ fun SettingsScreen(
     onNavigateToLibraries: () -> Unit,
     onNavigateToCleanerSettings: () -> Unit = {},
     initialPage: String? = null,
+    initialHighlight: String? = null,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -97,23 +111,50 @@ fun SettingsScreen(
     val context = LocalContext.current
     val isGestureMode = com.cleanify.util.rememberIsUsingGestureNavigation()
 
-    var currentPage by remember { mutableStateOf<String?>(initialPage) }
+    val mainMenuScrollState = rememberSaveable(saver = ScrollState.Saver) { ScrollState(initial = 0) }
+    var targetHighlightItem by remember { mutableStateOf<String?>(initialHighlight) }
+    var currentPage by rememberSaveable { mutableStateOf<String?>(initialPage) }
 
     LaunchedEffect(initialPage) {
-        if (initialPage != null) {
+        if (initialPage == "cleaner") {
+            onNavigateToCleanerSettings()
+            onNavigateUp()
+        } else if (initialPage != null) {
             currentPage = initialPage
         }
     }
 
-    BackHandler(enabled = currentPage != null) {
+    LaunchedEffect(initialHighlight) {
+        if (initialHighlight != null) {
+            targetHighlightItem = initialHighlight
+            kotlinx.coroutines.delay(2500)
+            targetHighlightItem = null
+        }
+    }
+
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusRequester = remember { FocusRequester() }
+
+    BackHandler(enabled = uiState.isSearchActive || uiState.searchQuery.isNotEmpty()) {
+        viewModel.toggleSearch()
+        keyboardController?.hide()
+    }
+
+    BackHandler(enabled = currentPage != null && !uiState.isSearchActive && uiState.searchQuery.isEmpty()) {
         if (initialPage != null) {
             onNavigateUp()
         } else {
             currentPage = null
         }
     }
-    val keyboardController = LocalSoftwareKeyboardController.current
-    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(uiState.isSearchActive) {
+        if (uiState.isSearchActive) {
+            try {
+                focusRequester.requestFocus()
+            } catch (_: Exception) {}
+        }
+    }
 
     LaunchedEffect(uiState.toastMessage) {
         uiState.toastMessage?.let { message ->
@@ -147,113 +188,140 @@ fun SettingsScreen(
     }
 
     Scaffold(
-        topBar = {
+                topBar = {
             TopAppBar(
                 title = {
-                    if (currentPage != null) {
-                        Text(pageTitle ?: "")
-                    } else {
-                        Box(modifier = Modifier.fillMaxWidth()) {
-                            AnimatedVisibility(
-                                visible = !uiState.isSearchActive,
-                                exit = fadeOut(animationSpec = tween(200))
-                            ) {
-                                Text(stringResource(R.string.settings))
-                            }
-                            AnimatedVisibility(
-                                visible = uiState.isSearchActive,
-                                enter = slideInHorizontally(animationSpec = tween(350)) { -it } + fadeIn(animationSpec = tween(350)),
-                                exit = slideOutHorizontally(animationSpec = tween(200)) { -it } + fadeOut(animationSpec = tween(200))
-                            ) {
-                                Box(
-                                    modifier = Modifier.fillMaxWidth().heightIn(max = 40.dp)
-                                        .clip(RoundedCornerShape(24.dp))
-                                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                                        .padding(horizontal = 16.dp, vertical = 7.dp),
-                                    contentAlignment = Alignment.CenterStart
-                                ) {
-                                    if (uiState.searchQuery.isEmpty()) {
-                                        Text(
-                                            stringResource(R.string.search_settings_placeholder),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    BasicTextField(
-                                        value = uiState.searchQuery,
-                                        onValueChange = viewModel::onSearchQueryChanged,
-                                        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
-                                        textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
-                                        singleLine = true,
-                                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                                        keyboardActions = KeyboardActions(onSearch = { keyboardController?.hide() })
-                                    )
-                                }
-                            }
-                        }
-                    }
+                    Text(if (currentPage != null) (pageTitle ?: "") else stringResource(R.string.settings))
                 },
                 navigationIcon = {
-                    BackNavigationIcon(onClick = { if (currentPage != null) { if (initialPage != null) onNavigateUp() else currentPage = null } else onNavigateUp() }, contentDescription = stringResource(R.string.navigate_back))
+                    BackNavigationIcon(
+                        onClick = { if (currentPage != null) { if (initialPage != null) onNavigateUp() else currentPage = null } else onNavigateUp() },
+                        contentDescription = stringResource(R.string.navigate_back)
+                    )
                 },
                 actions = {
-                    if (currentPage == null) {
-                        IconButton(onClick = viewModel::toggleSearch) {
-                            Icon(
-                                imageVector = if (uiState.isSearchActive) Icons.Default.Clear else Icons.Default.Search,
-                                contentDescription = if (uiState.isSearchActive) stringResource(R.string.close_search) else stringResource(R.string.search_settings_icon_desc)
-                            )
-                        }
+                    val isSearching = uiState.isSearchActive || uiState.searchQuery.isNotEmpty()
+                    IconButton(onClick = viewModel::toggleSearch) {
+                        Icon(
+                            imageVector = if (isSearching) Icons.Default.SearchOff else Icons.Default.Search,
+                            contentDescription = if (isSearching) stringResource(R.string.close_search) else stringResource(R.string.search_settings_icon_desc),
+                            tint = if (isSearching) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
                     }
                 }
             )
         },
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
-    ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-            AnimatedContent(
-                targetState = currentPage,
-                transitionSpec = {
-                    if (targetState != null && initialState == null) {
-                        (slideInHorizontally(animationSpec = tween(220)) { width -> width / 4 } + fadeIn(animationSpec = tween(220)))
-                            .togetherWith(slideOutHorizontally(animationSpec = tween(180)) { width -> -width / 4 } + fadeOut(animationSpec = tween(180)))
-                    } else if (targetState == null && initialState != null) {
-                        (slideInHorizontally(animationSpec = tween(220)) { width -> -width / 4 } + fadeIn(animationSpec = tween(220)))
-                            .togetherWith(slideOutHorizontally(animationSpec = tween(180)) { width -> width / 4 } + fadeOut(animationSpec = tween(180)))
+        ) { paddingValues ->
+        Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+            AnimatedVisibility(
+                visible = uiState.isSearchActive || uiState.searchQuery.isNotEmpty(),
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                CleanifySearchBar(
+                    query = uiState.searchQuery,
+                    onQueryChange = viewModel::onSearchQueryChanged,
+                    placeholder = stringResource(R.string.search_settings_placeholder),
+                    height = 48.dp,
+                    focusRequester = focusRequester,
+                    onSearchAction = { keyboardController?.hide() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                )
+            }
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                CompositionLocalProvider(LocalHighlightedSettingId provides targetHighlightItem) {
+                    if (debouncedSearchQuery.isNotBlank()) {
+                        SettingsMainMenu(
+                            categories = categories,
+                            searchQuery = debouncedSearchQuery,
+                            viewModel = viewModel,
+                            onCategoryClick = { catId ->
+                                keyboardController?.hide()
+                                viewModel.toggleSearch()
+                                currentPage = catId
+                            },
+                            onCleanerClick = {
+                                keyboardController?.hide()
+                                viewModel.toggleSearch()
+                                onNavigateToCleanerSettings()
+                            },
+                            onSettingClick = { item ->
+                                keyboardController?.hide()
+                                viewModel.toggleSearch()
+                                if (item.sectionId == "cleaner") {
+                                    onNavigateToCleanerSettings()
+                                } else {
+                                    currentPage = item.sectionId
+                                    targetHighlightItem = item.id
+                                    scope.launch {
+                                        kotlinx.coroutines.delay(2500)
+                                        targetHighlightItem = null
+                                    }
+                                }
+                            },
+                            scrollState = rememberScrollState()
+                        )
                     } else {
-                        fadeIn(animationSpec = tween(200)).togetherWith(fadeOut(animationSpec = tween(200)))
+                        AnimatedContent(
+                            targetState = currentPage,
+                            transitionSpec = {
+                                if (targetState != null && initialState == null) {
+                                    (slideInHorizontally(animationSpec = tween(220)) { width -> width / 4 } + fadeIn(animationSpec = tween(220)))
+                                        .togetherWith(slideOutHorizontally(animationSpec = tween(180)) { width -> -width / 4 } + fadeOut(animationSpec = tween(180)))
+                                } else if (targetState == null && initialState != null) {
+                                    (slideInHorizontally(animationSpec = tween(220)) { width -> -width / 4 } + fadeIn(animationSpec = tween(220)))
+                                        .togetherWith(slideOutHorizontally(animationSpec = tween(180)) { width -> width / 4 } + fadeOut(animationSpec = tween(180)))
+                                } else {
+                                    fadeIn(animationSpec = tween(200)).togetherWith(fadeOut(animationSpec = tween(200)))
+                                }
+                            },
+                            label = "SettingsPageTransition"
+                        ) { page ->
+                            when (page) {
+                                "appearance" -> AppearanceSection(
+                                    viewModel = viewModel,
+                                    onNavigateUp = { if (initialPage != null) onNavigateUp() else currentPage = null }
+                                )
+                                "sorting", "behavior", "media_storage" -> SortingSection(viewModel = viewModel)
+                                "duplicates" -> DuplicatesSection(viewModel = viewModel)
+                                "contact_cleaner" -> ContactCleanerSection(viewModel = viewModel)
+                                "help" -> HelpSection(
+                                    viewModel = viewModel,
+                                    exportFavoritesLauncher = exportFavoritesLauncher,
+                                    importFavoritesLauncher = importFavoritesLauncher,
+                                    defaultExportFilename = defaultExportFilename
+                                )
+                                "about" -> AboutSection(
+                                    viewModel = viewModel,
+                                    onNavigateToLibraries = onNavigateToLibraries,
+                                    onShowFunding = { showFundingDialog = true }
+                                )
+                                else -> SettingsMainMenu(
+                                    categories = categories,
+                                    searchQuery = "",
+                                    viewModel = viewModel,
+                                    onCategoryClick = { currentPage = it },
+                                    onCleanerClick = onNavigateToCleanerSettings,
+                                    onSettingClick = { item ->
+                                        if (item.sectionId == "cleaner") {
+                                            onNavigateToCleanerSettings()
+                                        } else {
+                                            currentPage = item.sectionId
+                                            targetHighlightItem = item.id
+                                            scope.launch {
+                                                kotlinx.coroutines.delay(2500)
+                                                targetHighlightItem = null
+                                            }
+                                        }
+                                    },
+                                    scrollState = mainMenuScrollState
+                                )
+                            }
+                        }
                     }
-                },
-                label = "SettingsPageTransition"
-            ) { page ->
-                when (page) {
-                    null -> SettingsMainMenu(
-                        categories = categories,
-                        searchQuery = debouncedSearchQuery,
-                        viewModel = viewModel,
-                        onCategoryClick = { currentPage = it },
-                        onCleanerClick = onNavigateToCleanerSettings
-                    )
-                    "appearance" -> AppearanceSection(
-                        viewModel = viewModel,
-                        onNavigateUp = { if (initialPage != null) onNavigateUp() else currentPage = null }
-                    )
-                    "sorting" -> SortingSection(viewModel = viewModel)
-                    "behavior" -> BehaviorSection(viewModel = viewModel)
-                    "duplicates" -> DuplicatesSection(viewModel = viewModel)
-                    "media_storage" -> MediaStorageSection(viewModel = viewModel)
-                    "contact_cleaner" -> ContactCleanerSection(viewModel = viewModel)
-                    "help" -> HelpSection(
-                        viewModel = viewModel,
-                        exportFavoritesLauncher = exportFavoritesLauncher,
-                        importFavoritesLauncher = importFavoritesLauncher,
-                        defaultExportFilename = defaultExportFilename
-                    )
-                    "about" -> AboutSection(
-                        viewModel = viewModel,
-                        onNavigateToLibraries = onNavigateToLibraries,
-                        onShowFunding = { showFundingDialog = true }
-                    )
                 }
             }
         }
@@ -437,58 +505,259 @@ private fun SettingsMainMenu(
     searchQuery: String,
     viewModel: SettingsViewModel,
     onCategoryClick: (String) -> Unit,
-    onCleanerClick: () -> Unit = {}
+    onCleanerClick: () -> Unit = {},
+    onSettingClick: (SearchableSettingItem) -> Unit,
+    scrollState: androidx.compose.foundation.ScrollState = rememberScrollState()
 ) {
     val resources = LocalResources.current
-    val filteredCategories = if (searchQuery.isBlank()) {
-        categories
-    } else {
-        categories.filter { cat ->
-            val title = resources.getString(cat.titleRes)
-            val desc = resources.getString(cat.descRes)
-            title.contains(searchQuery, ignoreCase = true) ||
-                desc.contains(searchQuery, ignoreCase = true)
+    val isSearching = searchQuery.isNotBlank()
+
+    val filteredSettings = remember(searchQuery) {
+        if (!isSearching) emptyList() else {
+            allSearchableSettings.filter { item ->
+                val title = resources.getString(item.titleRes)
+                val desc = item.descRes?.let { resources.getString(it) } ?: item.customDesc ?: ""
+                title.contains(searchQuery, ignoreCase = true) ||
+                    desc.contains(searchQuery, ignoreCase = true)
+            }
+        }
+    }
+
+    val filteredCategories = remember(searchQuery) {
+        if (!isSearching) categories else {
+            categories.filter { cat ->
+                val title = resources.getString(cat.titleRes)
+                val desc = resources.getString(cat.descRes)
+                title.contains(searchQuery, ignoreCase = true) ||
+                    desc.contains(searchQuery, ignoreCase = true)
+            }
         }
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp)
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        if (filteredCategories.isEmpty()) {
+        if (isSearching && filteredSettings.isEmpty() && filteredCategories.isEmpty()) {
             Text(
                 text = stringResource(R.string.no_settings_found, searchQuery),
-                modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 32.dp),
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            return
+            return@Column
         }
 
-        filteredCategories.forEach { category ->
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp).clickable {
-                    if (category.id == "cleaner") onCleanerClick() else onCategoryClick(category.id)
-                },
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
-            ) {
-                Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier.size(52.dp).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.primaryContainer),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(imageVector = category.icon, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(26.dp))
+        // 1. Search Results
+        if (isSearching) {
+            if (filteredSettings.isNotEmpty()) {
+                FrostedSettingsGroup(title = "Settings (${filteredSettings.size})") {
+                    filteredSettings.forEachIndexed { index, setting ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onSettingClick(setting) }
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = setting.icon,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                            Spacer(Modifier.width(14.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "${stringResource(setting.sectionTitleRes)} ›",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Spacer(Modifier.height(1.dp))
+                                Text(
+                                    text = stringResource(setting.titleRes),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                val desc = setting.descRes?.let { stringResource(it) } ?: setting.customDesc
+                                if (!desc.isNullOrBlank()) {
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(
+                                        text = desc,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                            )
+                        }
+                        if (index < filteredSettings.lastIndex) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 14.dp),
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+                            )
+                        }
                     }
-                    Spacer(Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(text = stringResource(category.titleRes), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                        Spacer(Modifier.height(2.dp))
-                        Text(text = stringResource(category.descRes), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+
+            if (filteredCategories.isNotEmpty()) {
+                FrostedSettingsGroup(title = "Sections (${filteredCategories.size})") {
+                    filteredCategories.forEachIndexed { index, category ->
+                        SettingsCategoryRow(
+                            category = category,
+                            onClick = {
+                                if (category.id == "cleaner") onCleanerClick() else onCategoryClick(category.id)
+                            }
+                        )
+                        if (index < filteredCategories.lastIndex) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 14.dp),
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+                            )
+                        }
                     }
-                    Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+                }
+            }
+        } else {
+            // 2. Normal grouped categories
+            val preferenceCategories = remember(filteredCategories) {
+                filteredCategories.filter { it.id in listOf("appearance", "sorting") }
+            }
+            val toolCategories = remember(filteredCategories) {
+                filteredCategories.filter { it.id in listOf("duplicates", "cleaner", "contact_cleaner") }
+            }
+            val supportCategories = remember(filteredCategories) {
+                filteredCategories.filter { it.id in listOf("help", "about") }
+            }
+
+            if (preferenceCategories.isNotEmpty()) {
+                FrostedSettingsGroup(title = "Preferences") {
+                    preferenceCategories.forEachIndexed { index, category ->
+                        SettingsCategoryRow(
+                            category = category,
+                            onClick = { onCategoryClick(category.id) }
+                        )
+                        if (index < preferenceCategories.lastIndex) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 14.dp),
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (toolCategories.isNotEmpty()) {
+                FrostedSettingsGroup(title = "Tools") {
+                    toolCategories.forEachIndexed { index, category ->
+                        SettingsCategoryRow(
+                            category = category,
+                            onClick = {
+                                if (category.id == "cleaner") onCleanerClick() else onCategoryClick(category.id)
+                            }
+                        )
+                        if (index < toolCategories.lastIndex) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 14.dp),
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (supportCategories.isNotEmpty()) {
+                FrostedSettingsGroup(title = "Support & About") {
+                    supportCategories.forEachIndexed { index, category ->
+                        SettingsCategoryRow(
+                            category = category,
+                            onClick = { onCategoryClick(category.id) }
+                        )
+                        if (index < supportCategories.lastIndex) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 14.dp),
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+                            )
+                        }
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SettingsCategoryRow(
+    category: SettingsCategory,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(46.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = category.icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(category.titleRes),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = stringResource(category.descRes),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+        )
     }
 }
 
@@ -534,48 +803,226 @@ private fun FundingDialog(onDismiss: () -> Unit) {
     val clipboard = androidx.compose.ui.platform.LocalClipboard.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val upiId = "raghavans5711@okicici"
 
-    data class Opt(val name: String, val network: String, val address: String)
+    // Detect installed UPI payment apps
+    val installedUpiApps = remember {
+        val upiIntent = Intent(Intent.ACTION_VIEW, Uri.parse("upi://pay"))
+        try {
+            val pm = context.packageManager
+            pm.queryIntentActivities(upiIntent, PackageManager.MATCH_DEFAULT_ONLY).mapNotNull { resolveInfo ->
+                val pkg = resolveInfo.activityInfo.packageName
+                val name = resolveInfo.loadLabel(pm).toString()
+                val iconBitmap = try {
+                    val drawable = resolveInfo.loadIcon(pm)
+                    drawable.toBitmap(width = 96, height = 96).asImageBitmap()
+                } catch (e: Exception) {
+                    null
+                }
+                InstalledPaymentApp(name = name, packageName = pkg, iconBitmap = iconBitmap)
+            }.distinctBy { it.packageName }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
 
-    val addressCopiedMsg = stringResource(R.string.address_copied)
-    val options = remember {
-        listOf(
-            Opt("Bitcoin", "BTC", "bc1qmzse7fuatzjws5a0n4evm9pjnj9sqmy0y6epu6"),
-            Opt("Ethereum", "ETH (ERC20)", "0xb4e7a72a06b606fecb1deb965573da07fcd86107"),
-            Opt("Solana", "SOL", "4sXJt424WjL3zcazC7mAccZAzeEpNreg2cpQQ8r7wMWr"),
-            Opt("BNB", "BSC (BEP20)", "0xb4e7a72a06b606fecb1deb965573da07fcd86107"),
-            Opt("USDT", "ETH/BSC", "0xb4e7a72a06b606fecb1deb965573da07fcd86107"),
-            Opt("XRP", "Ripple", "rp6jyrwvSrkKghyqXznZZuqM9TedrKiKEb"),
-            Opt("Litecoin", "LTC", "ltc1q8ey9y66frmlqg800m266vucjjux2672f6v2ffl"),
-            Opt("Tron", "TRC20", "TFSu7BfSjaiV1CioQgLaVAJsmNtPq4Cv1J"),
-            Opt("Monero", "XMR", "42Bh2WEy8LG6D4US4wCJ9aRKtuaKWgUM3Y35xBeCDgmvhWYhoJG9MbPPkW7o3GAGF1MNskK3jwXcGjByFDNrugZhEkqBrMT")
-        )
+    val launchUpi: (String?) -> Unit = { targetPackage ->
+        val uri = Uri.parse("upi://pay?pa=$upiId&pn=Raghav%20S&mc=&tid=&tr=&tn=Support%20Cleanify%20Development&cu=INR")
+        val intent = Intent(Intent.ACTION_VIEW, uri)
+        if (targetPackage != null) {
+            intent.setPackage(targetPackage)
+        }
+        try {
+            context.startActivity(if (targetPackage != null) intent else Intent.createChooser(intent, "Pay via UPI"))
+        } catch (e: Exception) {
+            android.widget.Toast.makeText(context, "Could not open UPI app: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+        }
     }
 
     AppDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.funding_dialog_title)) },
-        text = {
-            Column {
-                Text(stringResource(R.string.funding_dialog_body), style = MaterialTheme.typography.bodyMedium)
-                Spacer(Modifier.height(16.dp))
-                LazyColumn(Modifier.heightIn(max = 300.dp)) {
-                    items(options) { opt ->
-                        Row(Modifier.fillMaxWidth().clickable { scope.launch { clipboard.setClipEntry(androidx.compose.ui.platform.ClipEntry(android.content.ClipData.newPlainText("label", opt.address))); android.widget.Toast.makeText(context, addressCopiedMsg, android.widget.Toast.LENGTH_SHORT).show() } }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text(opt.name, style = MaterialTheme.typography.titleSmall)
-                                Text(opt.network, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text(opt.address, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                            }
-                            Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.copy_address_icon_desc), tint = MaterialTheme.colorScheme.primary)
-                        }
-                        HorizontalDivider()
-                    }
-                }
-                Spacer(Modifier.height(16.dp))
-                Text(stringResource(R.string.funding_dialog_footer), style = MaterialTheme.typography.bodySmall)
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Favorite, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.funding_dialog_title), fontWeight = FontWeight.Bold)
             }
         },
-        buttons = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) } }
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    stringResource(R.string.funding_dialog_body),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(14.dp))
+
+                // Compact QR Code Container (without outer padding or header text)
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = androidx.compose.ui.graphics.Color.White,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                    shadowElevation = 2.dp
+                ) {
+                    Image(
+                        painter = androidx.compose.ui.res.painterResource(R.drawable.payment_qr),
+                        contentDescription = "Payment QR",
+                        modifier = Modifier
+                            .size(190.dp)
+                            .clip(RoundedCornerShape(16.dp)),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                    )
+                }
+
+                Spacer(Modifier.height(14.dp))
+
+                // Understated Name & UPI ID Container with Dedicated Copy Button
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Raghav S",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                text = upiId,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        Button(
+                            onClick = {
+                                val cm = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                cm.setPrimaryClip(android.content.ClipData.newPlainText("UPI ID", upiId))
+                                android.widget.Toast.makeText(context, "UPI ID copied: $upiId", android.widget.Toast.LENGTH_SHORT).show()
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        ) {
+                            Icon(
+                                Icons.Default.ContentCopy,
+                                contentDescription = null,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text("Copy", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+
+                // Installed Payment Apps as clean consistent rows
+                if (installedUpiApps.isNotEmpty()) {
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        text = "Pay with Installed App",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp)
+                    )
+                    Spacer(Modifier.height(6.dp))
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        installedUpiApps.forEach { app ->
+                            Surface(
+                                onClick = { launchUpi(app.packageName) },
+                                shape = RoundedCornerShape(14.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    if (app.iconBitmap != null) {
+                                        Image(
+                                            bitmap = app.iconBitmap,
+                                            contentDescription = app.name,
+                                            modifier = Modifier
+                                                .size(36.dp)
+                                                .clip(RoundedCornerShape(8.dp))
+                                        )
+                                    } else {
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = MaterialTheme.colorScheme.secondaryContainer,
+                                            modifier = Modifier.size(36.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    Icons.Default.Payment,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(20.dp),
+                                                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                                )
+                                            }
+                                        }
+                                    }
+                                    Spacer(Modifier.width(14.dp))
+                                    Text(
+                                        text = app.name,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                        contentDescription = "Open ${app.name}",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(14.dp))
+
+                Button(
+                    onClick = { launchUpi(null) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Icon(Icons.Default.Payment, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Open UPI App")
+                }
+            }
+        },
+        buttons = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) }
+        }
     )
 }

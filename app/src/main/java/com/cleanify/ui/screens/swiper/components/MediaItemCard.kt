@@ -94,6 +94,7 @@ import com.cleanify.R
 import com.cleanify.data.model.FileCategory
 import com.cleanify.data.model.MediaItem
 import com.cleanify.data.repository.SwipeDownAction
+import com.cleanify.data.repository.SwipeUpAction
 import com.cleanify.data.repository.SwipeSensitivity
 import com.cleanify.ui.theme.LocalReducedAnimations
 import com.cleanify.ui.screens.swiper.components.AudioPlayerCard
@@ -115,12 +116,14 @@ internal fun MediaItemCard(
     onSwipeLeft: () -> Unit,
     onSwipeRight: () -> Unit,
     onSwipeDown: () -> Unit,
+    onSwipeUp: () -> Unit = {},
     onLongPress: (offset: DpOffset) -> Unit,
     onTap: (MediaItem) -> Unit,
     modifier: Modifier = Modifier,
     invertSwipe: Boolean = false,
     sensitivity: SwipeSensitivity,
     swipeDownAction: SwipeDownAction,
+    swipeUpAction: SwipeUpAction = SwipeUpAction.NONE,
     videoPlaybackSpeed: Float,
     onSetVideoPlaybackSpeed: (Float) -> Unit,
     isVideoMuted: Boolean,
@@ -290,6 +293,13 @@ internal fun MediaItemCard(
                                         swipeOffsetY.animateTo(cardHeight.toPx() * 1.5f, flyAwaySpec)
                                     }
                                     onSwipeDown()
+                                }
+                                swipeUpAction != SwipeUpAction.NONE && (swipeOffsetY.value < -swipeDownThreshold || (isFlingY && vy < 0)) -> {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    swipeScope.launch {
+                                        swipeOffsetY.animateTo(-cardHeight.toPx() * 1.5f, flyAwaySpec)
+                                    }
+                                    onSwipeUp()
                                 }
                                 else -> {
                                     swipeScope.launch {

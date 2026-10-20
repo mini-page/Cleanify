@@ -79,9 +79,12 @@ sealed class Screen(val route: String) {
             return "swiper/${URLEncoder.encode(encodedPaths, StandardCharsets.UTF_8.toString())}"
         }
     }
-    object Settings : Screen("settings?page={page}") {
-        fun createRoute(page: String? = null): String {
-            return if (page != null) "settings?page=$page" else "settings"
+    object Settings : Screen("settings?page={page}&highlight={highlight}") {
+        fun createRoute(page: String? = null, highlight: String? = null): String {
+            val params = mutableListOf<String>()
+            if (page != null) params.add("page=$page")
+            if (highlight != null) params.add("highlight=$highlight")
+            return if (params.isNotEmpty()) "settings?${params.joinToString("&")}" else "settings"
         }
     }
     object Libraries: Screen("libraries")
@@ -153,8 +156,19 @@ fun AppNavigation(
                     navController.navigate(Screen.Swiper.createRoute(bucketIds))
                 },
                 onNavigateToSettings = { navController.navigate(Screen.Settings.createRoute()) },
+                onNavigateToSettingsForTool = { page ->
+                    if (page == "cleaner") {
+                        navController.navigate(Screen.CleanerSettings.route)
+                    } else if (!page.isNullOrBlank()) {
+                        navController.navigate(Screen.Settings.createRoute(page))
+                    } else {
+                        navController.navigate(Screen.Settings.createRoute())
+                    }
+                },
+                onNavigateToCleanerSettings = { navController.navigate(Screen.CleanerSettings.route) },
                 onNavigateToTools = { navController.navigate(Screen.Tools.route) },
                 onNavigateToDuplicates = { navController.navigate(DUPLICATES_GRAPH_ROUTE) },
+                onNavigateToDuplicatesGroup = { groupId -> navController.navigate(Screen.GroupDetails.createRoute(groupId)) },
                 onNavigateToEmptyCleaner = { navController.navigate(Screen.EmptyCleaner.route) },
                 onNavigateToRecycleBin = { navController.navigate(Screen.RecycleBin.route) },
                 onNavigateToContactCleaner = { navController.navigate(Screen.ContactCleaner.route) },
@@ -228,7 +242,11 @@ onNavigateToSettings = { navController.navigate(Screen.Settings.createRoute("sor
 
         composable(Screen.StorageAnalysis.route) {
             StorageAnalysisScreen(
-                onNavigateUp = { navController.navigateUp() }
+                onNavigateUp = { navController.navigateUp() },
+                onNavigateToEmptyCleaner = { navController.navigate(Screen.EmptyCleaner.route) },
+                onNavigateToDuplicates = { navController.navigate(DUPLICATES_GRAPH_ROUTE) },
+                onNavigateToRecycleBin = { navController.navigate(Screen.RecycleBin.route) },
+                onNavigateToContactCleaner = { navController.navigate(Screen.ContactCleaner.route) }
             )
         }
 
@@ -266,18 +284,27 @@ onNavigateToSettings = { navController.navigate(Screen.Settings.createRoute("sor
 
         composable(
             route = Screen.Settings.route,
-            arguments = listOf(navArgument("page") {
-                type = NavType.StringType
-                defaultValue = null
-                nullable = true
-            })
+            arguments = listOf(
+                navArgument("page") {
+                    type = NavType.StringType
+                    defaultValue = null
+                    nullable = true
+                },
+                navArgument("highlight") {
+                    type = NavType.StringType
+                    defaultValue = null
+                    nullable = true
+                }
+            )
         ) { backStackEntry ->
             val initialPage = backStackEntry.arguments?.getString("page")
+            val initialHighlight = backStackEntry.arguments?.getString("highlight")
             SettingsScreen(
                 onNavigateUp = { navController.navigateUp() },
                 onNavigateToLibraries = { navController.navigate(Screen.Libraries.route) },
                 onNavigateToCleanerSettings = { navController.navigate(Screen.CleanerSettings.route) },
-                initialPage = initialPage
+                initialPage = initialPage,
+                initialHighlight = initialHighlight
             )
         }
 

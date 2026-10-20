@@ -93,6 +93,18 @@ enum class SwipeDownAction {
     OPEN_WITH
 }
 
+enum class SwipeUpAction {
+    NONE,
+    SKIP,
+    FAVORITE
+}
+
+data class ResumeSessionInfo(
+    val bucketIds: List<String>,
+    val folderName: String,
+    val remainingCount: Int
+)
+
 enum class TapAction {
     PLAY_PAUSE,
     NONE
@@ -115,13 +127,27 @@ enum class AppLocale(val tag: String?) {
     ITALIAN("it")
 }
 
-enum class UpdateCheckInterval(val days: Long, val label: String) {
-    NEVER(0L, "Never"),
-    DAILY(1L, "Every day"),
-    EVERY_2_DAYS(2L, "Every 2 days"),
-    EVERY_3_DAYS(3L, "Every 3 days"),
-    EVERY_5_DAYS(5L, "Every 5 days"),
-    WEEKLY(7L, "Every 7 days (Weekly)")
+enum class UpdateCheckInterval(val hours: Long, val label: String, val shortLabel: String) {
+    NEVER(0L, "Never (Manual only)", "Never"),
+    EVERY_1_HOUR(1L, "Every 1 hour", "1h"),
+    EVERY_3_HOURS(3L, "Every 3 hours", "3h"),
+    EVERY_12_HOURS(12L, "Every 12 hours", "12h"),
+    EVERY_1_DAY(24L, "Every 1 day", "1d"),
+    EVERY_3_DAYS(72L, "Every 3 days", "3d"),
+    EVERY_7_DAYS(168L, "Every 7 days (Weekly)", "7d");
+
+    val isEnabled: Boolean get() = this != NEVER
+
+    companion object {
+        fun fromSliderValue(value: Float): UpdateCheckInterval {
+            val index = value.toInt().coerceIn(0, entries.size - 1)
+            return entries[index]
+        }
+
+        fun toSliderValue(interval: UpdateCheckInterval): Float {
+            return entries.indexOf(interval).coerceAtLeast(0).toFloat()
+        }
+    }
 }
 
 
@@ -179,6 +205,11 @@ class PreferencesRepository @Inject constructor(
         val DUPLICATE_SCAN_INCLUDE_LIST = stringPreferencesKey("duplicate_scan_include_list")
         val DUPLICATE_SCAN_EXCLUDE_LIST = stringPreferencesKey("duplicate_scan_exclude_list")
         val SWIPE_DOWN_ACTION = stringPreferencesKey("swipe_down_action")
+        val SWIPE_UP_ACTION = stringPreferencesKey("swipe_up_action")
+        val SWIPER_BATCH_SIZE = intPreferencesKey("swiper_batch_size")
+        val RESUME_SESSION_BUCKET_IDS = stringPreferencesKey("resume_session_bucket_ids")
+        val RESUME_SESSION_FOLDER_NAME = stringPreferencesKey("resume_session_folder_name")
+        val RESUME_SESSION_REMAINING_COUNT = intPreferencesKey("resume_session_remaining_count")
         val FAVORITE_MEDIA_ITEMS = stringPreferencesKey("favorite_media_items")
         val TAP_ACTION = stringPreferencesKey("tap_action")
         val DOUBLE_TAP_ACTION = stringPreferencesKey("double_tap_action")
@@ -207,11 +238,16 @@ class PreferencesRepository @Inject constructor(
         val IMMERSIVE_MODE = booleanPreferencesKey("immersive_mode")
         val START_VIDEOS_UNMUTED = booleanPreferencesKey("start_videos_unmuted")
         val UPDATE_CHECK_INTERVAL = stringPreferencesKey("update_check_interval")
+        val LAST_SEEN_VERSION_CODE = intPreferencesKey("last_seen_version_code")
+        val SHAKE_TO_FEEDBACK_ENABLED = booleanPreferencesKey("shake_to_feedback_enabled")
+        val SCREENSHOT_TO_FEEDBACK_ENABLED = booleanPreferencesKey("screenshot_to_feedback_enabled")
     }
 
     // ── Boolean Preference instances ─────────────────────────────────────────
     // Each replaces ~10 lines of flow+setter boilerplate with 1 line.
 
+    private val shakeToFeedbackPref = Preference(context.dataStore, PreferencesKeys.SHAKE_TO_FEEDBACK_ENABLED, true)
+    private val screenshotToFeedbackPref = Preference(context.dataStore, PreferencesKeys.SCREENSHOT_TO_FEEDBACK_ENABLED, true)
     private val useDynamicColorsPref = Preference(context.dataStore, PreferencesKeys.USE_DYNAMIC_COLORS, true)
     private val isOnboardingCompletedPref = Preference(context.dataStore, PreferencesKeys.ONBOARDING_COMPLETED, false)
     private val compactFolderViewPref = Preference(context.dataStore, PreferencesKeys.COMPACT_FOLDER_VIEW, false)
@@ -265,12 +301,18 @@ class PreferencesRepository @Inject constructor(
     private val addFolderFocusTargetPref = EnumPreference(context.dataStore, PreferencesKeys.ADD_FOLDER_FOCUS_TARGET, AddFolderFocusTarget.SEARCH_PATH, AddFolderFocusTarget::class.java)
     private val swipeSensitivityPref = EnumPreference(context.dataStore, PreferencesKeys.SWIPE_SENSITIVITY, SwipeSensitivity.MEDIUM, SwipeSensitivity::class.java)
     private val swipeDownActionPref = EnumPreference(context.dataStore, PreferencesKeys.SWIPE_DOWN_ACTION, SwipeDownAction.NONE, SwipeDownAction::class.java)
+    private val swipeUpActionPref = EnumPreference(context.dataStore, PreferencesKeys.SWIPE_UP_ACTION, SwipeUpAction.NONE, SwipeUpAction::class.java)
     private val tapActionPref = EnumPreference(context.dataStore, PreferencesKeys.TAP_ACTION, TapAction.PLAY_PAUSE, TapAction::class.java)
     private val doubleTapActionPref = EnumPreference(context.dataStore, PreferencesKeys.DOUBLE_TAP_ACTION, DoubleTapAction.FAVORITE, DoubleTapAction::class.java)
     private val similarityThresholdLevelPref = EnumPreference(context.dataStore, PreferencesKeys.SIMILARITY_THRESHOLD_LEVEL, SimilarityThresholdLevel.BALANCED, SimilarityThresholdLevel::class.java)
     private val duplicateScanScopePref = EnumPreference(context.dataStore, PreferencesKeys.DUPLICATE_SCAN_SCOPE, DuplicateScanScope.ALL_FILES, DuplicateScanScope::class.java)
     private val unselectAllInSearchScopePref = EnumPreference(context.dataStore, PreferencesKeys.UNSELECT_ALL_IN_SEARCH_SCOPE, UnselectScanScope.GLOBAL, UnselectScanScope::class.java)
-    private val updateCheckIntervalPref = EnumPreference(context.dataStore, PreferencesKeys.UPDATE_CHECK_INTERVAL, UpdateCheckInterval.DAILY, UpdateCheckInterval::class.java)
+    private val updateCheckIntervalPref = EnumPreference(context.dataStore, PreferencesKeys.UPDATE_CHECK_INTERVAL, UpdateCheckInterval.EVERY_1_DAY, UpdateCheckInterval::class.java)
+
+    val lastSeenVersionCodeFlow: Flow<Int> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.LAST_SEEN_VERSION_CODE] ?: 0
+        }
 
     // ── Non-boolean flows (unchanged) ────────────────────────────────────────
 
@@ -369,6 +411,27 @@ class PreferencesRepository @Inject constructor(
 
     val swipeDownActionFlow: Flow<SwipeDownAction> = swipeDownActionPref.flow
 
+    val swipeUpActionFlow: Flow<SwipeUpAction> = swipeUpActionPref.flow
+
+    val swiperBatchSizeFlow: Flow<Int> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.SWIPER_BATCH_SIZE] ?: 30
+        }
+
+    val resumeSessionFlow: Flow<ResumeSessionInfo?> = context.dataStore.data
+        .map { preferences ->
+            val bucketIdsStr = preferences[PreferencesKeys.RESUME_SESSION_BUCKET_IDS]
+            val folderName = preferences[PreferencesKeys.RESUME_SESSION_FOLDER_NAME]
+            val remainingCount = preferences[PreferencesKeys.RESUME_SESSION_REMAINING_COUNT] ?: 0
+            if (!bucketIdsStr.isNullOrBlank() && !folderName.isNullOrBlank()) {
+                ResumeSessionInfo(
+                    bucketIds = bucketIdsStr.split("|").filter { it.isNotBlank() },
+                    folderName = folderName,
+                    remainingCount = remainingCount
+                )
+            } else null
+        }
+
     val tapActionFlow: Flow<TapAction> = tapActionPref.flow
 
     val doubleTapActionFlow: Flow<DoubleTapAction> = doubleTapActionPref.flow
@@ -409,6 +472,8 @@ class PreferencesRepository @Inject constructor(
 
     // ── Boolean flows: delegated to Preference instances ──────────────────────
 
+    val shakeToFeedbackFlow: Flow<Boolean> = shakeToFeedbackPref.flow
+    val screenshotToFeedbackFlow: Flow<Boolean> = screenshotToFeedbackPref.flow
     val useDynamicColorsFlow: Flow<Boolean> = useDynamicColorsPref.flow
     val isOnboardingCompletedFlow: Flow<Boolean?> = isOnboardingCompletedPref.flow
     val compactFolderViewFlow: Flow<Boolean> = compactFolderViewPref.flow
@@ -637,6 +702,30 @@ class PreferencesRepository @Inject constructor(
 
     suspend fun setSwipeDownAction(action: SwipeDownAction) = swipeDownActionPref.set(action)
 
+    suspend fun setSwipeUpAction(action: SwipeUpAction) = swipeUpActionPref.set(action)
+
+    suspend fun setSwiperBatchSize(size: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.SWIPER_BATCH_SIZE] = size
+        }
+    }
+
+    suspend fun saveResumeSession(bucketIds: List<String>, folderName: String, remainingCount: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.RESUME_SESSION_BUCKET_IDS] = bucketIds.joinToString("|")
+            preferences[PreferencesKeys.RESUME_SESSION_FOLDER_NAME] = folderName
+            preferences[PreferencesKeys.RESUME_SESSION_REMAINING_COUNT] = remainingCount
+        }
+    }
+
+    suspend fun clearResumeSession() {
+        context.dataStore.edit { preferences ->
+            preferences.remove(PreferencesKeys.RESUME_SESSION_BUCKET_IDS)
+            preferences.remove(PreferencesKeys.RESUME_SESSION_FOLDER_NAME)
+            preferences.remove(PreferencesKeys.RESUME_SESSION_REMAINING_COUNT)
+        }
+    }
+
     suspend fun setTapAction(action: TapAction) = tapActionPref.set(action)
 
     suspend fun setDoubleTapAction(action: DoubleTapAction) = doubleTapActionPref.set(action)
@@ -739,6 +828,8 @@ class PreferencesRepository @Inject constructor(
 
     // ── Boolean setters: delegated to Preference instances ────────────────────
 
+    suspend fun setShakeToFeedbackEnabled(enabled: Boolean) = shakeToFeedbackPref.set(enabled)
+    suspend fun setScreenshotToFeedbackEnabled(enabled: Boolean) = screenshotToFeedbackPref.set(enabled)
     suspend fun setUseDynamicColors(enabled: Boolean) = useDynamicColorsPref.set(enabled)
     suspend fun setCompactFolderView(enabled: Boolean) = compactFolderViewPref.set(enabled)
     suspend fun setHideFilename(enabled: Boolean) = hideFilenamePref.set(enabled)
@@ -772,6 +863,11 @@ class PreferencesRepository @Inject constructor(
     suspend fun setImmersiveMode(enabled: Boolean) = immersiveModePref.set(enabled)
     suspend fun setStartVideosUnmuted(unmuted: Boolean) = startVideosUnmutedPref.set(unmuted)
     suspend fun setUpdateCheckInterval(interval: UpdateCheckInterval) = updateCheckIntervalPref.set(interval)
+    suspend fun setLastSeenVersionCode(versionCode: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.LAST_SEEN_VERSION_CODE] = versionCode
+        }
+    }
 
     // ── Dialog confirmation setters ──────────────────────────────────────────
 

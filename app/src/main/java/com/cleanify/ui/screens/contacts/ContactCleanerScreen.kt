@@ -42,8 +42,9 @@ import com.cleanify.ui.components.BackNavigationIcon
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ContactCleanerScreen(
-    onNavigateUp: () -> Unit,
+    onNavigateUp: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
+    embedded: Boolean = false,
     viewModel: ContactCleanerViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -122,19 +123,21 @@ fun ContactCleanerScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Contact Cleaner") },
-                navigationIcon = { BackNavigationIcon(onClick = onNavigateUp) },
-                actions = {
-                    IconButton(onClick = onNavigateToSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+            if (!embedded) {
+                TopAppBar(
+                    title = { Text("Contact Cleaner") },
+                    navigationIcon = { BackNavigationIcon(onClick = onNavigateUp) },
+                    actions = {
+                        IconButton(onClick = onNavigateToSettings) {
+                            Icon(Icons.Default.Settings, contentDescription = "Settings")
+                        }
+                        if (uiState.selectedIds.isNotEmpty()) {
+                            TextButton(onClick = viewModel::selectAll) { Text("All") }
+                            TextButton(onClick = viewModel::deselectAll) { Text("None") }
+                        }
                     }
-                    if (uiState.selectedIds.isNotEmpty()) {
-                        TextButton(onClick = viewModel::selectAll) { Text("All") }
-                        TextButton(onClick = viewModel::deselectAll) { Text("None") }
-                    }
-                }
-            )
+                )
+            }
         },
         bottomBar = {
             if (uiState.selectedIds.isNotEmpty()) {

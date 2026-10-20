@@ -28,31 +28,56 @@ fun ContactCleanerSection(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Spacer(Modifier.height(8.dp))
-            Box(modifier = Modifier.size(80.dp).clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.Contacts, contentDescription = null, modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+        FrostedSettingsGroup(title = "Overview") {
+            Column(
+                Modifier.fillMaxWidth().padding(vertical = 16.dp, horizontal = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(72.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Contacts,
+                        contentDescription = null,
+                        modifier = Modifier.size(36.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+                Spacer(Modifier.height(14.dp))
+                Text(
+                    stringResource(R.string.contact_cleaner_section_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    stringResource(R.string.contact_cleaner_section_desc),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
             }
-            Spacer(Modifier.height(16.dp))
-            Text(stringResource(R.string.contact_cleaner_section_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text(stringResource(R.string.contact_cleaner_section_desc), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
         }
 
-        HorizontalDivider()
-
-        ToolAboutCard(
-            icon = Icons.Default.Contacts,
-            title = "Contact Cleaner",
-            description = "Contact Cleaner helps you find and fix issues in your contacts list. " +
-                "It detects duplicate contacts (by phone number or name), " +
-                "and flags contacts with missing names or phone numbers so you can clean them up.",
-            warning = "Deleting contacts permanently removes them from your device and synced accounts. " +
-                "Merging combines duplicate entries using Android's aggregation mechanism — " +
-                "the first contact in each group becomes the primary. These actions cannot be undone."
-        )
+        FrostedSettingsGroup(title = "About Contact Cleaner") {
+            ToolAboutCard(
+                icon = Icons.Default.Contacts,
+                title = "Contact Cleaner",
+                description = "Contact Cleaner helps you find and fix issues in your contacts list. " +
+                    "It detects duplicate contacts (by phone number or name), " +
+                    "and flags contacts with missing names or phone numbers so you can clean them up.",
+                warning = "Deleting contacts permanently removes them from your device and synced accounts. " +
+                    "Merging combines duplicate entries using Android's aggregation mechanism — " +
+                    "the first contact in each group becomes the primary. These actions cannot be undone."
+            )
+        }
 
         Spacer(Modifier.height(16.dp))
     }

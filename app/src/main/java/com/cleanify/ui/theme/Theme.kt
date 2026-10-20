@@ -200,7 +200,12 @@ fun CleanifyTheme(
             } else {
                 val accentColor = predefinedAccentColors.find { it.key == accentColorKey }
                     ?: predefinedAccentColors.first()
-                baseColorScheme.copy(primary = accentColor.darkColor)
+                val primary = accentColor.darkColor
+                baseColorScheme.copy(
+                    primary = primary,
+                    primaryContainer = primary.copy(alpha = 0.22f),
+                    onPrimaryContainer = primary
+                )
             }
         }
 
@@ -219,8 +224,11 @@ fun CleanifyTheme(
             }
             val accentColor = predefinedAccentColors.find { it.key == accentColorKey }
                 ?: predefinedAccentColors.first()
+            val primary = if (darkTheme) accentColor.darkColor else accentColor.lightColor
             baseColorScheme.copy(
-                primary = if (darkTheme) accentColor.darkColor else accentColor.lightColor
+                primary = primary,
+                primaryContainer = primary.copy(alpha = if (darkTheme) 0.22f else 0.14f),
+                onPrimaryContainer = primary
             )
         }
     }

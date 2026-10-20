@@ -57,6 +57,34 @@ class MainActivity : BaseActivity() {
     @Inject
     lateinit var recycleBinManager: RecycleBinManager
 
+    private val shakeDetector by lazy {
+        com.cleanify.util.ShakeDetector(this) {
+            mainViewModel.openFeedbackDialog()
+        }
+    }
+
+    private val screenshotDetector by lazy {
+        com.cleanify.util.ScreenshotDetector(this) {
+            mainViewModel.openFeedbackDialog()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (mainViewModel.shakeToFeedbackEnabled.value) {
+            shakeDetector.start()
+        }
+        if (mainViewModel.screenshotToFeedbackEnabled.value) {
+            screenshotDetector.start()
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        shakeDetector.stop()
+        screenshotDetector.stop()
+    }
+
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         // Install the SplashScreen API before super.onCreate()
@@ -95,6 +123,18 @@ class MainActivity : BaseActivity() {
                 if (currentLocales.toLanguageTags() != appLocales.toLanguageTags()) {
                     AppCompatDelegate.setApplicationLocales(appLocales)
                 }
+            }
+        }
+
+        // Dynamically toggle shake & screenshot listeners when preference changes
+        lifecycleScope.launch {
+            mainViewModel.shakeToFeedbackEnabled.collectLatest { enabled ->
+                if (enabled) shakeDetector.start() else shakeDetector.stop()
+            }
+        }
+        lifecycleScope.launch {
+            mainViewModel.screenshotToFeedbackEnabled.collectLatest { enabled ->
+                if (enabled) screenshotDetector.start() else screenshotDetector.stop()
             }
         }
 

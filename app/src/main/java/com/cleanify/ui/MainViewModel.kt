@@ -37,7 +37,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    preferencesRepository: PreferencesRepository,
+    private val preferencesRepository: PreferencesRepository,
     private val mediaRepository: MediaRepository,
     private val appLifecycleEventBus: AppLifecycleEventBus
 ) : ViewModel() {
@@ -92,7 +92,14 @@ class MainViewModel @Inject constructor(
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = com.cleanify.data.repository.UpdateCheckInterval.DAILY
+            initialValue = com.cleanify.data.repository.UpdateCheckInterval.EVERY_1_DAY
+        )
+
+    val lastSeenVersionCode: StateFlow<Int> = preferencesRepository.lastSeenVersionCodeFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = 0
         )
 
     val isOnboardingCompleted: StateFlow<Boolean?> = preferencesRepository.isOnboardingCompletedFlow
@@ -103,9 +110,50 @@ class MainViewModel @Inject constructor(
             initialValue = null
         )
 
+    val shakeToFeedbackEnabled: StateFlow<Boolean> = preferencesRepository.shakeToFeedbackFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = true
+        )
+
+    val screenshotToFeedbackEnabled: StateFlow<Boolean> = preferencesRepository.screenshotToFeedbackFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = true
+        )
+
+    val showFeedbackDialog = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val showChangelogDialog = kotlinx.coroutines.flow.MutableStateFlow(false)
+
+    private var lastFeedbackOpenTime = 0L
+
     init {
         viewModelScope.launch {
             mediaRepository.cleanupGhostFolders()
+        }
+    }
+
+    fun openFeedbackDialog() {
+        val now = System.currentTimeMillis()
+        if (now - lastFeedbackOpenTime < 1500L) return
+        lastFeedbackOpenTime = now
+        showFeedbackDialog.value = true
+    }
+
+    fun closeFeedbackDialog() {
+        showFeedbackDialog.value = false
+    }
+
+    fun openChangelogDialog() {
+        showChangelogDialog.value = true
+    }
+
+    fun closeChangelogDialog(currentVersionCode: Int) {
+        showChangelogDialog.value = false
+        viewModelScope.launch {
+            preferencesRepository.setLastSeenVersionCode(currentVersionCode)
         }
     }
 

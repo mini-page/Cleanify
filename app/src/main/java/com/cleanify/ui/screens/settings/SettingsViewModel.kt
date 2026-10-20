@@ -33,6 +33,7 @@ import com.cleanify.data.repository.PreferencesRepository
 import com.cleanify.data.repository.SimilarityThresholdLevel
 import com.cleanify.data.repository.DoubleTapAction
 import com.cleanify.data.repository.SwipeDownAction
+import com.cleanify.data.repository.SwipeUpAction
 import com.cleanify.data.repository.SwipeSensitivity
 import com.cleanify.data.repository.TapAction
 import com.cleanify.data.repository.UnselectScanScope
@@ -322,6 +323,30 @@ class SettingsViewModel @Inject constructor(
                 initialValue = SwipeDownAction.NONE
             )
 
+    val swipeUpAction: StateFlow<SwipeUpAction> =
+        preferencesRepository.swipeUpActionFlow
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = SwipeUpAction.NONE
+            )
+
+    val swiperBatchSize: StateFlow<Int> =
+        preferencesRepository.swiperBatchSizeFlow
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = 30
+            )
+
+    val recycleBinEnabled: StateFlow<Boolean> =
+        preferencesRepository.recycleBinEnabledFlow
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = true
+            )
+
     val tapAction: StateFlow<TapAction> =
         preferencesRepository.tapActionFlow
             .stateIn(
@@ -455,7 +480,23 @@ class SettingsViewModel @Inject constructor(
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5000),
-                initialValue = UpdateCheckInterval.DAILY
+                initialValue = UpdateCheckInterval.EVERY_1_DAY
+            )
+
+    val shakeToFeedbackEnabled: StateFlow<Boolean> =
+        preferencesRepository.shakeToFeedbackFlow
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = true
+            )
+
+    val screenshotToFeedbackEnabled: StateFlow<Boolean> =
+        preferencesRepository.screenshotToFeedbackFlow
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = true
             )
 
     fun setUpdateCheckInterval(interval: UpdateCheckInterval) {
@@ -765,6 +806,18 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setShakeToFeedbackEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.setShakeToFeedbackEnabled(enabled)
+        }
+    }
+
+    fun setScreenshotToFeedbackEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.setScreenshotToFeedbackEnabled(enabled)
+        }
+    }
+
     fun onSkipPartialExpansionChanged(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.setSkipPartialExpansion(enabled)
@@ -810,6 +863,24 @@ class SettingsViewModel @Inject constructor(
     fun setSwipeDownAction(action: SwipeDownAction) {
         viewModelScope.launch {
             preferencesRepository.setSwipeDownAction(action)
+        }
+    }
+
+    fun setSwipeUpAction(action: SwipeUpAction) {
+        viewModelScope.launch {
+            preferencesRepository.setSwipeUpAction(action)
+        }
+    }
+
+    fun setSwiperBatchSize(size: Int) {
+        viewModelScope.launch {
+            preferencesRepository.setSwiperBatchSize(size)
+        }
+    }
+
+    fun setRecycleBinEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.setRecycleBinEnabled(enabled)
         }
     }
 

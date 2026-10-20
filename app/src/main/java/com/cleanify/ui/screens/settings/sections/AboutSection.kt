@@ -53,6 +53,12 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import androidx.core.graphics.drawable.toBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.ImageBitmap
 import com.cleanify.R
 import com.cleanify.data.repository.UpdateCheckInterval
 import com.cleanify.ui.components.FeedbackDialog
@@ -61,7 +67,21 @@ import com.cleanify.ui.screens.settings.SettingsViewModel
 import com.cleanify.util.UpdateChecker
 import com.cleanify.util.UpdateCheckState
 import com.cleanify.util.UpdateInfo
+import androidx.compose.ui.graphics.vector.ImageVector
 import kotlinx.coroutines.launch
+
+data class InstalledPaymentApp(
+    val name: String,
+    val packageName: String,
+    val iconBitmap: ImageBitmap?
+)
+
+data class SocialBrandItem(
+    val icon: ImageVector,
+    val label: String,
+    val url: String,
+    val brandColor: Color
+)
 
 @Composable
 fun AboutSection(
@@ -83,12 +103,8 @@ fun AboutSection(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
-        // App Identity Header Card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-        ) {
+        // App Identity Header Card
+        FrostedSettingsGroup {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -139,6 +155,231 @@ fun AboutSection(
             }
         }
 
+        // 2. Support Development Card directly below App Card
+        val clipboard = androidx.compose.ui.platform.LocalClipboard.current
+        val installedUpiApps = remember {
+            val upiIntent = Intent(Intent.ACTION_VIEW, Uri.parse("upi://pay"))
+            try {
+                val pm = context.packageManager
+                pm.queryIntentActivities(upiIntent, PackageManager.MATCH_DEFAULT_ONLY).mapNotNull { resolveInfo ->
+                    val pkg = resolveInfo.activityInfo.packageName
+                    val name = resolveInfo.loadLabel(pm).toString()
+                    val iconBitmap = try {
+                        val drawable = resolveInfo.loadIcon(pm)
+                        drawable.toBitmap(width = 96, height = 96).asImageBitmap()
+                    } catch (e: Exception) {
+                        null
+                    }
+                    InstalledPaymentApp(name = name, packageName = pkg, iconBitmap = iconBitmap)
+                }.distinctBy { it.packageName }
+            } catch (e: Exception) {
+                emptyList()
+            }
+        }
+
+        val launchUpi: (String?) -> Unit = { targetPackage ->
+            val uri = Uri.parse("upi://pay?pa=raghavans5711@okicici&pn=Raghav%20S&mc=&tid=&tr=&tn=Support%20Cleanify%20Development&cu=INR")
+            val intent = Intent(Intent.ACTION_VIEW, uri)
+            if (targetPackage != null) {
+                intent.setPackage(targetPackage)
+            }
+            try {
+                context.startActivity(if (targetPackage != null) intent else Intent.createChooser(intent, "Pay via UPI"))
+            } catch (e: Exception) {
+                android.widget.Toast.makeText(context, "Could not open payment app: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        FrostedSettingsGroup(title = "Support Development") {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Default.Favorite,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.support_development_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Support continuous open-source development",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(18.dp))
+
+                // Compact QR Code Container (without outer padding or header text)
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = Color.White,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                    shadowElevation = 2.dp
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.payment_qr),
+                        contentDescription = "Payment QR",
+                        modifier = Modifier
+                            .size(190.dp)
+                            .clip(RoundedCornerShape(16.dp)),
+                        contentScale = ContentScale.Fit
+                    )
+                }
+
+                Spacer(Modifier.height(14.dp))
+
+                // Understated Name & UPI ID Container with Dedicated Copy Button
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Raghav S",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                text = "raghavans5711@okicici",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        Button(
+                            onClick = {
+                                val cm = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                cm.setPrimaryClip(android.content.ClipData.newPlainText("UPI ID", "raghavans5711@okicici"))
+                                android.widget.Toast.makeText(context, "UPI ID copied: raghavans5711@okicici", android.widget.Toast.LENGTH_SHORT).show()
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        ) {
+                            Icon(
+                                Icons.Default.ContentCopy,
+                                contentDescription = null,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text("Copy", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+
+                // Installed Payment Apps as clean consistent rows
+                if (installedUpiApps.isNotEmpty()) {
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        text = "Pay with Installed App",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp)
+                    )
+                    Spacer(Modifier.height(6.dp))
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        installedUpiApps.forEach { app ->
+                            Surface(
+                                onClick = { launchUpi(app.packageName) },
+                                shape = RoundedCornerShape(14.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    if (app.iconBitmap != null) {
+                                        Image(
+                                            bitmap = app.iconBitmap,
+                                            contentDescription = app.name,
+                                            modifier = Modifier
+                                                .size(36.dp)
+                                                .clip(RoundedCornerShape(8.dp))
+                                        )
+                                    } else {
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = MaterialTheme.colorScheme.secondaryContainer,
+                                            modifier = Modifier.size(36.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    Icons.Default.Payment,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(20.dp),
+                                                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                                )
+                                            }
+                                        }
+                                    }
+                                    Spacer(Modifier.width(14.dp))
+                                    Text(
+                                        text = app.name,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                        contentDescription = "Open ${app.name}",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // Updates Card with Manual Check & Frequency Selector
         UpdateCard(
             state = updateState,
@@ -163,13 +404,9 @@ fun AboutSection(
             onDismiss = { updateState = UpdateCheckState.Idle }
         )
 
-        // Features & Highlights Card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-        ) {
-            Column(modifier = Modifier.padding(18.dp)) {
+        // Features & Highlights Card
+        FrostedSettingsGroup(title = "Features & Capabilities") {
+            Column(modifier = Modifier.padding(14.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         Icons.Default.AutoAwesome,
@@ -220,7 +457,7 @@ fun AboutSection(
             }
         }
 
-        // Community & Social Links
+        // Community & Social Links with brand styling
         Column {
             Text(
                 text = stringResource(R.string.social_section_title),
@@ -231,12 +468,12 @@ fun AboutSection(
 
             val socialLinks = remember {
                 listOf(
-                    Triple(Icons.Default.Star, "Star Repo", "https://github.com/mini-page/Cleanify"),
-                    Triple(Icons.Default.Code, "Developer", "https://mini-page.github.io/ugsoc"),
-                    Triple(Icons.Default.BusinessCenter, "LinkedIn", "https://www.linkedin.com/in/ug5711"),
-                    Triple(Icons.Default.CameraAlt, "Instagram", "https://www.instagram.com/ug_5711"),
-                    Triple(Icons.AutoMirrored.Filled.Send, "Telegram", "https://t.me/ug_5711"),
-                    Triple(Icons.Default.Email, "Feedback", "feedback_action")
+                    SocialBrandItem(Icons.Default.Star, "GitHub", "https://github.com/mini-page/Cleanify", Color(0xFF24292E)),
+                    SocialBrandItem(Icons.Default.Code, "Developer", "https://mini-page.github.io/ugsoc", Color(0xFF10B981)),
+                    SocialBrandItem(Icons.AutoMirrored.Filled.Send, "Telegram", "https://t.me/ug_5711", Color(0xFF0088CC)),
+                    SocialBrandItem(Icons.Default.BusinessCenter, "LinkedIn", "https://www.linkedin.com/in/ug5711", Color(0xFF0A66C2)),
+                    SocialBrandItem(Icons.Default.CameraAlt, "Instagram", "https://www.instagram.com/ug_5711", Color(0xFFE1306C)),
+                    SocialBrandItem(Icons.Default.Email, "Feedback", "feedback_action", Color(0xFF6366F1))
                 )
             }
 
@@ -245,13 +482,13 @@ fun AboutSection(
                 contentPadding = PaddingValues(horizontal = 2.dp)
             ) {
                 items(socialLinks.size) { index ->
-                    val (icon, label, url) = socialLinks[index]
+                    val item = socialLinks[index]
                     Surface(
                         onClick = {
-                            if (url == "feedback_action") {
+                            if (item.url == "feedback_action") {
                                 showFeedbackDialog = true
                             } else {
-                                uriHandler.openUri(url)
+                                uriHandler.openUri(item.url)
                             }
                         },
                         shape = RoundedCornerShape(18.dp),
@@ -266,21 +503,21 @@ fun AboutSection(
                         ) {
                             Surface(
                                 shape = CircleShape,
-                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                color = item.brandColor.copy(alpha = 0.15f),
                                 modifier = Modifier.size(38.dp)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
-                                        icon,
-                                        contentDescription = label,
+                                        item.icon,
+                                        contentDescription = item.label,
                                         modifier = Modifier.size(20.dp),
-                                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                        tint = item.brandColor
                                     )
                                 }
                             }
                             Spacer(Modifier.height(6.dp))
                             Text(
-                                text = label,
+                                text = item.label,
                                 style = MaterialTheme.typography.labelSmall,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -292,60 +529,8 @@ fun AboutSection(
             }
         }
 
-        // Support Development Card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.35f))
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onShowFunding)
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.tertiary,
-                    modifier = Modifier.size(42.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            Icons.Default.Favorite,
-                            contentDescription = null,
-                            modifier = Modifier.size(22.dp),
-                            tint = MaterialTheme.colorScheme.onTertiary
-                        )
-                    }
-                }
-                Spacer(Modifier.width(14.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        stringResource(R.string.support_development_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        stringResource(R.string.support_development_desc),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Icon(
-                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                )
-            }
-        }
-
-        // Legal & Transparency Grouped Card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-        ) {
+        // Legal & Transparency Grouped Card
+        FrostedSettingsGroup(title = "Legal & Open Source") {
             Column(modifier = Modifier.padding(vertical = 4.dp)) {
                 SettingsItemRow(
                     icon = Icons.Default.Gavel,
@@ -459,14 +644,8 @@ private fun UpdateCard(
     onCheck: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    var showIntervalMenu by remember { mutableStateOf(false) }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-    ) {
-        Column(modifier = Modifier.padding(18.dp)) {
+    FrostedSettingsGroup(title = "Updates") {
+        Column(modifier = Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Surface(
                     shape = CircleShape,
@@ -552,111 +731,70 @@ private fun UpdateCard(
             HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
             Spacer(Modifier.height(12.dp))
 
-            // Auto-check interval selector
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        stringResource(R.string.auto_update_check_title),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Text(
-                        stringResource(R.string.auto_update_check_desc),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+            // Auto-check interval slider
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.auto_update_check_title),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            stringResource(R.string.auto_update_check_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (currentInterval.isEnabled) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                    ) {
+                        Text(
+                            text = currentInterval.label,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (currentInterval.isEnabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                        )
+                    }
                 }
 
-                Box(modifier = Modifier.padding(start = 8.dp)) {
-                    val intervalLabel = when (currentInterval) {
-                        UpdateCheckInterval.NEVER -> stringResource(R.string.update_interval_never)
-                        UpdateCheckInterval.DAILY -> stringResource(R.string.update_interval_daily)
-                        UpdateCheckInterval.EVERY_2_DAYS -> stringResource(R.string.update_interval_2_days)
-                        UpdateCheckInterval.EVERY_3_DAYS -> stringResource(R.string.update_interval_3_days)
-                        UpdateCheckInterval.EVERY_5_DAYS -> stringResource(R.string.update_interval_5_days)
-                        UpdateCheckInterval.WEEKLY -> stringResource(R.string.update_interval_weekly)
-                    }
+                Spacer(Modifier.height(14.dp))
 
-                    Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(16.dp))
-                            .clickable { showIntervalMenu = true }
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = intervalLabel,
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Icon(
-                                Icons.Default.UnfoldMore,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
+                var sliderPosition by remember(currentInterval) {
+                    mutableFloatStateOf(UpdateCheckInterval.toSliderValue(currentInterval))
+                }
 
-                    DropdownMenu(
-                        expanded = showIntervalMenu,
-                        onDismissRequest = { showIntervalMenu = false },
-                        shape = RoundedCornerShape(18.dp),
-                        modifier = Modifier
-                            .widthIn(min = 240.dp, max = 320.dp)
-                            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                        offset = DpOffset(x = (-100).dp, y = 6.dp)
-                    ) {
-                        UpdateCheckInterval.entries.forEach { interval ->
-                            val isSelected = interval == currentInterval
-                            val label = when (interval) {
-                                UpdateCheckInterval.NEVER -> stringResource(R.string.update_interval_never)
-                                UpdateCheckInterval.DAILY -> stringResource(R.string.update_interval_daily)
-                                UpdateCheckInterval.EVERY_2_DAYS -> stringResource(R.string.update_interval_2_days)
-                                UpdateCheckInterval.EVERY_3_DAYS -> stringResource(R.string.update_interval_3_days)
-                                UpdateCheckInterval.EVERY_5_DAYS -> stringResource(R.string.update_interval_5_days)
-                                UpdateCheckInterval.WEEKLY -> stringResource(R.string.update_interval_weekly)
-                            }
-                            DropdownMenuItem(
-                                text = {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = label,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                                        )
-                                        if (isSelected) {
-                                            Icon(
-                                                Icons.Default.Check,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.primary,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        }
-                                    }
-                                },
-                                onClick = {
-                                    onIntervalChanged(interval)
-                                    showIntervalMenu = false
-                                }
-                            )
+                Slider(
+                    value = sliderPosition,
+                    onValueChange = { pos ->
+                        sliderPosition = pos
+                        val selected = UpdateCheckInterval.fromSliderValue(pos)
+                        if (selected != currentInterval) {
+                            onIntervalChanged(selected)
                         }
+                    },
+                    valueRange = 0f..(UpdateCheckInterval.entries.size - 1).toFloat(),
+                    steps = UpdateCheckInterval.entries.size - 2,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    UpdateCheckInterval.entries.forEach { interval ->
+                        Text(
+                            text = interval.shortLabel,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = if (interval == currentInterval) FontWeight.Bold else FontWeight.Normal,
+                            color = if (interval == currentInterval) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        )
                     }
                 }
             }

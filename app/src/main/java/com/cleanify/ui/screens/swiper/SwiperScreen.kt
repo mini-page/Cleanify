@@ -126,6 +126,7 @@ import com.cleanify.data.model.MediaItem
 import com.cleanify.data.repository.FolderBarLayout
 import com.cleanify.data.repository.FolderNameLayout
 import com.cleanify.data.repository.SwipeDownAction
+import com.cleanify.data.repository.SwipeUpAction
 import com.cleanify.data.repository.SwipeSensitivity
 import com.cleanify.ui.components.AppDialog
 import com.cleanify.ui.components.AppDropdownMenu
@@ -193,6 +194,7 @@ fun SwiperScreen(
     val invertSwipe by viewModel.invertSwipe.collectAsStateWithLifecycle()
     val swipeSensitivity by viewModel.swipeSensitivity.collectAsStateWithLifecycle()
     val swipeDownAction by viewModel.swipeDownAction.collectAsStateWithLifecycle()
+    val swipeUpAction by viewModel.swipeUpAction.collectAsStateWithLifecycle()
     val folderBarLayout by viewModel.folderBarLayout.collectAsStateWithLifecycle()
     val folderNameLayout by viewModel.folderNameLayout.collectAsStateWithLifecycle()
     val hidePreviewStrip by viewModel.hidePreviewStrip.collectAsStateWithLifecycle()
@@ -397,10 +399,12 @@ fun SwiperScreen(
                                 onSwipeLeft = viewModel::handleSwipeLeft,
                                 onSwipeRight = viewModel::handleSwipeRight,
                                 onSwipeDown = viewModel::handleSwipeDown,
+                                onSwipeUp = viewModel::handleSwipeUp,
                                 onLongPress = viewModel::showMediaItemMenu,
                                 invertSwipe = invertSwipe,
                                 sensitivity = swipeSensitivity,
                                 swipeDownAction = swipeDownAction,
+                                swipeUpAction = swipeUpAction,
                                 onSetVideoPlaybackSpeed = viewModel::setPlaybackSpeed,
                                 onToggleMute = {
                                     val hasAudio = exoPlayer.currentTracks.isTypeSupported(C.TRACK_TYPE_AUDIO)
@@ -457,10 +461,12 @@ fun SwiperScreen(
                                 onSwipeLeft = viewModel::handleSwipeLeft,
                                 onSwipeRight = viewModel::handleSwipeRight,
                                 onSwipeDown = viewModel::handleSwipeDown,
+                                onSwipeUp = viewModel::handleSwipeUp,
                                 onLongPress = viewModel::showMediaItemMenu,
                                 invertSwipe = invertSwipe,
                                 sensitivity = swipeSensitivity,
                                 swipeDownAction = swipeDownAction,
+                                swipeUpAction = swipeUpAction,
                                 onSetVideoPlaybackSpeed = viewModel::setPlaybackSpeed,
                                 onToggleMute = {
                                     val hasAudio = exoPlayer.currentTracks.isTypeSupported(C.TRACK_TYPE_AUDIO)
@@ -699,10 +705,12 @@ private fun MainContent(
     onSwipeLeft: () -> Unit,
     onSwipeRight: () -> Unit,
     onSwipeDown: () -> Unit,
+    onSwipeUp: () -> Unit = {},
     onLongPress: (offset: DpOffset) -> Unit,
     invertSwipe: Boolean,
     sensitivity: SwipeSensitivity,
     swipeDownAction: SwipeDownAction,
+    swipeUpAction: SwipeUpAction = SwipeUpAction.NONE,
     onSetVideoPlaybackSpeed: (Float) -> Unit,
     onToggleMute: () -> Unit,
     onTap: (MediaItem) -> Unit,
@@ -743,11 +751,13 @@ private fun MainContent(
                     onSwipeLeft = onSwipeLeft,
                     onSwipeRight = onSwipeRight,
                     onSwipeDown = onSwipeDown,
+                    onSwipeUp = onSwipeUp,
                     onLongPress = onLongPress,
                     modifier = Modifier.fillMaxSize(),
                     invertSwipe = invertSwipe,
                     sensitivity = sensitivity,
                     swipeDownAction = swipeDownAction,
+                    swipeUpAction = swipeUpAction,
                     videoPlaybackSpeed = uiState.videoPlaybackSpeed,
                     onSetVideoPlaybackSpeed = onSetVideoPlaybackSpeed,
                     isVideoMuted = uiState.isVideoMuted,

@@ -1,11 +1,14 @@
 package com.cleanify.ui.screens.settings.sections
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -29,7 +32,10 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.cleanify.R
 import com.cleanify.ui.theme.predefinedAccentColors
+import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
+
+val LocalHighlightedSettingId = compositionLocalOf<String?> { null }
 
 @Composable
 fun SectionHeader(titleRes: Int) {
@@ -43,13 +49,68 @@ fun SectionHeader(titleRes: Int) {
 }
 
 @Composable
-fun SettingsItem(title: String, summary: String, onClick: (() -> Unit)? = null, onLongClick: (() -> Unit)? = null) {
-    val modifier = if (onClick != null || onLongClick != null)
+fun FrostedSettingsGroup(
+    modifier: Modifier = Modifier,
+    titleRes: Int? = null,
+    title: String? = null,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        val headerText = title ?: titleRes?.let { stringResource(it) }
+        if (headerText != null) {
+            Text(
+                text = headerText,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = 6.dp, bottom = 8.dp, top = 6.dp)
+            )
+        }
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.75f),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp, horizontal = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+                content = content
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun SettingsItem(
+    title: String,
+    summary: String,
+    onClick: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
+    settingId: String? = null
+) {
+    val isHighlighted = LocalHighlightedSettingId.current != null && LocalHighlightedSettingId.current == settingId
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    LaunchedEffect(isHighlighted) {
+        if (isHighlighted) {
+            delay(150)
+            bringIntoViewRequester.bringIntoView()
+        }
+    }
+    val clickModifier = if (onClick != null || onLongClick != null)
         Modifier.pointerInput(Unit) { detectTapGestures(onTap = { onClick?.invoke() }, onLongPress = { onLongClick?.invoke() }) }
     else Modifier
     Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+        modifier = clickModifier
+            .fillMaxWidth()
+            .bringIntoViewRequester(bringIntoViewRequester),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isHighlighted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surfaceContainerHigh
+        ),
+        border = if (isHighlighted) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
     ) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
             Text(text = title, style = MaterialTheme.typography.titleMedium)
@@ -59,43 +120,58 @@ fun SettingsItem(title: String, summary: String, onClick: (() -> Unit)? = null, 
     }
 }
 
-val settingsPickerAccents = mapOf(
-    R.string.language_title to Color(0xFF9B59B6),
-    R.string.theme_title to Color(0xFF9B59B6),
-    R.string.folder_name_position_title to Color(0xFF9B59B6),
-    R.string.folder_bar_layout_title to Color(0xFF9B59B6),
-    R.string.swipe_sensitivity_title to Color(0xFF00BCD4),
-    R.string.swipe_down_action_title to Color(0xFF00BCD4),
-    R.string.folder_selection_mode_title to Color(0xFF00BCD4),
-    R.string.initial_dialog_focus_title to Color(0xFF00BCD4),
-    R.string.unselect_all_behavior_title to Color(0xFF00BCD4),
-    R.string.similarity_level_title to Color(0xFFE74C3C),
-    R.string.scan_scope_title to Color(0xFFE74C3C),
-    R.string.default_video_speed_title to Color(0xFF4CAF50),
-    R.string.screenshot_quality_title to Color(0xFF4CAF50),
-)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun <T> SettingsPickerItem(titleRes: Int, descriptionRes: Int, options: List<T>, selectedOption: T, onOptionSelected: (T) -> Unit, getDisplayName: @Composable (T) -> String) {
+fun <T> SettingsPickerItem(
+    titleRes: Int,
+    descriptionRes: Int,
+    options: List<T>,
+    selectedOption: T,
+    onOptionSelected: (T) -> Unit,
+    getDisplayName: @Composable (T) -> String,
+    settingId: String? = null
+) {
     SettingsPickerItem(
         titleRes = titleRes,
         description = stringResource(descriptionRes),
         options = options,
         selectedOption = selectedOption,
         onOptionSelected = onOptionSelected,
-        getDisplayName = getDisplayName
+        getDisplayName = getDisplayName,
+        settingId = settingId
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun <T> SettingsPickerItem(titleRes: Int, description: String, options: List<T>, selectedOption: T, onOptionSelected: (T) -> Unit, getDisplayName: @Composable (T) -> String) {
-    val accentColor = settingsPickerAccents[titleRes] ?: Color(0xFF7F8C8D)
+fun <T> SettingsPickerItem(
+    titleRes: Int,
+    description: String,
+    options: List<T>,
+    selectedOption: T,
+    onOptionSelected: (T) -> Unit,
+    getDisplayName: @Composable (T) -> String,
+    settingId: String? = null
+) {
+    val isHighlighted = LocalHighlightedSettingId.current != null && LocalHighlightedSettingId.current == settingId
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    LaunchedEffect(isHighlighted) {
+        if (isHighlighted) {
+            delay(150)
+            bringIntoViewRequester.bringIntoView()
+        }
+    }
+    val accentColor = MaterialTheme.colorScheme.primary
     var showDropdown by remember { mutableStateOf(false) }
     val displayValue = getDisplayName(selectedOption)
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+        modifier = Modifier
+            .fillMaxWidth()
+            .bringIntoViewRequester(bringIntoViewRequester),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isHighlighted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surfaceContainerHigh
+        ),
+        border = if (isHighlighted) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
@@ -140,9 +216,9 @@ fun <T> SettingsPickerItem(titleRes: Int, description: String, options: List<T>,
                     onDismissRequest = { showDropdown = false },
                     shape = RoundedCornerShape(20.dp),
                     modifier = Modifier
-                        .widthIn(min = 250.dp, max = 340.dp)
+                        .widthIn(min = 220.dp, max = 320.dp)
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                    offset = DpOffset(x = (-100).dp, y = 8.dp)
+                    offset = DpOffset(x = (-40).dp, y = 8.dp)
                 ) {
                     options.forEach { option ->
                         val isSelected = option == selectedOption
@@ -184,11 +260,32 @@ fun <T> SettingsPickerItem(titleRes: Int, description: String, options: List<T>,
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun SettingSwitch(titleRes: Int, descriptionRes: Int, checked: Boolean, onCheckedChange: (Boolean) -> Unit, enabled: Boolean = true) {
+fun SettingSwitch(
+    titleRes: Int,
+    descriptionRes: Int,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    enabled: Boolean = true,
+    settingId: String? = null
+) {
+    val isHighlighted = LocalHighlightedSettingId.current != null && LocalHighlightedSettingId.current == settingId
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    LaunchedEffect(isHighlighted) {
+        if (isHighlighted) {
+            delay(150)
+            bringIntoViewRequester.bringIntoView()
+        }
+    }
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+        modifier = Modifier
+            .fillMaxWidth()
+            .bringIntoViewRequester(bringIntoViewRequester),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isHighlighted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surfaceContainerHigh
+        ),
+        border = if (isHighlighted) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
     ) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
@@ -204,11 +301,32 @@ fun SettingSwitch(titleRes: Int, descriptionRes: Int, checked: Boolean, onChecke
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun SettingSwitch(titleRes: Int, description: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit, enabled: Boolean = true) {
+fun SettingSwitch(
+    titleRes: Int,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    enabled: Boolean = true,
+    settingId: String? = null
+) {
+    val isHighlighted = LocalHighlightedSettingId.current != null && LocalHighlightedSettingId.current == settingId
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    LaunchedEffect(isHighlighted) {
+        if (isHighlighted) {
+            delay(150)
+            bringIntoViewRequester.bringIntoView()
+        }
+    }
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+        modifier = Modifier
+            .fillMaxWidth()
+            .bringIntoViewRequester(bringIntoViewRequester),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isHighlighted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surfaceContainerHigh
+        ),
+        border = if (isHighlighted) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
     ) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
@@ -261,12 +379,31 @@ fun ToolAboutCard(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun AccentColorSetting(currentAccentKey: String, onClick: () -> Unit) {
+fun AccentColorSetting(
+    currentAccentKey: String,
+    onClick: () -> Unit,
+    settingId: String? = null
+) {
+    val isHighlighted = LocalHighlightedSettingId.current != null && LocalHighlightedSettingId.current == settingId
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    LaunchedEffect(isHighlighted) {
+        if (isHighlighted) {
+            delay(150)
+            bringIntoViewRequester.bringIntoView()
+        }
+    }
     val accent = predefinedAccentColors.find { it.key == currentAccentKey } ?: predefinedAccentColors.first()
     Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+        modifier = Modifier
+            .fillMaxWidth()
+            .bringIntoViewRequester(bringIntoViewRequester)
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isHighlighted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surfaceContainerHigh
+        ),
+        border = if (isHighlighted) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
     ) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),

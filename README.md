@@ -16,6 +16,19 @@
   <img src="https://img.shields.io/badge/Kotlin-2.2-purple.svg" alt="Kotlin" />
 </p>
 
+<p align="center">
+  <a href="https://rookieenough.github.io/Orion-Data/redirect.html?id=cleanify">
+    <img src="https://raw.githubusercontent.com/RookieEnough/Orion-Store/refs/heads/main/assets/orion-badge.png" height="50" alt="Get it on Orion Store" />
+  </a>
+  &nbsp;
+  <a href="https://github.com/mini-page/Cleanify/releases/latest">
+    <img src="https://img.shields.io/badge/Download-Latest%20APK-7c5cfc?style=for-the-badge&logo=android&logoColor=white" height="50" alt="Download APK" />
+  </a>
+</p>
+<p align="center">
+  <sub>Open in Orion Store: <code>orionstore://app/cleanify</code></sub>
+</p>
+
 ---
 
 Cleanify is a powerful, privacy-first Android app for managing your photos, videos, and files. Sort through thousands of files with a fun Tinder-style swipe interface, find and eliminate duplicate or similar media, and clean up junk — all without ever touching the internet.

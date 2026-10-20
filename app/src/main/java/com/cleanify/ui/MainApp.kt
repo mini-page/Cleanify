@@ -45,6 +45,7 @@ fun MainApp(
     viewModel: MainViewModel,
     windowSizeClass: WindowSizeClass
 ) {
+    val appNavController = rememberNavController()
     val isOnboardingCompleted by viewModel.isOnboardingCompleted.collectAsStateWithLifecycle()
     var hasAllFilesAccess by remember { mutableStateOf(PermissionManager.hasAllFilesAccess()) }
     var justGrantedAccess by remember { mutableStateOf(false) }
@@ -83,7 +84,7 @@ fun MainApp(
                 }
 
                 AppNavigation(
-                    navController = rememberNavController(),
+                    navController = appNavController,
                     windowSizeClass = windowSizeClass,
                     startDestination = startDestination
                 )
@@ -99,13 +100,63 @@ fun MainApp(
             }
         }
         false -> {
-            val navController = rememberNavController()
             AppNavigation(
-                navController = navController,
+                navController = appNavController,
                 windowSizeClass = windowSizeClass,
                 startDestination = Screen.Onboarding.route
             )
         }
+    }
+
+    val showFeedbackDialog by viewModel.showFeedbackDialog.collectAsStateWithLifecycle()
+    val showChangelogDialog by viewModel.showChangelogDialog.collectAsStateWithLifecycle()
+    val lastSeenVersionCode by viewModel.lastSeenVersionCode.collectAsStateWithLifecycle()
+
+    LaunchedEffect(lastSeenVersionCode) {
+        if (lastSeenVersionCode > 0 && lastSeenVersionCode < com.cleanify.BuildConfig.VERSION_CODE) {
+            viewModel.openChangelogDialog()
+        } else if (lastSeenVersionCode == 0) {
+            viewModel.closeChangelogDialog(com.cleanify.BuildConfig.VERSION_CODE)
+        }
+    }
+
+    if (showFeedbackDialog) {
+        com.cleanify.ui.components.FeedbackDialog(
+            appVersion = com.cleanify.BuildConfig.VERSION_NAME,
+            onDismiss = viewModel::closeFeedbackDialog,
+            onNavigateToSettings = {
+                viewModel.closeFeedbackDialog()
+                appNavController.navigate(Screen.Settings.createRoute("help", "shake_to_feedback"))
+            }
+        )
+    }
+
+    if (showChangelogDialog) {
+        val changelogNotes = """
+            ### 🚀 Cleanify v3.1.0 Highlights
+
+            - **Shake & Screenshot to Feedback**: Shake your phone or take a screenshot anytime to quickly open the feedback dialog.
+            - **Upgraded Feedback Engine**:
+              - Rotating placeholder inspirations for Name and Subject.
+              - Attach screenshots directly from your gallery.
+              - Full device diagnostics with privacy toggle.
+              - Send seamlessly via WhatsApp, Telegram, or Email without exposing contact details upfront.
+            - **Interactive Update Frequency Slider**: Easily pick update check intervals from 1 hour to 7 days.
+            - **High-Definition Header Logo**: Polished Cleanify branding on the home screen.
+            - **Streamlined Tool Chips**: Cleaned up redundant chips on the home screen.
+            - **Recycle Bin Overhaul**: Refreshed UI, category badges, space recovery indicators, and batch restore/delete.
+            - **Storage Analysis**: Actionable cleanup insights and storage health indicators.
+            - **Settings Unified**: Resolved settings back-navigation scroll position reset bug, and reorganized sorting/appearance settings.
+            - **Crash Resolved**: Fixed crash when launching Contact Cleaner.
+        """.trimIndent()
+
+        com.cleanify.ui.components.ChangelogDialog(
+            versionName = com.cleanify.BuildConfig.VERSION_NAME,
+            changelogMarkdown = changelogNotes,
+            onDismiss = {
+                viewModel.closeChangelogDialog(com.cleanify.BuildConfig.VERSION_CODE)
+            }
+        )
     }
 }
 
