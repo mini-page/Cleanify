@@ -192,6 +192,48 @@ class CleanerViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    fun executeCleanFiles(filesToDelete: List<File>) {
+        if (_uiState.value.isScanning || filesToDelete.isEmpty()) return
+        _uiState.value = _uiState.value.copy(
+            isScanning = true,
+            progress = 0.0,
+            deleteComplete = false,
+            log = emptyList(),
+            filesFailed = 0,
+            ramFreed = 0
+        )
+
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                var failed = 0
+                val total = filesToDelete.size
+                filesToDelete.forEachIndexed { idx, file ->
+                    val success = try {
+                        if (file.isDirectory) file.deleteRecursively() else file.delete()
+                    } catch (e: Exception) {
+                        false
+                    }
+                    if (success) {
+                        _uiState.value = _uiState.value.copy(log = _uiState.value.log + "Deleted: ${file.name}")
+                    } else {
+                        failed++
+                        _uiState.value = _uiState.value.copy(log = _uiState.value.log + "Failed: ${file.name}")
+                    }
+                    _uiState.value = _uiState.value.copy(progress = ((idx + 1) * 100.0) / total)
+                }
+
+                _uiState.value = _uiState.value.copy(
+                    isScanning = false,
+                    deleteComplete = true,
+                    scanComplete = false,
+                    foundFiles = emptyList(),
+                    totalSize = 0L,
+                    filesFailed = failed
+                )
+            }
+        }
+    }
+
     fun quickClean(volumeIndex: Int = -1) {
         val state = _uiState.value
         _uiState.value = state.copy(

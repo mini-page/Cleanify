@@ -43,7 +43,6 @@ import com.cleanify.ui.screens.session.SessionSetupScreen
 import com.cleanify.ui.screens.session.SessionSetupViewModel
 import com.cleanify.ui.screens.settings.SettingsScreen
 import com.cleanify.ui.screens.swiper.SwiperScreen
-import com.cleanify.ui.screens.contacts.ContactCleanerScreen
 import com.cleanify.ui.screens.recyclebin.RecycleBinScreen
 import com.cleanify.ui.screens.tools.BlacklistEditorScreen
 import com.cleanify.ui.screens.tools.CleanerSettingsScreen
@@ -94,7 +93,6 @@ sealed class Screen(val route: String) {
     object CleanerBlacklist : Screen("cleaner_blacklist")
     object CleanerWhitelist : Screen("cleaner_whitelist")
     object RecycleBin : Screen("recycle_bin")
-    object ContactCleaner : Screen("contact_cleaner")
     object StorageAnalysis : Screen("storage_analysis")
 
     // Routes for the duplicates feature, now part of a nested graph
@@ -171,7 +169,6 @@ fun AppNavigation(
                 onNavigateToDuplicatesGroup = { groupId -> navController.navigate(Screen.GroupDetails.createRoute(groupId)) },
                 onNavigateToEmptyCleaner = { navController.navigate(Screen.EmptyCleaner.route) },
                 onNavigateToRecycleBin = { navController.navigate(Screen.RecycleBin.route) },
-                onNavigateToContactCleaner = { navController.navigate(Screen.ContactCleaner.route) },
                 onNavigateToStorageAnalysis = { navController.navigate(Screen.StorageAnalysis.route) },
                 viewModel = viewModel
             )
@@ -217,25 +214,12 @@ onNavigateToSettings = { navController.navigate(Screen.Settings.createRoute("sor
             )
         }
 
-        composable(
-            route = Screen.ContactCleaner.route,
-            deepLinks = listOf(
-                navDeepLink { uriPattern = "$DEEP_LINK_URI_BASE/contact_cleaner" }
-            )
-        ) {
-            ContactCleanerScreen(
-                onNavigateUp = { navController.navigateUp() },
-                onNavigateToSettings = { navController.navigate(Screen.Settings.createRoute("contact_cleaner")) }
-            )
-        }
-
         composable(Screen.Tools.route) {
             ToolsScreen(
                 onNavigateUp = { navController.navigateUp() },
                 onNavigateToDuplicates = { navController.navigate(DUPLICATES_GRAPH_ROUTE) },
                 onNavigateToEmptyCleaner = { navController.navigate(Screen.EmptyCleaner.route) },
                 onNavigateToRecycleBin = { navController.navigate(Screen.RecycleBin.route) },
-                onNavigateToContactCleaner = { navController.navigate(Screen.ContactCleaner.route) },
                 onNavigateToStorageAnalysis = { navController.navigate(Screen.StorageAnalysis.route) }
             )
         }
@@ -246,7 +230,8 @@ onNavigateToSettings = { navController.navigate(Screen.Settings.createRoute("sor
                 onNavigateToEmptyCleaner = { navController.navigate(Screen.EmptyCleaner.route) },
                 onNavigateToDuplicates = { navController.navigate(DUPLICATES_GRAPH_ROUTE) },
                 onNavigateToRecycleBin = { navController.navigate(Screen.RecycleBin.route) },
-                onNavigateToContactCleaner = { navController.navigate(Screen.ContactCleaner.route) }
+                onNavigateToSwiper = { bucketIds -> navController.navigate(Screen.Swiper.createRoute(bucketIds)) },
+                onNavigateToSettings = { page -> navController.navigate(Screen.Settings.createRoute(page)) }
             )
         }
 

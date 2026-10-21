@@ -1064,13 +1064,16 @@ class SwiperViewModel @Inject constructor(
 
 
     private suspend fun synchronizeUnindexedChanges(changes: List<PendingChange>): List<PendingChange>? {
-        val unindexedChanges = changes.filter { it.item.uri.scheme == "file" }
-        if (unindexedChanges.isEmpty()) {
-            return changes // No un-indexed items, return original list
+        // Skip scanning files that are purely queued for deletion to prevent multi-second lag on heavy files (>200MB)
+        val itemsNeedingScan = changes.filter { change ->
+            change.item.uri.scheme == "file" && change.action !is SwiperAction.Delete
+        }
+        if (itemsNeedingScan.isEmpty()) {
+            return changes // No items needing media scan, return original list immediately
         }
 
-        val pathsToScan = unindexedChanges.map { it.item.id }
-        Log.d(logTag, "synchronizeUnindexedChanges: Found ${pathsToScan.size} items with file:// URIs. Scanning.")
+        val pathsToScan = itemsNeedingScan.map { it.item.id }
+        Log.d(logTag, "synchronizeUnindexedChanges: Found ${pathsToScan.size} items with file:// URIs to index. Scanning.")
 
         val scanSuccess = mediaRepository.scanPathsAndWait(pathsToScan)
         if (!scanSuccess) {

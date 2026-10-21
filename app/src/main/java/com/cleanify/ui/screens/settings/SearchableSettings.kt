@@ -401,6 +401,151 @@ val allSearchableSettings = listOf(
         itemType = SettingItemType.NavigationItem
     ),
 
+    // Storage Management
+    SearchableSettingItem(
+        id = "storage_large_file_threshold",
+        titleRes = R.string.storage_management_title,
+        customDesc = "Configure large file threshold (MB) for storage analysis",
+        sectionId = "storage_management",
+        sectionTitleRes = R.string.storage_management_title,
+        icon = Icons.Default.SdCard,
+        itemType = SettingItemType.NavigationItem
+    ),
+    SearchableSettingItem(
+        id = "storage_old_downloads",
+        titleRes = R.string.storage_management_title,
+        customDesc = "Threshold days for old download candidate detection",
+        sectionId = "storage_management",
+        sectionTitleRes = R.string.storage_management_title,
+        icon = Icons.Default.SdCard,
+        itemType = SettingItemType.NavigationItem
+    ),
+    SearchableSettingItem(
+        id = "storage_scan_hidden",
+        titleRes = R.string.storage_management_title,
+        customDesc = "Include hidden files and folders during storage scan",
+        sectionId = "storage_management",
+        sectionTitleRes = R.string.storage_management_title,
+        icon = Icons.Default.SdCard,
+        itemType = SettingItemType.SwitchItem(
+            isChecked = { it.storageScanHiddenFiles.value },
+            onToggle = { vm, checked -> vm.setStorageScanHiddenFiles(checked) }
+        )
+    ),
+    SearchableSettingItem(
+        id = "storage_haptics",
+        titleRes = R.string.storage_management_title,
+        customDesc = "Haptic feedback for storage actions and quick deletes",
+        sectionId = "storage_management",
+        sectionTitleRes = R.string.storage_management_title,
+        icon = Icons.Default.SdCard,
+        itemType = SettingItemType.SwitchItem(
+            isChecked = { it.storageHapticsEnabled.value },
+            onToggle = { vm, checked -> vm.setStorageHapticsEnabled(checked) }
+        )
+    ),
+
+    // Cleaner Settings
+    SearchableSettingItem(
+        id = "clean_empty_files",
+        titleRes = R.string.cleaner_section_title,
+        customDesc = "Empty Files (0 bytes): Delete files with size 0",
+        sectionId = "cleaner",
+        sectionTitleRes = R.string.cleaner_section_title,
+        icon = Icons.Default.CleaningServices,
+        itemType = SettingItemType.NavigationItem
+    ),
+    SearchableSettingItem(
+        id = "clean_empty_folders",
+        titleRes = R.string.cleaner_section_title,
+        customDesc = "Empty Folders: Delete directories containing no files",
+        sectionId = "cleaner",
+        sectionTitleRes = R.string.cleaner_section_title,
+        icon = Icons.Default.CleaningServices,
+        itemType = SettingItemType.NavigationItem
+    ),
+    SearchableSettingItem(
+        id = "clean_generic_junk",
+        titleRes = R.string.cleaner_section_title,
+        customDesc = "Generic Junk: Delete .tmp, .log files and temporary folders",
+        sectionId = "cleaner",
+        sectionTitleRes = R.string.cleaner_section_title,
+        icon = Icons.Default.CleaningServices,
+        itemType = SettingItemType.NavigationItem
+    ),
+    SearchableSettingItem(
+        id = "clean_apk_packages",
+        titleRes = R.string.cleaner_section_title,
+        customDesc = "APK Packages: Delete cached .apk, .apks, .apkm, .aab files",
+        sectionId = "cleaner",
+        sectionTitleRes = R.string.cleaner_section_title,
+        icon = Icons.Default.CleaningServices,
+        itemType = SettingItemType.NavigationItem
+    ),
+    SearchableSettingItem(
+        id = "clean_corpse_files",
+        titleRes = R.string.cleaner_section_title,
+        customDesc = "Corpse Files: Delete orphaned app data folders in Android/data",
+        sectionId = "cleaner",
+        sectionTitleRes = R.string.cleaner_section_title,
+        icon = Icons.Default.CleaningServices,
+        itemType = SettingItemType.NavigationItem
+    ),
+    SearchableSettingItem(
+        id = "clean_auto_whitelist",
+        titleRes = R.string.cleaner_section_title,
+        customDesc = "Auto-whitelist: Protect folders containing 'backup' or 'important'",
+        sectionId = "cleaner",
+        sectionTitleRes = R.string.cleaner_section_title,
+        icon = Icons.Default.CleaningServices,
+        itemType = SettingItemType.NavigationItem
+    ),
+    SearchableSettingItem(
+        id = "clean_clipboard",
+        titleRes = R.string.cleaner_section_title,
+        customDesc = "Clear Clipboard: Clear system clipboard after each clean",
+        sectionId = "cleaner",
+        sectionTitleRes = R.string.cleaner_section_title,
+        icon = Icons.Default.CleaningServices,
+        itemType = SettingItemType.NavigationItem
+    ),
+    SearchableSettingItem(
+        id = "clean_scheduled",
+        titleRes = R.string.cleaner_section_title,
+        customDesc = "Scheduled Clean: Hourly automated device cleanup",
+        sectionId = "cleaner",
+        sectionTitleRes = R.string.cleaner_section_title,
+        icon = Icons.Default.CleaningServices,
+        itemType = SettingItemType.NavigationItem
+    ),
+    SearchableSettingItem(
+        id = "clean_multi_run",
+        titleRes = R.string.cleaner_section_title,
+        customDesc = "Double-checker (multi-run): Repeat scan passes for deep clean",
+        sectionId = "cleaner",
+        sectionTitleRes = R.string.cleaner_section_title,
+        icon = Icons.Default.CleaningServices,
+        itemType = SettingItemType.NavigationItem
+    ),
+    SearchableSettingItem(
+        id = "clean_blacklist",
+        titleRes = R.string.cleaner_section_title,
+        customDesc = "Blacklist: Paths and patterns excluded from cleaning",
+        sectionId = "cleaner",
+        sectionTitleRes = R.string.cleaner_section_title,
+        icon = Icons.Default.Block,
+        itemType = SettingItemType.NavigationItem
+    ),
+    SearchableSettingItem(
+        id = "clean_whitelist",
+        titleRes = R.string.cleaner_section_title,
+        customDesc = "Whitelist: Paths protected from cleaning",
+        sectionId = "cleaner",
+        sectionTitleRes = R.string.cleaner_section_title,
+        icon = Icons.Default.CheckCircle,
+        itemType = SettingItemType.NavigationItem
+    ),
+
     // Help & Support
     SearchableSettingItem(
         id = "shake_to_feedback",

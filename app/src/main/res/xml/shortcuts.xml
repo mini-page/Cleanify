@@ -27,17 +27,17 @@
             android:data="app://com.cleanify/duplicates_graph" />
     </shortcut>
     <shortcut
-        android:shortcutId="contact_cleaner"
+        android:shortcutId="storage_analysis"
         android:enabled="true"
         android:icon="@mipmap/ic_launcher_monochrome"
-        android:shortcutShortLabel="@string/shortcut_contact_cleaner"
-        android:shortcutLongLabel="@string/shortcut_contact_cleaner_long"
+        android:shortcutShortLabel="@string/storage_management_title"
+        android:shortcutLongLabel="@string/storage_management_desc"
         android:shortcutDisabledMessage="@string/shortcut_disabled">
         <intent
             android:action="android.intent.action.VIEW"
             android:targetPackage="com.cleanify"
             android:targetClass="com.cleanify.ui.MainActivity"
-            android:data="app://com.cleanify/contact_cleaner" />
+            android:data="app://com.cleanify/storage_analysis" />
     </shortcut>
     <shortcut
         android:shortcutId="recycle_bin"

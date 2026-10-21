@@ -1,3 +1,8 @@
+/*
+ * Cleanify - Storage Management & Quarry Engine Integration
+ * Copyright (c) 2025 LoopOtto & Quarry App contributors (Apache 2.0 / GPLv3)
+ */
+
 package com.cleanify.ui.screens.storage
 
 import android.content.Context
@@ -11,6 +16,12 @@ import android.text.format.Formatter
 import android.webkit.MimeTypeMap
 import android.widget.Toast
 import androidx.core.content.FileProvider
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -18,17 +29,29 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.AccountTree
+import androidx.compose.material.icons.filled.Android
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SdCard
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DeleteOutline
@@ -37,17 +60,17 @@ import androidx.compose.material.icons.outlined.FolderDelete
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.MusicNote
 import androidx.compose.material.icons.outlined.OpenInNew
-import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.VideoFile
 import androidx.compose.material.icons.outlined.Warning
-import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -60,6 +83,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.cleanify.domain.treemap.TreemapEngine
+import com.cleanify.domain.treemap.TreemapNode
 import com.cleanify.ui.components.BackNavigationIcon
 import com.cleanify.ui.components.MediaPreviewDialog
 import kotlinx.coroutines.Dispatchers
@@ -96,9 +121,18 @@ data class StorageAnalysisState(
     val categories: List<CategoryUsage> = emptyList(),
     val otherBytes: Long = 0,
     val largeFiles: List<LargeFile> = emptyList(),
+    val largeFilesTotalBytes: Long = 0L,
+    val apkFiles: List<File> = emptyList(),
+    val apkFilesTotalBytes: Long = 0L,
+    val screenshotFiles: List<File> = emptyList(),
+    val screenshotFilesTotalBytes: Long = 0L,
+    val emptyFoldersCount: Int = 0,
     val isScanning: Boolean = false,
     val scannedFiles: Int = 0
-)
+) {
+    val totalRecoverableBytes: Long
+        get() = largeFilesTotalBytes + apkFilesTotalBytes + screenshotFilesTotalBytes
+}
 
 private val categoryExtensions = mapOf(
     "Images" to listOf("jpg", "jpeg", "png", "gif", "bmp", "webp", "svg", "heic", "heif"),
@@ -125,13 +159,50 @@ fun StorageAnalysisScreen(
     onNavigateToEmptyCleaner: () -> Unit = {},
     onNavigateToDuplicates: () -> Unit = {},
     onNavigateToRecycleBin: () -> Unit = {},
-    onNavigateToContactCleaner: () -> Unit = {},
+    onNavigateToSwiper: (List<String>) -> Unit = {},
+    onNavigateToSettings: (String) -> Unit = {},
     embedded: Boolean = false
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var state by remember { mutableStateOf(StorageAnalysisState()) }
     var selectedFile by remember { mutableStateOf<LargeFile?>(null) }
+    val pagerState = rememberPagerState(initialPage = 0) { 3 }
+    var isBottomBarVisible by remember { mutableStateOf(true) }
+    var showAppStorageSheet by remember { mutableStateOf(false) }
+    var showLargeFilesSheet by remember { mutableStateOf(false) }
+    var treemapRoot by remember { mutableStateOf<TreemapNode?>(null) }
+    var isTreemapLoading by remember { mutableStateOf(false) }
+    val treemapNavStack = remember { mutableStateListOf<TreemapNode>() }
+
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                // Scrolling down (finger moves up) -> hide
+                if (available.y < -10f) {
+                    isBottomBarVisible = false
+                } else if (available.y > 10f) {
+                    // Scrolling up (finger moves down) -> show
+                    isBottomBarVisible = true
+                }
+                return Offset.Zero
+            }
+        }
+    }
+
+    LaunchedEffect(pagerState.currentPage) {
+        isBottomBarVisible = true
+        if (pagerState.currentPage == 1 && treemapRoot == null && !isTreemapLoading) {
+            isTreemapLoading = true
+            val root = withContext(Dispatchers.IO) {
+                val externalDir = Environment.getExternalStorageDirectory()
+                TreemapEngine.buildTree(externalDir, maxDepth = 2)
+            }
+            treemapRoot = root
+            isTreemapLoading = false
+        }
+    }
+
     val totalBytes = state.volumeUsages.sumOf { it.totalBytes }
     val usedBytes = state.volumeUsages.sumOf { it.usedBytes }
     val freeBytes = state.volumeUsages.sumOf { it.freeBytes }
@@ -169,9 +240,15 @@ fun StorageAnalysisScreen(
                 var otherTotal = 0L
                 var downloadBytes = 0L
                 val largeFilesList = mutableListOf<LargeFile>()
+                var largeFilesTotal = 0L
+                val apkFilesList = mutableListOf<File>()
+                var apkFilesTotal = 0L
+                val screenshotFilesList = mutableListOf<File>()
+                var screenshotFilesTotal = 0L
+                var emptyFolders = 0
                 var scanned = 0
                 val maxScanned = 50000
-                val downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                val largeFileThreshold = 50L * 1024L * 1024L // 50MB
 
                 for (vol in volumes) {
                     val dir = if (vol.isPrimary) Environment.getExternalStorageDirectory()
@@ -185,6 +262,9 @@ fun StorageAnalysisScreen(
                     while (queue.isNotEmpty() && scanned < maxScanned) {
                         val d = queue.removeFirst()
                         val children = d.listFiles() ?: continue
+                        if (children.isEmpty() && !d.name.startsWith(".") && d != dir) {
+                            emptyFolders++
+                        }
                         for (child in children) {
                             if (scanned >= maxScanned) break
                             scanned++
@@ -210,7 +290,27 @@ fun StorageAnalysisScreen(
                                         otherTotal += size
                                     }
                                 }
-                                largeFilesList.add(LargeFile(child, size))
+
+                                // Old APK Check
+                                if (ext in listOf("apk", "apks", "apkm", "xapk")) {
+                                    apkFilesList.add(child)
+                                    apkFilesTotal += size
+                                }
+
+                                // Screenshots Check
+                                val pathLower = child.absolutePath.lowercase()
+                                if ((pathLower.contains("screenshot") || child.parentFile?.name?.lowercase() == "screenshots") &&
+                                    ext in listOf("jpg", "jpeg", "png", "webp")
+                                ) {
+                                    screenshotFilesList.add(child)
+                                    screenshotFilesTotal += size
+                                }
+
+                                // Large Files Check (>50MB)
+                                if (size >= largeFileThreshold) {
+                                    largeFilesList.add(LargeFile(child, size))
+                                    largeFilesTotal += size
+                                }
                             }
                         }
                     }
@@ -235,7 +335,13 @@ fun StorageAnalysisScreen(
                     volumeUsages = volumes,
                     categories = catList.filter { it.bytes > 0 },
                     otherBytes = otherTotal,
-                    largeFiles = largeFilesList.take(10),
+                    largeFiles = largeFilesList,
+                    largeFilesTotalBytes = largeFilesTotal,
+                    apkFiles = apkFilesList,
+                    apkFilesTotalBytes = apkFilesTotal,
+                    screenshotFiles = screenshotFilesList,
+                    screenshotFilesTotalBytes = screenshotFilesTotal,
+                    emptyFoldersCount = emptyFolders,
                     isScanning = false,
                     scannedFiles = scanned
                 )
@@ -250,123 +356,400 @@ fun StorageAnalysisScreen(
         topBar = {
             if (!embedded) {
                 TopAppBar(
-                    title = { Text("Storage Analysis") },
+                    title = { Text("Storage") },
                     navigationIcon = { BackNavigationIcon(onClick = onNavigateUp, contentDescription = "Back") },
                     actions = {
                         IconButton(onClick = { refresh() }) {
                             Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                        }
+                        IconButton(onClick = { onNavigateToSettings("storage_management") }) {
+                            Icon(Icons.Default.Settings, contentDescription = "Storage Settings")
                         }
                     }
                 )
             }
         }
     ) { padding ->
-        if (state.isScanning) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator()
-                    Spacer(Modifier.height(12.dp))
-                    Text("Scanning storage...", style = MaterialTheme.typography.bodyMedium)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .nestedScroll(nestedScrollConnection)
+        ) {
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize()
+            ) { page ->
+                when (page) {
+                    0 -> {
+                        // TAB 0: QUARRY CLEANUP HUB
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 96.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                        // Live Scanning progress bar
+                        if (state.isScanning) {
+                            item {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f))
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(14.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(24.dp),
+                                            strokeWidth = 2.5.dp
+                                        )
+                                        Spacer(Modifier.width(14.dp))
+                                        Column {
+                                            Text(
+                                                "Scanning storage candidates...",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                            Text(
+                                                "${state.scannedFiles} files indexed across storage",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Quarry Hero Overview Card
+                        item {
+                            QuarryHeroCard(
+                                totalRecoverableBytes = state.totalRecoverableBytes,
+                                largeFilesBytes = state.largeFilesTotalBytes,
+                                apkBytes = state.apkFilesTotalBytes,
+                                screenshotsBytes = state.screenshotFilesTotalBytes,
+                                emptyFoldersCount = state.emptyFoldersCount,
+                                scannedFiles = state.scannedFiles,
+                                context = context
+                            )
+                        }
+
+                        // Storage Candidates Section Header
+                        item {
+                            Column(modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)) {
+                                Text(
+                                    "Storage Candidates",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    "Safe and targeted modules to reclaim device space",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        // 1. Large Files Candidate Card
+                        item {
+                            StorageCandidateCard(
+                                title = "Large Files (>50 MB)",
+                                subtitle = "${state.largeFiles.size} large files (${Formatter.formatShortFileSize(context, state.largeFilesTotalBytes)})",
+                                icon = Icons.Outlined.Description,
+                                badgeText = if (state.largeFiles.isNotEmpty()) Formatter.formatShortFileSize(context, state.largeFilesTotalBytes) else null,
+                                actionLabel = "Inspect",
+                                onClick = { showLargeFilesSheet = true }
+                            )
+                        }
+
+                        // 2. Old APK Installers Candidate Card -> Opens Swiper
+                        item {
+                            StorageCandidateCard(
+                                title = "Old APK Installers",
+                                subtitle = "${state.apkFiles.size} installer packages (${Formatter.formatShortFileSize(context, state.apkFilesTotalBytes)})",
+                                icon = Icons.Default.Android,
+                                badgeText = if (state.apkFiles.isNotEmpty()) "${state.apkFiles.size} APKs" else null,
+                                actionLabel = "Swipe Review",
+                                isHighlight = state.apkFiles.isNotEmpty(),
+                                onClick = { onNavigateToSwiper(listOf("virtual:apks")) }
+                            )
+                        }
+
+                        // 3. Screenshots Review Candidate Card -> Opens Swiper
+                        item {
+                            StorageCandidateCard(
+                                title = "Screenshots Review",
+                                subtitle = "${state.screenshotFiles.size} screenshots (${Formatter.formatShortFileSize(context, state.screenshotFilesTotalBytes)})",
+                                icon = Icons.Outlined.Image,
+                                badgeText = if (state.screenshotFiles.isNotEmpty()) Formatter.formatShortFileSize(context, state.screenshotFilesTotalBytes) else null,
+                                actionLabel = "Swipe Clean",
+                                onClick = { onNavigateToSwiper(listOf("virtual:screenshots")) }
+                            )
+                        }
+
+                        // 4. Empty Directories Candidate Card -> Opens Empty Cleaner
+                        item {
+                            StorageCandidateCard(
+                                title = "Empty Directory Cleanup",
+                                subtitle = "${state.emptyFoldersCount} folders containing zero files",
+                                icon = Icons.Outlined.FolderDelete,
+                                badgeText = if (state.emptyFoldersCount > 0) "${state.emptyFoldersCount} empty" else null,
+                                actionLabel = "Clean",
+                                onClick = onNavigateToEmptyCleaner
+                            )
+                        }
+
+                        // 5. Duplicate Files Arbiter Card -> Opens Duplicates Screen
+                        item {
+                            StorageCandidateCard(
+                                title = "Duplicate Files Arbiter",
+                                subtitle = "Rule-based duplicate resolver & content hash matcher",
+                                icon = Icons.Outlined.ContentCopy,
+                                badgeText = "Arbiter",
+                                actionLabel = "Review",
+                                onClick = onNavigateToDuplicates
+                            )
+                        }
+
+                        // 6. Installed App Storage Card -> Opens App Storage BottomSheet
+                        item {
+                            StorageCandidateCard(
+                                title = "Installed Apps & Cache",
+                                subtitle = "Inspect app binaries, user storage, and cache footprint",
+                                icon = Icons.Filled.Apps,
+                                badgeText = "Inspector",
+                                actionLabel = "Analyze",
+                                onClick = { showAppStorageSheet = true }
+                            )
+                        }
+
+                        // 7. Recycle Bin Staging Candidate Card -> Opens Recycle Bin
+                        item {
+                            StorageCandidateCard(
+                                title = "Recycle Bin & Trash",
+                                subtitle = "Review staged deletions or permanently purge files",
+                                icon = Icons.Outlined.DeleteOutline,
+                                badgeText = null,
+                                actionLabel = "View Bin",
+                                onClick = onNavigateToRecycleBin
+                            )
+                        }
+
+                        // Storage Health Banner
+                        item {
+                            Spacer(Modifier.height(4.dp))
+                            StorageHealthBanner(
+                                totalBytes = totalBytes,
+                                usedBytes = usedBytes,
+                                freeBytes = freeBytes
+                            )
+                        }
+                    }
+                }
+
+                1 -> {
+                    // TAB 1: TREEMAP EXPLORER
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = 76.dp)
+                    ) {
+                        if (isTreemapLoading) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    CircularProgressIndicator()
+                                    Spacer(Modifier.height(12.dp))
+                                    Text("Computing squarified treemap hierarchy...", style = MaterialTheme.typography.bodyMedium)
+                                }
+                            }
+                        } else if (treemapRoot != null) {
+                            val currentNode = treemapNavStack.lastOrNull() ?: treemapRoot!!
+                            TreemapCanvas(
+                                rootNode = currentNode,
+                                onDrillDown = { child ->
+                                    if (child.isDirectory && child.children.isNotEmpty()) {
+                                        treemapNavStack.add(child)
+                                    }
+                                },
+                                onNavigateUp = {
+                                    if (treemapNavStack.isNotEmpty()) {
+                                        treemapNavStack.removeAt(treemapNavStack.lastIndex)
+                                    }
+                                },
+                                onFileClick = { fileNode ->
+                                    val file = File(fileNode.path)
+                                    if (file.exists()) {
+                                        selectedFile = LargeFile(file = file, size = fileNode.size)
+                                    }
+                                },
+                                canNavigateUp = treemapNavStack.isNotEmpty(),
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("No storage data available for Treemap", style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                    }
+                }
+
+                2 -> {
+                    // TAB 2: STORAGE BREAKDOWN
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        item {
+                            StorageDonutChart(
+                                totalBytes = totalBytes,
+                                usedBytes = usedBytes,
+                                freeBytes = freeBytes
+                            )
+                        }
+
+                        item {
+                            Text(
+                                "Storage by Volume",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+
+                        items(state.volumeUsages, key = { it.description }) { volume ->
+                            VolumeCard(volume = volume, context = context)
+                        }
+
+                        if (state.categories.isNotEmpty()) {
+                            item {
+                                Text(
+                                    "Category Breakdown",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
+                            items(state.categories, key = { it.name }) { category ->
+                                CategoryBar(
+                                    category = category,
+                                    totalBytes = totalBytes,
+                                    context = context
+                                )
+                            }
+                        }
+
+                        item {
+                            Spacer(Modifier.height(4.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    "Largest Files (>50 MB)",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    "${state.largeFiles.size} files",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        if (state.largeFiles.isEmpty()) {
+                            item {
+                                Text(
+                                    "No large files found (>50 MB)",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        } else {
+                            items(state.largeFiles.take(15), key = { it.file.absolutePath }) { largeFile ->
+                                LargeFileRow(
+                                    largeFile = largeFile,
+                                    context = context,
+                                    onClick = { selectedFile = largeFile }
+                                )
+                            }
+                        }
+                    }
                 }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+        }
+
+        // Floating Auto-Hiding Bottom Nav Bar
+            AnimatedVisibility(
+                visible = isBottomBarVisible,
+                enter = slideInVertically { it * 2 } + fadeIn(),
+                exit = slideOutVertically { it * 2 } + fadeOut(),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 20.dp)
             ) {
-                item {
-                    StorageDonutChart(
-                        totalBytes = totalBytes,
-                        usedBytes = usedBytes,
-                        freeBytes = freeBytes
-                    )
-                }
-
-                item {
-                    StorageHealthBanner(
-                        totalBytes = totalBytes,
-                        usedBytes = usedBytes,
-                        freeBytes = freeBytes
-                    )
-                }
-
-                item {
-                    QuickCleanupToolsRow(
-                        onNavigateToEmptyCleaner = onNavigateToEmptyCleaner,
-                        onNavigateToDuplicates = onNavigateToDuplicates,
-                        onNavigateToRecycleBin = onNavigateToRecycleBin,
-                        onNavigateToContactCleaner = onNavigateToContactCleaner
-                    )
-                }
-
-                item {
-                    Text(
-                        "Storage by Volume",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-
-                items(state.volumeUsages, key = { it.description }) { volume ->
-                    VolumeCard(volume = volume, context = context)
-                }
-
-                if (state.categories.isNotEmpty()) {
-                    item {
-                        Text(
-                            "Category Breakdown",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
-                    }
-                    items(state.categories, key = { it.name }) { category ->
-                        CategoryBar(
-                            category = category,
-                            totalBytes = totalBytes,
-                            context = context
-                        )
-                    }
-                }
-
-                item {
-                    Spacer(Modifier.height(4.dp))
+                Surface(
+                    shape = RoundedCornerShape(32.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f),
+                    tonalElevation = 8.dp,
+                    shadowElevation = 8.dp,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            "Largest Files",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
+                        val tabs = listOf(
+                            Triple("Cleanup", Icons.Outlined.CleaningServices, 0),
+                            Triple("Treemap", Icons.Default.AccountTree, 1),
+                            Triple("Breakdown", Icons.Default.Storage, 2)
                         )
-                        Text(
-                            "${state.scannedFiles} files scanned",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-
-                if (state.largeFiles.isEmpty()) {
-                    item {
-                        Text(
-                            "No files found",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                } else {
-                    items(state.largeFiles, key = { it.file.absolutePath }) { largeFile ->
-                        LargeFileRow(
-                            largeFile = largeFile,
-                            context = context,
-                            onClick = { selectedFile = largeFile }
-                        )
+                        tabs.forEach { (label, icon, index) ->
+                            val isSelected = pagerState.currentPage == index
+                            Box(
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                                        else Color.Transparent
+                                    )
+                                    .clickable {
+                                        scope.launch { pagerState.animateScrollToPage(index) }
+                                    }
+                                    .padding(horizontal = if (isSelected) 14.dp else 10.dp, vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = label,
+                                        tint = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
+                                               else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    if (isSelected) {
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(
+                                            text = label,
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -374,6 +757,60 @@ fun StorageAnalysisScreen(
     }
 
     var previewFile by remember { mutableStateOf<File?>(null) }
+
+    // Large Files Modal Sheet
+    if (showLargeFilesSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showLargeFilesSheet = false }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            "Large Files (>50 MB)",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            "${state.largeFiles.size} items • ${Formatter.formatShortFileSize(context, state.largeFilesTotalBytes)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    IconButton(onClick = { showLargeFilesSheet = false }) {
+                        Icon(Icons.Default.Close, contentDescription = "Close")
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f, fill = false),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(state.largeFiles, key = { it.file.absolutePath }) { largeFile ->
+                        LargeFileRow(
+                            largeFile = largeFile,
+                            context = context,
+                            onClick = {
+                                selectedFile = largeFile
+                            }
+                        )
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+            }
+        }
+    }
 
     selectedFile?.let { file ->
         FileInfoDialog(
@@ -411,6 +848,250 @@ fun StorageAnalysisScreen(
             },
             onDismiss = { previewFile = null }
         )
+    }
+
+    if (showAppStorageSheet) {
+        AppStorageBottomSheet(
+            onDismissRequest = { showAppStorageSheet = false }
+        )
+    }
+}
+
+/**
+ * Quarry-styled Cleanup Hero Card displaying total recoverable bytes prominently
+ */
+@Composable
+private fun QuarryHeroCard(
+    totalRecoverableBytes: Long,
+    largeFilesBytes: Long,
+    apkBytes: Long,
+    screenshotsBytes: Long,
+    emptyFoldersCount: Int,
+    scannedFiles: Int,
+    context: Context,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        ),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Outlined.CleaningServices,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "RECOVERABLE STORAGE",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        letterSpacing = 1.sp
+                    )
+                }
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surfaceVariant
+                ) {
+                    Text(
+                        text = "$scannedFiles items indexed",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            Text(
+                text = Formatter.formatShortFileSize(context, totalRecoverableBytes),
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            Text(
+                text = "Safe & reviewable space identified across storage",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(Modifier.height(14.dp))
+
+            // Sub-metrics row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                MetricChip(
+                    label = "Large Files",
+                    value = Formatter.formatShortFileSize(context, largeFilesBytes),
+                    modifier = Modifier.weight(1f)
+                )
+                MetricChip(
+                    label = "Old APKs",
+                    value = Formatter.formatShortFileSize(context, apkBytes),
+                    modifier = Modifier.weight(1f)
+                )
+                MetricChip(
+                    label = "Screenshots",
+                    value = Formatter.formatShortFileSize(context, screenshotsBytes),
+                    modifier = Modifier.weight(1f)
+                )
+                MetricChip(
+                    label = "Empty Dirs",
+                    value = "$emptyFoldersCount",
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MetricChip(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.65f)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                value,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall,
+                fontSize = 10.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+/**
+ * Quarry-styled Storage Candidate Action Card
+ */
+@Composable
+private fun StorageCandidateCard(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    badgeText: String?,
+    actionLabel: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    isHighlight: Boolean = false
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isHighlight) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+            else MaterialTheme.colorScheme.surfaceContainerHigh
+        ),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                        shape = RoundedCornerShape(12.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+
+            Spacer(Modifier.width(14.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    if (badgeText != null) {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                        ) {
+                            Text(
+                                text = badgeText,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Spacer(Modifier.width(8.dp))
+
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = actionLabel,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                modifier = Modifier.size(18.dp)
+            )
+        }
     }
 }
 
@@ -746,50 +1427,6 @@ private fun StorageHealthBanner(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun QuickCleanupToolsRow(
-    onNavigateToEmptyCleaner: () -> Unit,
-    onNavigateToDuplicates: () -> Unit,
-    onNavigateToRecycleBin: () -> Unit,
-    onNavigateToContactCleaner: () -> Unit
-) {
-    Column {
-        Text(
-            "Quick Cleanup Tools",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            SuggestionChip(
-                onClick = onNavigateToEmptyCleaner,
-                label = { Text("Empty Folders") },
-                icon = { Icon(Icons.Outlined.FolderDelete, contentDescription = null, modifier = Modifier.size(18.dp)) }
-            )
-            SuggestionChip(
-                onClick = onNavigateToDuplicates,
-                label = { Text("Duplicates") },
-                icon = { Icon(Icons.Outlined.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp)) }
-            )
-            SuggestionChip(
-                onClick = onNavigateToRecycleBin,
-                label = { Text("Recycle Bin") },
-                icon = { Icon(Icons.Outlined.DeleteOutline, contentDescription = null, modifier = Modifier.size(18.dp)) }
-            )
-            SuggestionChip(
-                onClick = onNavigateToContactCleaner,
-                label = { Text("Contacts") },
-                icon = { Icon(Icons.Outlined.Person, contentDescription = null, modifier = Modifier.size(18.dp)) }
-            )
         }
     }
 }

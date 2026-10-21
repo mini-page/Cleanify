@@ -178,6 +178,7 @@ import com.cleanify.ui.screens.swiper.components.MediaItemContextMenu
 import com.cleanify.ui.screens.swiper.components.NoMoreItemsMessage
 import com.cleanify.ui.screens.swiper.components.SwiperTopBar
 import com.cleanify.ui.screens.swiper.components.ThumbnailStrip
+import com.cleanify.ui.screens.swiper.components.ThumbnailStatus
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -728,17 +729,34 @@ private fun MainContent(
     val decidedIds = remember(uiState.pendingChanges) {
         uiState.pendingChanges.map { it.item.id }.toSet()
     }
+    val itemStatuses = remember(uiState.pendingChanges, uiState.sessionSkippedMediaIds) {
+        val map = mutableMapOf<String, ThumbnailStatus>()
+        for (skippedId in uiState.sessionSkippedMediaIds) {
+            map[skippedId] = ThumbnailStatus.SKIP
+        }
+        for (change in uiState.pendingChanges) {
+            when (change.action) {
+                is SwiperAction.Keep -> map[change.item.id] = ThumbnailStatus.KEEP
+                is SwiperAction.Delete -> map[change.item.id] = ThumbnailStatus.DELETE
+                is SwiperAction.Move -> map[change.item.id] = ThumbnailStatus.MOVE
+                is SwiperAction.Screenshot -> map[change.item.id] = ThumbnailStatus.SCREENSHOT
+                is SwiperAction.ScreenshotAndDelete -> map[change.item.id] = ThumbnailStatus.DELETE
+            }
+        }
+        map
+    }
 
     Column(modifier) {
         // Thumbnail strip
         if (!hidePreviewStrip) {
             ThumbnailStrip(
-            items = uiState.allMediaItems,
-            currentIndex = uiState.currentIndex,
-            decidedIds = decidedIds,
-            onTap = onNavigateToIndex,
-            imageLoader = imageLoader
-        )
+                items = uiState.allMediaItems,
+                currentIndex = uiState.currentIndex,
+                itemStatuses = itemStatuses,
+                decidedIds = decidedIds,
+                onTap = onNavigateToIndex,
+                imageLoader = imageLoader
+            )
         }
         // Media card + FABs
         Box(modifier = Modifier.weight(1f)) {

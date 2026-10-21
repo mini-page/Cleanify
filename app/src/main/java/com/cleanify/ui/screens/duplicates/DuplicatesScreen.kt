@@ -272,6 +272,18 @@ fun DuplicatesScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.weight(1f)
                         )
+                        // Smart Auto-Select (Arbiter) across all groups
+                        IconButton(onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            viewModel.autoSelectAllWithArbiter()
+                        }) {
+                            Icon(
+                                Icons.Outlined.AutoFixHigh,
+                                contentDescription = "Smart Auto-Select with Arbiter",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
                         // Delete all exact duplicates
                         val hasExactDuplicates = uiState.resultGroups.any { it is DuplicateGroup }
                         if (hasExactDuplicates) {
@@ -475,6 +487,14 @@ fun GroupDetailsScreen(
                                         viewModel.toggleSelectAllInGroup(group)
                                         showMenu = false
                                     }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Smart Auto-Select (Arbiter)") },
+                                    onClick = {
+                                        viewModel.autoSelectWithArbiter(group)
+                                        showMenu = false
+                                    },
+                                    leadingIcon = { Icon(Icons.Outlined.AutoFixHigh, contentDescription = "Auto-Select") }
                                 )
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.keep_oldest)) },
@@ -963,6 +983,7 @@ private fun ResultsView(
                     onToggleSelectAll = viewModel::toggleSelectAllInGroup,
                     onSelectAllButOldest = viewModel::selectAllButOldest,
                     onSelectAllButNewest = viewModel::selectAllButNewest,
+                    onAutoSelectWithArbiter = viewModel::autoSelectWithArbiter,
                     onHideGroup = viewModel::hideGroup,
                     onFlagAsIncorrect = viewModel::flagAsIncorrect,
                     onPreview = onPreview,
@@ -1206,6 +1227,7 @@ private fun ListView(
     onToggleSelectAll: (ScanResultGroup) -> Unit,
     onSelectAllButOldest: (ScanResultGroup) -> Unit,
     onSelectAllButNewest: (ScanResultGroup) -> Unit,
+    onAutoSelectWithArbiter: (ScanResultGroup) -> Unit = {},
     onHideGroup: (ScanResultGroup) -> Unit,
     onFlagAsIncorrect: (ScanResultGroup) -> Unit,
     onPreview: (MediaItem) -> Unit,
@@ -1249,8 +1271,8 @@ private fun ListView(
             items(uiState.resultGroups, key = { it.uniqueId }) { group ->
                 Box(modifier = Modifier.padding(horizontal = 16.dp)) {
                     when (group) {
-                        is DuplicateGroup -> DuplicateGroupCard(group, uiState.selectedForDeletion, onToggleSelection, onToggleSelectAll, onSelectAllButOldest, onSelectAllButNewest, onHideGroup, onPreview, onOpenFile)
-                        is SimilarGroup -> SimilarMediaGroupCard(group, uiState.selectedForDeletion, onToggleSelection, onToggleSelectAll, onSelectAllButOldest, onSelectAllButNewest, onHideGroup, onFlagAsIncorrect, onPreview, onOpenFile)
+                        is DuplicateGroup -> DuplicateGroupCard(group, uiState.selectedForDeletion, onToggleSelection, onToggleSelectAll, onSelectAllButOldest, onSelectAllButNewest, onAutoSelectWithArbiter, onHideGroup, onPreview, onOpenFile)
+                        is SimilarGroup -> SimilarMediaGroupCard(group, uiState.selectedForDeletion, onToggleSelection, onToggleSelectAll, onSelectAllButOldest, onSelectAllButNewest, onAutoSelectWithArbiter, onHideGroup, onFlagAsIncorrect, onPreview, onOpenFile)
                     }
                 }
             }
@@ -1559,6 +1581,7 @@ private fun DuplicateGroupCard(
     onToggleSelectAll: (ScanResultGroup) -> Unit,
     onSelectAllButOldest: (ScanResultGroup) -> Unit,
     onSelectAllButNewest: (ScanResultGroup) -> Unit,
+    onAutoSelectWithArbiter: (ScanResultGroup) -> Unit = {},
     onHideGroup: (ScanResultGroup) -> Unit,
     onPreview: (MediaItem) -> Unit,
     onOpenFile: (MediaItem) -> Unit
@@ -1614,6 +1637,11 @@ private fun DuplicateGroupCard(
                         onDismissRequest = { showMenu = false }
                     ) {
                         DropdownMenuItem(
+                            text = { Text("Smart Auto-Select (Arbiter)") },
+                            onClick = { onAutoSelectWithArbiter(group); showMenu = false },
+                            leadingIcon = { Icon(Icons.Outlined.AutoFixHigh, contentDescription = "Auto-Select") }
+                        )
+                        DropdownMenuItem(
                             text = { Text(stringResource(R.string.hide_group)) },
                             onClick = { onHideGroup(group); showMenu = false },
                             leadingIcon = { Icon(Icons.Outlined.VisibilityOff, contentDescription = "Hide") }
@@ -1657,6 +1685,7 @@ private fun SimilarMediaGroupCard(
     onToggleSelectAll: (ScanResultGroup) -> Unit,
     onSelectAllButOldest: (ScanResultGroup) -> Unit,
     onSelectAllButNewest: (ScanResultGroup) -> Unit,
+    onAutoSelectWithArbiter: (ScanResultGroup) -> Unit = {},
     onHideGroup: (ScanResultGroup) -> Unit,
     onFlagAsIncorrect: (ScanResultGroup) -> Unit,
     onPreview: (MediaItem) -> Unit,
@@ -1711,6 +1740,11 @@ private fun SimilarMediaGroupCard(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false }
                     ) {
+                        DropdownMenuItem(
+                            text = { Text("Smart Auto-Select (Arbiter)") },
+                            onClick = { onAutoSelectWithArbiter(group); showMenu = false },
+                            leadingIcon = { Icon(Icons.Outlined.AutoFixHigh, contentDescription = "Auto-Select") }
+                        )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.flag_as_incorrect)) },
                             onClick = { onFlagAsIncorrect(group); showMenu = false },

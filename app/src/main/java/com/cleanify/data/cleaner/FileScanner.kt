@@ -3,9 +3,7 @@ package com.cleanify.data.cleaner
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
-import android.graphics.Color
 import android.os.Build
-import android.widget.TextView
 import java.io.File
 
 class FileScanner(private val path: File, private val context: Context) {
@@ -17,6 +15,7 @@ class FileScanner(private val path: File, private val context: Context) {
     var corpse = prefs.cleanCorpse
     var emptyFile = prefs.cleanEmptyFile
     var emptyDir = prefs.cleanEmptyFolder
+    var scanApk = prefs.cleanApk
     var updateProgress: ((percent: Double) -> Unit)? = null
     var addText: ((path: String, type: Int) -> Unit)? = null
     var addFailText: ((path: String) -> Unit)? = null
@@ -26,6 +25,7 @@ class FileScanner(private val path: File, private val context: Context) {
     private var guiScanProgressProgress = 0
     private var foundFiles: ArrayList<File>? = null
 
+    private val superfluousApkDetector = SuperfluousApkDetector(context)
     private var whitelist: List<String> = emptyList()
     private var blacklist: List<Regex> = emptyList()
     private var autoWhitelist: MutableList<String> = ArrayList()
@@ -99,17 +99,34 @@ class FileScanner(private val path: File, private val context: Context) {
     }
 
     fun filter(file: File): Boolean {
-        if (
-            corpse &&
-            file.parentFile?.name == "data" &&
-            file.parentFile?.parentFile?.name == "Android" &&
-            file.name != ".nomedia" &&
-            !installedPackages.contains(file.name) ||
-            emptyFile && isFileEmpty(file) ||
-            emptyDir && isDirectoryEmpty(file) ||
-            isBlackListed(file)
-        ) return true
+        // 1. Corpse detection: check Android/data, Android/media, Android/obb with prefix normalization
+        if (corpse && isCorpseFolder(file)) {
+            return true
+        }
 
+        // 2. Empty file detection
+        if (emptyFile && isFileEmpty(file)) {
+            return true
+        }
+
+        // 3. Empty directory detection (with safety shield for system/media directories)
+        if (emptyDir && isDirectoryEmpty(file)) {
+            return true
+        }
+
+        // 4. Superfluous APK detection (package-aware verification against installed version)
+        if (scanApk && file.isFile && file.name.endsWith(".apk", ignoreCase = true)) {
+            if (superfluousApkDetector.isSuperfluous(file)) {
+                return true
+            }
+        }
+
+        // 5. User-configured blacklist
+        if (isBlackListed(file)) {
+            return true
+        }
+
+        // 6. Generic filter match (temp files, cache, logs)
         val absolutePath = file.absolutePath.lowercase()
         for (filter in filters) {
             if (absolutePath.matches(filter.lowercase().toRegex())) return true
@@ -117,11 +134,54 @@ class FileScanner(private val path: File, private val context: Context) {
         return false
     }
 
+    /**
+     * Determines whether a directory is a corpse (orphaned application folder).
+     * Pattern adapted from SD Maid SE PublicDataCSI / FilterCandidates (GPLv3).
+     */
+    private fun isCorpseFolder(file: File): Boolean {
+        if (!file.isDirectory) return false
+        val parent = file.parentFile?.name?.lowercase() ?: return false
+        val grandParent = file.parentFile?.parentFile?.name?.lowercase() ?: return false
+
+        val isAppStorageArea = grandParent == "android" && (parent == "data" || parent == "media" || parent == "obb")
+        if (!isAppStorageArea || file.name == ".nomedia") return false
+
+        val candidatePackage = cleanCorpsePackageName(file.name)
+        return !installedPackages.contains(candidatePackage)
+    }
+
+    private fun cleanCorpsePackageName(name: String): String {
+        var cleaned = name
+        if (cleaned.startsWith(".external.", ignoreCase = true)) {
+            cleaned = cleaned.substring(".external.".length)
+        }
+        while (cleaned.startsWith(".") || cleaned.startsWith("_")) {
+            cleaned = cleaned.substring(1)
+        }
+        if (cleaned.endsWith(":remote", ignoreCase = true)) {
+            cleaned = cleaned.removeSuffix(":remote")
+        }
+        return cleaned
+    }
+
+    /**
+     * Verifies if a directory is empty AND safe to delete.
+     * Guaranteed protection for essential OS directories adapted from SD Maid SE EmptyDirectoryFilter (GPLv3).
+     */
     private fun isDirectoryEmpty(directory: File): Boolean {
         if (!directory.isDirectory) return false
+        if (isProtectedDirectory(directory)) return false
         val list = directory.list()
-        if (list == null) return false
-        return list.isNullOrEmpty()
+        return list != null && list.isEmpty()
+    }
+
+    private fun isProtectedDirectory(directory: File): Boolean {
+        val name = directory.name.lowercase()
+        if (Constants.protectedBaseDirectories.contains(name)) return true
+        val parent = directory.parentFile?.name?.lowercase()
+        if (parent == "android" && Constants.protectedSubDirectories.contains(name)) return true
+        if (Constants.protectedSubDirectories.contains(name)) return true
+        return false
     }
 
     private fun isFileEmpty(file: File): Boolean {
@@ -130,12 +190,18 @@ class FileScanner(private val path: File, private val context: Context) {
 
     fun setFilters(generic: Boolean, apk: Boolean) {
         filters.clear()
+        scanApk = apk
         if (generic) {
             for (folder in Constants.filter_genericFolders) filters.add(getRegexForFolder(folder))
             for (file in Constants.filter_genericFiles) filters.add(getRegexForFile(file))
         }
+        // Non-apk installers (e.g. .aab, .apks) fallback to extension filter when apk cleaning is on
         if (apk) {
-            for (apkFile in Constants.filter_apkFiles) filters.add(getRegexForFile(apkFile))
+            for (apkFile in Constants.filter_apkFiles) {
+                if (apkFile != ".apk") {
+                    filters.add(getRegexForFile(apkFile))
+                }
+            }
         }
 
         whitelist = prefs.whitelistOn.mapNotNull { it }

@@ -15,6 +15,11 @@ object Formatters {
      * Formats a byte count into a human-readable file size string.
      * e.g., 1536 → "1.5 KB", 1073741824 → "1 GB"
      */
+    /**
+     * Alias for [fileSize].
+     */
+    fun formatFileSize(size: Long): String = fileSize(size)
+
     fun fileSize(size: Long): String {
         if (size <= 0) return "0 B"
         val units = arrayOf("B", "KB", "MB", "GB", "TB")

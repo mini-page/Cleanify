@@ -40,12 +40,18 @@ import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.DriveFileMove
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Slideshow
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.TableChart
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.Card
@@ -154,18 +160,30 @@ internal fun MediaItemCard(
 
     val reduceAnimations = LocalReducedAnimations.current
     val snapBackSpec = if (reduceAnimations) snap<Float>() else spring<Float>(
-        dampingRatio = Spring.DampingRatioMediumBouncy,
-        stiffness = Spring.StiffnessLow
+        dampingRatio = Spring.DampingRatioLowBouncy,
+        stiffness = Spring.StiffnessMediumLow
     )
-    val flyAwaySpec = if (reduceAnimations) snap<Float>() else tween<Float>(durationMillis = 200)
-    val rotation = (swipeOffsetX.value / 30).coerceIn(-6f, 6f)
+    val flyAwaySpec = if (reduceAnimations) snap<Float>() else tween<Float>(durationMillis = 220)
     val animatedScale by animateFloatAsState(targetValue = scale, label = "scale")
     val animatedPanOffset by animateOffsetAsState(targetValue = panOffset, label = "panOffset")
 
-    val leftBorderAlpha = if (swipeOffsetX.value < 0) (abs(swipeOffsetX.value) / swipeThreshold).coerceIn(0f, 1f) else 0f
-    val rightBorderAlpha = if (swipeOffsetX.value > 0) (swipeOffsetX.value / swipeThreshold).coerceIn(0f, 1f) else 0f
-    val leftColor = if (invertSwipe) Color.Green else Color.Red
-    val rightColor = if (invertSwipe) Color.Red else Color.Green
+    val leftColor = if (invertSwipe) Color(0xFF22C55E) else Color(0xFFEF4444)
+    val rightColor = if (invertSwipe) Color(0xFFEF4444) else Color(0xFF22C55E)
+
+    val (upColor, upText, upIcon) = when (swipeUpAction) {
+        SwipeUpAction.SKIP -> Triple(Color(0xFF64748B), "Skip", Icons.Default.SkipNext)
+        SwipeUpAction.FAVORITE -> Triple(Color(0xFFEAB308), "Favorite", Icons.Default.Star)
+        SwipeUpAction.NONE -> Triple(Color.Transparent, "", Icons.Default.SkipNext)
+    }
+
+    val (downColor, downText, downIcon) = when (swipeDownAction) {
+        SwipeDownAction.SKIP_ITEM -> Triple(Color(0xFF64748B), "Skip", Icons.Default.SkipNext)
+        SwipeDownAction.MOVE_TO_EDIT -> Triple(Color(0xFF3B82F6), "Edit", Icons.Default.Edit)
+        SwipeDownAction.ADD_TARGET_FOLDER -> Triple(Color(0xFF3B82F6), "Move", Icons.Default.DriveFileMove)
+        SwipeDownAction.SHARE -> Triple(Color(0xFF10B981), "Share", Icons.Default.Share)
+        SwipeDownAction.OPEN_WITH -> Triple(Color(0xFF8B5CF6), "Open With", Icons.Default.OpenInNew)
+        SwipeDownAction.NONE -> Triple(Color.Transparent, "", Icons.Default.SkipNext)
+    }
     var globalPosition by remember { mutableStateOf(Offset.Zero) }
 
     LaunchedEffect(item.id) {
@@ -250,12 +268,19 @@ internal fun MediaItemCard(
                                     longPressJob.cancel()
                                     wasDragging = true
                                     velocityTracker.addPosition(System.currentTimeMillis(), change.position)
-                                    if (abs(dragAmount.x) > abs(dragAmount.y) && scale <= 1f) {
-                                        swipeScope.launch { swipeOffsetX.snapTo(swipeOffsetX.value + dragAmount.x) }
-                                    } else if (abs(dragAmount.y) > abs(dragAmount.x) && scale <= 1f) {
-                                        if (swipeDownAction != SwipeDownAction.NONE) {
-                                            val newY = (swipeOffsetY.value + dragAmount.y).coerceAtLeast(0f)
-                                            swipeScope.launch { swipeOffsetY.snapTo(newY) }
+                                    if (scale <= 1f) {
+                                        swipeScope.launch {
+                                            swipeOffsetX.snapTo(swipeOffsetX.value + dragAmount.x)
+                                            val canSwipeUp = swipeUpAction != SwipeUpAction.NONE
+                                            val canSwipeDown = swipeDownAction != SwipeDownAction.NONE
+                                            val newY = when {
+                                                dragAmount.y > 0 && canSwipeDown -> swipeOffsetY.value + dragAmount.y
+                                                dragAmount.y < 0 && canSwipeUp -> swipeOffsetY.value + dragAmount.y
+                                                dragAmount.y > 0 && !canSwipeDown -> (swipeOffsetY.value + dragAmount.y * 0.25f).coerceAtMost(35f)
+                                                dragAmount.y < 0 && !canSwipeUp -> (swipeOffsetY.value + dragAmount.y * 0.25f).coerceAtLeast(-35f)
+                                                else -> swipeOffsetY.value + dragAmount.y
+                                            }
+                                            swipeOffsetY.snapTo(newY)
                                         }
                                     }
                                     change.consume()
@@ -272,39 +297,55 @@ internal fun MediaItemCard(
                             val isFlingX = abs(vx) > velocityThreshold
                             val isFlingY = abs(vy) > velocityThreshold
 
-                            when {
-                                swipeOffsetX.value < -swipeThreshold || (isFlingX && vx < 0) -> {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    swipeScope.launch {
-                                        swipeOffsetX.animateTo(-cardWidth.toPx() * 1.5f, flyAwaySpec)
+                            val absX = abs(swipeOffsetX.value)
+                            val absY = abs(swipeOffsetY.value)
+
+                            if (absX >= absY) {
+                                // Horizontal dominant swipe
+                                when {
+                                    swipeOffsetX.value < -swipeThreshold || (isFlingX && vx < 0) -> {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        swipeScope.launch {
+                                            swipeOffsetX.animateTo(-cardWidth.toPx() * 1.6f, flyAwaySpec)
+                                        }
+                                        onSwipeLeft()
                                     }
-                                    onSwipeLeft()
-                                }
-                                swipeOffsetX.value > swipeThreshold || (isFlingX && vx > 0) -> {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    swipeScope.launch {
-                                        swipeOffsetX.animateTo(cardWidth.toPx() * 1.5f, flyAwaySpec)
+                                    swipeOffsetX.value > swipeThreshold || (isFlingX && vx > 0) -> {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        swipeScope.launch {
+                                            swipeOffsetX.animateTo(cardWidth.toPx() * 1.6f, flyAwaySpec)
+                                        }
+                                        onSwipeRight()
                                     }
-                                    onSwipeRight()
-                                }
-                                swipeDownAction != SwipeDownAction.NONE && (swipeOffsetY.value > swipeDownThreshold || (isFlingY && vy > 0)) -> {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    swipeScope.launch {
-                                        swipeOffsetY.animateTo(cardHeight.toPx() * 1.5f, flyAwaySpec)
+                                    else -> {
+                                        swipeScope.launch {
+                                            launch { swipeOffsetX.animateTo(0f, snapBackSpec) }
+                                            launch { swipeOffsetY.animateTo(0f, snapBackSpec) }
+                                        }
                                     }
-                                    onSwipeDown()
                                 }
-                                swipeUpAction != SwipeUpAction.NONE && (swipeOffsetY.value < -swipeDownThreshold || (isFlingY && vy < 0)) -> {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    swipeScope.launch {
-                                        swipeOffsetY.animateTo(-cardHeight.toPx() * 1.5f, flyAwaySpec)
+                            } else {
+                                // Vertical dominant swipe
+                                when {
+                                    swipeDownAction != SwipeDownAction.NONE && (swipeOffsetY.value > swipeDownThreshold || (isFlingY && vy > 0)) -> {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        swipeScope.launch {
+                                            swipeOffsetY.animateTo(cardHeight.toPx() * 1.6f, flyAwaySpec)
+                                        }
+                                        onSwipeDown()
                                     }
-                                    onSwipeUp()
-                                }
-                                else -> {
-                                    swipeScope.launch {
-                                        launch { swipeOffsetX.animateTo(0f, snapBackSpec) }
-                                        launch { swipeOffsetY.animateTo(0f, snapBackSpec) }
+                                    swipeUpAction != SwipeUpAction.NONE && (swipeOffsetY.value < -swipeDownThreshold || (isFlingY && vy < 0)) -> {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        swipeScope.launch {
+                                            swipeOffsetY.animateTo(-cardHeight.toPx() * 1.6f, flyAwaySpec)
+                                        }
+                                        onSwipeUp()
+                                    }
+                                    else -> {
+                                        swipeScope.launch {
+                                            launch { swipeOffsetX.animateTo(0f, snapBackSpec) }
+                                            launch { swipeOffsetY.animateTo(0f, snapBackSpec) }
+                                        }
                                     }
                                 }
                             }
@@ -357,7 +398,7 @@ internal fun MediaItemCard(
                         translationY = if (animatedScale > 1f) animatedPanOffset.y else swipeOffsetY.value
                         scaleX = animatedScale
                         scaleY = animatedScale
-                        rotationZ = if (animatedScale > 1f) 0f else rotation
+                        rotationZ = if (animatedScale > 1f) 0f else (swipeOffsetX.value / 35f).coerceIn(-16f, 16f)
                         clip = false
                     },
             ) {
@@ -401,51 +442,185 @@ internal fun MediaItemCard(
                                 )
                             }
                         }
-                        if (leftBorderAlpha > 0f) {
-                            Canvas(modifier = Modifier.fillMaxSize()) {
-                                val intensity = (leftBorderAlpha * 0.9f).coerceAtMost(0.9f)
-                                drawRect(brush = Brush.radialGradient(0.0f to leftColor.copy(alpha = intensity), 0.12f to leftColor.copy(alpha = intensity * 0.5f), 0.5f to leftColor.copy(alpha = intensity * 0.1f), 1.0f to Color.Transparent, center = Offset(0f, size.height), radius = size.maxDimension * (1.2f + leftBorderAlpha)))
+                        // Single hardware-accelerated Canvas for directional light gradients
+                        Canvas(modifier = Modifier.fillMaxSize()) {
+                            val curX = swipeOffsetX.value
+                            val curY = swipeOffsetY.value
+                            val leftA = if (curX < 0) (kotlin.math.abs(curX) / swipeThreshold).coerceIn(0f, 1f) else 0f
+                            val rightA = if (curX > 0) (curX / swipeThreshold).coerceIn(0f, 1f) else 0f
+                            val upA = if (curY < 0 && swipeUpAction != SwipeUpAction.NONE) (kotlin.math.abs(curY) / swipeDownThreshold).coerceIn(0f, 1f) else 0f
+                            val downA = if (curY > 0 && swipeDownAction != SwipeDownAction.NONE) (curY / swipeDownThreshold).coerceIn(0f, 1f) else 0f
+
+                            if (leftA > 0f) {
+                                val intensity = (leftA * 0.9f).coerceAtMost(0.9f)
+                                drawRect(
+                                    brush = Brush.radialGradient(
+                                        0.0f to leftColor.copy(alpha = intensity),
+                                        0.12f to leftColor.copy(alpha = intensity * 0.5f),
+                                        0.5f to leftColor.copy(alpha = intensity * 0.1f),
+                                        1.0f to Color.Transparent,
+                                        center = Offset(0f, size.height),
+                                        radius = size.maxDimension * (1.2f + leftA)
+                                    )
+                                )
                             }
-                        }
-                        if (rightBorderAlpha > 0f) {
-                            Canvas(modifier = Modifier.fillMaxSize()) {
-                                val intensity = (rightBorderAlpha * 0.9f).coerceAtMost(0.9f)
-                                drawRect(brush = Brush.radialGradient(0.0f to rightColor.copy(alpha = intensity), 0.12f to rightColor.copy(alpha = intensity * 0.5f), 0.5f to rightColor.copy(alpha = intensity * 0.1f), 1.0f to Color.Transparent, center = Offset(size.width, size.height), radius = size.maxDimension * (1.2f + rightBorderAlpha)))
+                            if (rightA > 0f) {
+                                val intensity = (rightA * 0.9f).coerceAtMost(0.9f)
+                                drawRect(
+                                    brush = Brush.radialGradient(
+                                        0.0f to rightColor.copy(alpha = intensity),
+                                        0.12f to rightColor.copy(alpha = intensity * 0.5f),
+                                        0.5f to rightColor.copy(alpha = intensity * 0.1f),
+                                        1.0f to Color.Transparent,
+                                        center = Offset(size.width, size.height),
+                                        radius = size.maxDimension * (1.2f + rightA)
+                                    )
+                                )
+                            }
+                            if (upA > 0f) {
+                                val intensity = (upA * 0.85f).coerceAtMost(0.85f)
+                                drawRect(
+                                    brush = Brush.radialGradient(
+                                        0.0f to upColor.copy(alpha = intensity),
+                                        0.15f to upColor.copy(alpha = intensity * 0.5f),
+                                        0.6f to upColor.copy(alpha = intensity * 0.1f),
+                                        1.0f to Color.Transparent,
+                                        center = Offset(size.width / 2f, size.height),
+                                        radius = size.maxDimension * (1.1f + upA)
+                                    )
+                                )
+                            }
+                            if (downA > 0f) {
+                                val intensity = (downA * 0.85f).coerceAtMost(0.85f)
+                                drawRect(
+                                    brush = Brush.radialGradient(
+                                        0.0f to downColor.copy(alpha = intensity),
+                                        0.15f to downColor.copy(alpha = intensity * 0.5f),
+                                        0.6f to downColor.copy(alpha = intensity * 0.1f),
+                                        1.0f to Color.Transparent,
+                                        center = Offset(size.width / 2f, 0f),
+                                        radius = size.maxDimension * (1.1f + downA)
+                                    )
+                                )
                             }
                         }
                         Box(modifier = Modifier.fillMaxSize()) {
-                            if (leftBorderAlpha > 0.3f) {
+                            // Action Pill Overlays driven via RenderThread graphicsLayer (zero touch recompositions)
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = leftColor.copy(alpha = 0.9f),
+                                modifier = Modifier
+                                    .align(Alignment.CenterEnd)
+                                    .padding(end = 16.dp)
+                                    .graphicsLayer {
+                                        val curX = swipeOffsetX.value
+                                        val leftA = if (curX < 0) (kotlin.math.abs(curX) / swipeThreshold).coerceIn(0f, 1f) else 0f
+                                        alpha = if (leftA > 0.2f) ((leftA - 0.2f) / 0.8f).coerceIn(0f, 1f) else 0f
+                                        scaleX = 0.8f + 0.2f * alpha
+                                        scaleY = 0.8f + 0.2f * alpha
+                                    }
+                            ) {
+                                Text(
+                                    text = if (invertSwipe) "Keep" else "Delete",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
+                                )
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = rightColor.copy(alpha = 0.9f),
+                                modifier = Modifier
+                                    .align(Alignment.CenterStart)
+                                    .padding(start = 16.dp)
+                                    .graphicsLayer {
+                                        val curX = swipeOffsetX.value
+                                        val rightA = if (curX > 0) (curX / swipeThreshold).coerceIn(0f, 1f) else 0f
+                                        alpha = if (rightA > 0.2f) ((rightA - 0.2f) / 0.8f).coerceIn(0f, 1f) else 0f
+                                        scaleX = 0.8f + 0.2f * alpha
+                                        scaleY = 0.8f + 0.2f * alpha
+                                    }
+                            ) {
+                                Text(
+                                    text = if (invertSwipe) "Delete" else "Keep",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
+                                )
+                            }
+
+                            if (swipeUpAction != SwipeUpAction.NONE) {
                                 Surface(
                                     shape = RoundedCornerShape(12.dp),
-                                    color = leftColor.copy(alpha = 0.85f),
+                                    color = upColor.copy(alpha = 0.9f),
                                     modifier = Modifier
-                                        .align(Alignment.CenterEnd)
-                                        .padding(end = 16.dp)
+                                        .align(Alignment.BottomCenter)
+                                        .padding(bottom = 24.dp)
+                                        .graphicsLayer {
+                                            val curY = swipeOffsetY.value
+                                            val upA = if (curY < 0) (kotlin.math.abs(curY) / swipeDownThreshold).coerceIn(0f, 1f) else 0f
+                                            alpha = if (upA > 0.2f) ((upA - 0.2f) / 0.8f).coerceIn(0f, 1f) else 0f
+                                            scaleX = 0.8f + 0.2f * alpha
+                                            scaleY = 0.8f + 0.2f * alpha
+                                        }
                                 ) {
-                                    Text(
-                                        text = if (invertSwipe) "Keep" else "Delete",
-                                        color = Color.White,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        style = MaterialTheme.typography.titleLarge,
-                                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
-                                    )
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = upIcon,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Text(
+                                            text = upText,
+                                            color = Color.White,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            style = MaterialTheme.typography.titleLarge
+                                        )
+                                    }
                                 }
                             }
-                            if (rightBorderAlpha > 0.3f) {
+
+                            if (swipeDownAction != SwipeDownAction.NONE) {
                                 Surface(
                                     shape = RoundedCornerShape(12.dp),
-                                    color = rightColor.copy(alpha = 0.85f),
+                                    color = downColor.copy(alpha = 0.9f),
                                     modifier = Modifier
-                                        .align(Alignment.CenterStart)
-                                        .padding(start = 16.dp)
+                                        .align(Alignment.TopCenter)
+                                        .padding(top = 56.dp)
+                                        .graphicsLayer {
+                                            val curY = swipeOffsetY.value
+                                            val downA = if (curY > 0) (curY / swipeDownThreshold).coerceIn(0f, 1f) else 0f
+                                            alpha = if (downA > 0.2f) ((downA - 0.2f) / 0.8f).coerceIn(0f, 1f) else 0f
+                                            scaleX = 0.8f + 0.2f * alpha
+                                            scaleY = 0.8f + 0.2f * alpha
+                                        }
                                 ) {
-                                    Text(
-                                        text = if (invertSwipe) "Delete" else "Keep",
-                                        color = Color.White,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        style = MaterialTheme.typography.titleLarge,
-                                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
-                                    )
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = downIcon,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Text(
+                                            text = downText,
+                                            color = Color.White,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            style = MaterialTheme.typography.titleLarge
+                                        )
+                                    }
                                 }
                             }
                             // Top-Start Controls: Mute/Unmute for Video & Audio, plus Pending Conversion indicator

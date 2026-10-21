@@ -2,6 +2,56 @@
 
 All notable changes to Cleanify are documented here.
 
+## [3.2.0] — 2026-10-21
+
+### 🚀 Release Highlights
+Cleanify **v3.2.0** brings a monumental modernization and performance upgrade: complete **Storage Engine Overhaul** with Quarry-inspired deep scanning, an interactive **Hardware-Accelerated Squarified Treemap** with instant in-app file preview, **Swipeable Storage Tabs** with a floating auto-hiding icon dock (YouTube-style nested scroll), **Full-Spectrum Search Indexing** for all Cleaner Settings with a quick top-bar search toggle, ultra-fluid **High-Performance Swiper Mechanics** for massive files, and a streamlined core toolset with the removal of redundant contacts management.
+
+---
+
+### 📦 Storage Engine Overhaul & Quarry Integration
+- **Quarry Storage Architecture**: Deep, multi-threaded storage candidate analysis across internal and external volumes, surfacing exact reclaimable capacity.
+- **Cleanup Hub Dashboard**: Hero overview card displaying total recoverable space and targeted candidate modules:
+  - *Large Files (>50 MB)*: Instant modal sheet review and batch management.
+  - *Superfluous APKs*: Scans older and cached APK/APKS/APKM/XAPK installation packages with direct swipe-to-clean flow.
+  - *Screenshots*: Dedicated screenshot detection with one-tap swiper triage.
+  - *Empty Folders*: Deep directory traversal discovering orphan folders with direct integration into Empty Cleaner.
+  - *Duplicates Arbiter*: Direct shortcut to the high-performance media deduplicator.
+  - *Installed App Storage Inspector*: Comprehensive breakdown of app binaries, user storage, and cache footprints.
+- **Interactive Squarified Treemap**:
+  - Visual hierarchy mapped to relative disk footprint with intuitive color coding.
+  - Hardware-accelerated canvas supporting pinch-to-zoom (up to 5x), single-finger pan when zoomed, and double-tap zoom reset.
+  - Deep folder drill-down with persistent path breadcrumbs.
+  - **In-App File Details & Internal Preview**: Tapping any file leaf block brings up full file metadata (name, size, path, date modified, extension type) with Open With, Share, Delete, and a direct internal preview viewer (`MediaPreviewDialog`) supporting images, videos, audio, text, and PDF files.
+- **Storage Breakdown View**: Volume usage cards, interactive category storage donut chart, and extension distribution (Images, Videos, Music, Documents, APKs, Downloads, Other).
+- **Floating Auto-Hiding Bottom Nav Bar**:
+  - Replaced top tab bars with fluid horizontal swipe switching (`HorizontalPager`) between *Cleanup Hub*, *Treemap*, and *Breakdown*.
+  - Frosted floating pill dock at bottom center with clean icons and active pill indicators.
+  - **YouTube-Style Nested Scroll**: Smoothly slides down and hides when scrolling down through lists; automatically slides back up into view with a slight upward swipe.
+  - Extra bottom content padding ensuring no list items or buttons are ever hidden behind the dock.
+
+---
+
+### 🔍 Cleaner Settings Search & Top-Bar Toggle
+- **Full Settings Search Indexing**: All individual Cleaner preferences (*Empty Files, Empty Folders, Generic Junk, APK Packages, Corpse Files, Auto-whitelist, Clipboard, Scheduled Clean, Double-checker multi-run, Blacklist, Whitelist*) are now indexed in the main Settings search. Searching for any keyword instantly displays direct setting results with one-tap deep navigation.
+- **Search Action Toggle**: Added a search icon button in the top app bar of Cleaner Settings that smoothly expands an in-page search bar (`CleanifySearchBar`), automatically requests focus, hides the keyboard on search action, and respects back button navigation.
+
+---
+
+### ⚡ Performance Swiping & Gesture Enhancements
+- **Fluid High-Performance Swiper**: Optimized gesture handling and view transitions inspired by SD Maid swipe mechanics for effortless sorting.
+- **Heavy Media Deletion Speed**: Asynchronous, non-blocking file deletion handling large video files (>200MB) without UI stutter.
+- **Visual Swipe Feedback**: Added dark overlays with distinct action badges (Green *Keep*, Red *Delete*, Slate Gray *Skip*) that dynamically preview as cards are dragged.
+
+---
+
+### 🧹 Streamlining & Architecture Cleanups
+- **Removed Contacts Tool**: Deprecated the Contacts cleaner to focus Cleanify strictly on high-performance storage, media management, and junk cleaning.
+- **Dedicated Storage Settings**: Created a standalone Storage configuration section in app settings, accessible directly from the Storage top bar and Settings index.
+- **Android 15 / 16 Target Ready**: Refined edge-to-edge layouts, window insets, and gesture exclusions for Android 15 (API 35) and Android 16 (API 36).
+
+---
+
 ## [3.1.0] — 2026-10-20
 
 ### 🚀 Release Highlights

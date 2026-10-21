@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Cleanify
  * Copyright (c) 2025 LoopOtto
  *
@@ -36,6 +36,7 @@ import com.cleanify.domain.bus.FolderUpdateEventBus
 import com.cleanify.domain.model.DuplicateGroup
 import com.cleanify.domain.model.ScanResultGroup
 import com.cleanify.domain.model.SimilarGroup
+import com.cleanify.domain.usecase.DuplicatesArbiter
 import com.cleanify.domain.repository.DuplicatesRepository
 import com.cleanify.domain.repository.MediaRepository
 import com.cleanify.domain.repository.PersistedScanResult
@@ -467,6 +468,37 @@ class DuplicatesViewModel @Inject constructor(
         val idsToDeselect = group.items.map { it.id }.toSet()
         val currentSelection = _uiState.value.selectedForDeletion
         val newSelection = (currentSelection - idsToDeselect) + idsToSelect
+        updateSelection(newSelection)
+    }
+
+    fun autoSelectWithArbiter(
+        group: ScanResultGroup,
+        strategy: DuplicatesArbiter.Strategy = DuplicatesArbiter.Strategy.DEFAULT
+    ) {
+        val arbiter = DuplicatesArbiter(strategy)
+        val arbitration = arbiter.arbitrateItems(group.items)
+        val idsToSelect = arbitration.redundantCopies.map { it.id }.toSet()
+        val idsToDeselect = group.items.map { it.id }.toSet()
+        val currentSelection = _uiState.value.selectedForDeletion
+        val newSelection = (currentSelection - idsToDeselect) + idsToSelect
+        updateSelection(newSelection)
+    }
+
+    fun autoSelectAllWithArbiter(
+        strategy: DuplicatesArbiter.Strategy = DuplicatesArbiter.Strategy.DEFAULT
+    ) {
+        val arbiter = DuplicatesArbiter(strategy)
+        val allRedundantIds = mutableSetOf<String>()
+        val allGroupItemIds = mutableSetOf<String>()
+
+        _uiState.value.resultGroups.forEach { group ->
+            val arbitration = arbiter.arbitrateItems(group.items)
+            allRedundantIds.addAll(arbitration.redundantCopies.map { it.id })
+            allGroupItemIds.addAll(group.items.map { it.id })
+        }
+
+        val currentSelection = _uiState.value.selectedForDeletion
+        val newSelection = (currentSelection - allGroupItemIds) + allRedundantIds
         updateSelection(newSelection)
     }
 

@@ -25,6 +25,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.cleanify.ui.theme.AppTheme
@@ -198,6 +199,10 @@ class PreferencesRepository @Inject constructor(
         val HAS_RUN_DUPLICATE_SCAN_ONCE = booleanPreferencesKey("has_run_duplicate_scan_once")
         val SCREENSHOT_DELETES_VIDEO = booleanPreferencesKey("screenshot_deletes_video")
         val SCREENSHOT_JPEG_QUALITY = stringPreferencesKey("screenshot_jpeg_quality")
+        val STORAGE_LARGE_FILE_THRESHOLD_MB = longPreferencesKey("storage_large_file_threshold_mb")
+        val STORAGE_OLD_DOWNLOADS_DAYS = intPreferencesKey("storage_old_downloads_days")
+        val STORAGE_SCAN_HIDDEN_FILES = booleanPreferencesKey("storage_scan_hidden_files")
+        val STORAGE_HAPTICS_ENABLED = booleanPreferencesKey("storage_haptics_enabled")
         val SIMILARITY_THRESHOLD_LEVEL = stringPreferencesKey("similarity_threshold_level")
         val HIDE_SWIPER_SKIP_BUTTON = booleanPreferencesKey("hide_swiper_skip_button")
         val HIDE_SWIPER_ACTION_BUTTONS = booleanPreferencesKey("hide_swiper_action_buttons")
@@ -877,6 +882,44 @@ class PreferencesRepository @Inject constructor(
     suspend fun setShowConfirmResetSourceFavs(enabled: Boolean) = showConfirmResetSourceFavsPref.set(enabled)
     suspend fun setShowConfirmResetTargetFavs(enabled: Boolean) = showConfirmResetTargetFavsPref.set(enabled)
     suspend fun setShowConfirmDeleteAllExact(enabled: Boolean) = showConfirmDeleteAllExactPref.set(enabled)
+
+    // ── Storage Management Preferences (Quarry Integration) ───────────────
+
+    val storageLargeFileThresholdMb: Flow<Long> = context.dataStore.data
+        .map { preferences -> preferences[PreferencesKeys.STORAGE_LARGE_FILE_THRESHOLD_MB] ?: 50L }
+
+    val storageOldDownloadsDays: Flow<Int> = context.dataStore.data
+        .map { preferences -> preferences[PreferencesKeys.STORAGE_OLD_DOWNLOADS_DAYS] ?: 30 }
+
+    val storageScanHiddenFiles: Flow<Boolean> = context.dataStore.data
+        .map { preferences -> preferences[PreferencesKeys.STORAGE_SCAN_HIDDEN_FILES] ?: false }
+
+    val storageHapticsEnabled: Flow<Boolean> = context.dataStore.data
+        .map { preferences -> preferences[PreferencesKeys.STORAGE_HAPTICS_ENABLED] ?: true }
+
+    suspend fun setStorageLargeFileThresholdMb(thresholdMb: Long) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.STORAGE_LARGE_FILE_THRESHOLD_MB] = thresholdMb
+        }
+    }
+
+    suspend fun setStorageOldDownloadsDays(days: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.STORAGE_OLD_DOWNLOADS_DAYS] = days
+        }
+    }
+
+    suspend fun setStorageScanHiddenFiles(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.STORAGE_SCAN_HIDDEN_FILES] = enabled
+        }
+    }
+
+    suspend fun setStorageHapticsEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.STORAGE_HAPTICS_ENABLED] = enabled
+        }
+    }
 
     suspend fun resetDialogConfirmations() {
         context.dataStore.edit { preferences ->

@@ -354,6 +354,8 @@
     <string name="advanced_section_title">Advanced</string>
     <string name="help_support_section_title">Help &amp; Support</string>
     <string name="media_storage_section_title">Media &amp; Storage</string>
+    <string name="storage_management_title">Storage</string>
+    <string name="storage_management_desc">Storage analysis, volume inspection, and threshold preferences</string>
     <string name="about_section_title">About</string>
     <string name="no_settings_found">No settings found for \"%1$s\"</string>
     <string name="appearance_section_desc">Customize theme, colors, language, and folder layout</string>

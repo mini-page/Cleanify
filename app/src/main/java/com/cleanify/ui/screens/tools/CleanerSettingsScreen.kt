@@ -1,8 +1,14 @@
 package com.cleanify.ui.screens.tools
 
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -16,18 +22,26 @@ import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.cleanify.ui.components.BackNavigationIcon
+import com.cleanify.ui.components.CleanifySearchBar
 import com.cleanify.data.cleaner.CleanerPreferences
 import com.cleanify.ui.screens.settings.sections.FrostedSettingsGroup
 import com.cleanify.ui.screens.settings.sections.ToolAboutCard
 import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
 import org.json.JSONObject
 import org.json.JSONTokener
 
@@ -53,8 +67,24 @@ fun CleanerSettingsScreen(
     var multiRun by remember { mutableStateOf(prefs.multiRun) }
     var autoWhite by remember { mutableStateOf(prefs.autoWhite) }
 
+    var searchQuery by remember { mutableStateOf("") }
+    var isSearchActive by rememberSaveable { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
     var exportResult by remember { mutableStateOf<String?>(null) }
     var importResult by remember { mutableStateOf<String?>(null) }
+
+    BackHandler(enabled = isSearchActive || searchQuery.isNotEmpty()) {
+        isSearchActive = false
+        searchQuery = ""
+    }
+
+    LaunchedEffect(isSearchActive) {
+        if (isSearchActive) {
+            delay(100)
+            focusRequester.requestFocus()
+        }
+    }
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -99,11 +129,57 @@ fun CleanerSettingsScreen(
         }
     }
 
+    fun matches(vararg strings: String): Boolean {
+        if (searchQuery.isBlank()) return true
+        val q = searchQuery.trim().lowercase()
+        return strings.any { it.lowercase().contains(q) }
+    }
+
+    val showEmptyFile = matches("Empty Files (0 bytes)", "Delete files with size 0")
+    val showEmptyFolder = matches("Empty Folders", "Delete directories containing no files")
+    val showGeneric = matches("Generic Junk", "Delete .tmp, .log files and temporary folders")
+    val showApk = matches("APK Packages", "Delete cached .apk, .apks, .apkm, .aab files")
+    val showCorpse = matches("Corpse Files", "Delete orphaned app data folders in Android/data")
+    val hasScanFilters = showEmptyFile || showEmptyFolder || showGeneric || showApk || showCorpse
+
+    val showMultiRun = matches("Double-checker (multi-run)", "Repeat scan passes")
+    val showAutoWhite = matches("Auto-whitelist", "Auto-whitelist paths containing 'backup', 'important'")
+    val showClipboard = matches("Clear Clipboard", "Clear system clipboard after each clean")
+    val showCleanOnBoot = matches("Clean on Boot", "Run a full clean automatically after device restart")
+    val showScheduled = matches("Scheduled Clean", "Every hour")
+    val showStopBg = matches("Stop Background Apps", "Kill background processes of non-system apps after clean")
+    val hasBehavior = showMultiRun || showAutoWhite || showClipboard || showCleanOnBoot || showScheduled || showStopBg
+
+    val showBlacklist = matches("Blacklist", "Paths and patterns excluded from cleaning")
+    val showWhitelist = matches("Whitelist", "Paths protected from cleaning")
+    val hasFilterLists = showBlacklist || showWhitelist
+
+    val showExport = matches("Export Cleaner Settings", "Save all cleaner preferences to a JSON file")
+    val showImport = matches("Import Cleaner Settings", "Restore cleaner preferences from a JSON file")
+    val hasImportExport = showExport || showImport
+
+    val showAbout = matches("About Empty Cleaner", "Empty Cleaner scans your device for junk files")
+
+    val anyMatches = hasScanFilters || hasBehavior || hasFilterLists || hasImportExport || showAbout
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Cleaner Settings") },
-                navigationIcon = { BackNavigationIcon(onClick = onNavigateUp) }
+                navigationIcon = { BackNavigationIcon(onClick = onNavigateUp) },
+                actions = {
+                    val isSearching = isSearchActive || searchQuery.isNotEmpty()
+                    IconButton(onClick = {
+                        isSearchActive = !isSearchActive
+                        if (!isSearchActive) searchQuery = ""
+                    }) {
+                        Icon(
+                            imageVector = if (isSearching) Icons.Default.SearchOff else Icons.Default.Search,
+                            contentDescription = if (isSearching) "Close search" else "Search cleaner settings",
+                            tint = if (isSearching) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
             )
         }
     ) { padding ->
@@ -115,196 +191,234 @@ fun CleanerSettingsScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Search Bar
+            AnimatedVisibility(
+                visible = isSearchActive || searchQuery.isNotEmpty(),
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                CleanifySearchBar(
+                    query = searchQuery,
+                    onQueryChange = { searchQuery = it },
+                    placeholder = "Search cleaner settings…",
+                    focusRequester = focusRequester,
+                    onSearchAction = { keyboardController?.hide() },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            if (!anyMatches && searchQuery.isNotBlank()) {
+                Text(
+                    text = "No cleaner settings matching \"$searchQuery\"",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 32.dp),
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
             // ── Scan Filters ──
-            FrostedSettingsGroup(title = "Scan Filters") {
-                CleanerSwitchRow(
-                    title = "Empty Files (0 bytes)",
-                    subtitle = "Delete files with size 0",
-                    checked = cleanEmptyFile,
-                    onCheckedChange = { v -> cleanEmptyFile = v; prefs.cleanEmptyFile = v }
-                )
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 14.dp),
-                    thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
-                )
-                CleanerSwitchRow(
-                    title = "Empty Folders",
-                    subtitle = "Delete directories containing no files",
-                    checked = cleanEmptyFolder,
-                    onCheckedChange = { v -> cleanEmptyFolder = v; prefs.cleanEmptyFolder = v }
-                )
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 14.dp),
-                    thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
-                )
-                CleanerSwitchRow(
-                    title = "Generic Junk",
-                    subtitle = "Delete .tmp, .log files and temporary folders",
-                    checked = cleanGeneric,
-                    onCheckedChange = { v -> cleanGeneric = v; prefs.cleanGeneric = v }
-                )
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 14.dp),
-                    thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
-                )
-                CleanerSwitchRow(
-                    title = "APK Packages",
-                    subtitle = "Delete cached .apk, .apks, .apkm, .aab files",
-                    checked = cleanApk,
-                    onCheckedChange = { v -> cleanApk = v; prefs.cleanApk = v }
-                )
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 14.dp),
-                    thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
-                )
-                CleanerSwitchRow(
-                    title = "Corpse Files",
-                    subtitle = "Delete orphaned app data folders in Android/data",
-                    checked = cleanCorpse,
-                    onCheckedChange = { v -> cleanCorpse = v; prefs.cleanCorpse = v }
-                )
+            if (hasScanFilters) {
+                FrostedSettingsGroup(title = "Scan Filters") {
+                    var rendered = false
+                    if (showEmptyFile) {
+                        CleanerSwitchRow(
+                            title = "Empty Files (0 bytes)",
+                            subtitle = "Delete files with size 0",
+                            checked = cleanEmptyFile,
+                            onCheckedChange = { v -> cleanEmptyFile = v; prefs.cleanEmptyFile = v }
+                        )
+                        rendered = true
+                    }
+                    if (showEmptyFolder) {
+                        if (rendered) HorizontalDivider(modifier = Modifier.padding(horizontal = 14.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
+                        CleanerSwitchRow(
+                            title = "Empty Folders",
+                            subtitle = "Delete directories containing no files",
+                            checked = cleanEmptyFolder,
+                            onCheckedChange = { v -> cleanEmptyFolder = v; prefs.cleanEmptyFolder = v }
+                        )
+                        rendered = true
+                    }
+                    if (showGeneric) {
+                        if (rendered) HorizontalDivider(modifier = Modifier.padding(horizontal = 14.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
+                        CleanerSwitchRow(
+                            title = "Generic Junk",
+                            subtitle = "Delete .tmp, .log files and temporary folders",
+                            checked = cleanGeneric,
+                            onCheckedChange = { v -> cleanGeneric = v; prefs.cleanGeneric = v }
+                        )
+                        rendered = true
+                    }
+                    if (showApk) {
+                        if (rendered) HorizontalDivider(modifier = Modifier.padding(horizontal = 14.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
+                        CleanerSwitchRow(
+                            title = "APK Packages",
+                            subtitle = "Delete cached .apk, .apks, .apkm, .aab files",
+                            checked = cleanApk,
+                            onCheckedChange = { v -> cleanApk = v; prefs.cleanApk = v }
+                        )
+                        rendered = true
+                    }
+                    if (showCorpse) {
+                        if (rendered) HorizontalDivider(modifier = Modifier.padding(horizontal = 14.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
+                        CleanerSwitchRow(
+                            title = "Corpse Files",
+                            subtitle = "Delete orphaned app data folders in Android/data",
+                            checked = cleanCorpse,
+                            onCheckedChange = { v -> cleanCorpse = v; prefs.cleanCorpse = v }
+                        )
+                    }
+                }
             }
 
             // ── Scan Behavior & Automation ──
-            FrostedSettingsGroup(title = "Scan Behavior & Automation") {
-                CleanerSliderRow(
-                    title = "Double-checker (multi-run)",
-                    subtitle = "Repeat scan passes: $multiRun time${if (multiRun != 1) "s" else ""}",
-                    value = multiRun.toFloat(),
-                    onValueChange = { v ->
-                        val stepped = (v / 1f).roundToInt().coerceIn(1, 10)
-                        multiRun = stepped
-                        prefs.multiRun = stepped
-                    },
-                    valueRange = 1f..10f,
-                    steps = 8,
-                    startLabel = "1x",
-                    endLabel = "10x"
-                )
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 14.dp),
-                    thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
-                )
-                CleanerSwitchRow(
-                    title = "Auto-whitelist",
-                    subtitle = "Auto-whitelist paths containing 'backup', 'important', etc.",
-                    checked = autoWhite,
-                    onCheckedChange = { v -> autoWhite = v; prefs.autoWhite = v }
-                )
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 14.dp),
-                    thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
-                )
-                CleanerSwitchRow(
-                    title = "Clear Clipboard",
-                    subtitle = "Clear system clipboard after each clean",
-                    checked = cleanClipboard,
-                    onCheckedChange = { v -> cleanClipboard = v; prefs.cleanClipboard = v }
-                )
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 14.dp),
-                    thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
-                )
-                CleanerSwitchRow(
-                    title = "Clean on Boot",
-                    subtitle = "Run a full clean automatically after device restart",
-                    checked = cleanOnBoot,
-                    onCheckedChange = { v -> cleanOnBoot = v; prefs.cleanOnBoot = v }
-                )
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 14.dp),
-                    thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
-                )
-                CleanerSliderRow(
-                    title = "Scheduled Clean",
-                    subtitle = if (cleanEvery <= 0) "Disabled" else "Every $cleanEvery hour${if (cleanEvery != 1) "s" else ""}",
-                    value = if (cleanEvery <= 0) 0f else cleanEvery.toFloat(),
-                    onValueChange = { v ->
-                        val stepped = v.roundToInt().coerceIn(0, 24)
-                        cleanEvery = stepped
-                        prefs.cleanEvery = stepped
-                        if (stepped > 0) {
-                            com.cleanify.data.cleaner.CleanerWorker.scheduleHourlyClean(ctx, stepped)
-                        } else {
-                            com.cleanify.data.cleaner.CleanerWorker.cancelHourlyClean(ctx)
-                        }
-                    },
-                    valueRange = 0f..24f,
-                    steps = 23,
-                    startLabel = "Off",
-                    endLabel = "24h"
-                )
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 14.dp),
-                    thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
-                )
-                CleanerSwitchRow(
-                    title = "Stop Background Apps",
-                    subtitle = "Kill background processes of non-system apps after clean",
-                    checked = stopBackgroundApps,
-                    onCheckedChange = { v -> stopBackgroundApps = v; prefs.stopBackgroundApps = v }
-                )
+            if (hasBehavior) {
+                FrostedSettingsGroup(title = "Scan Behavior & Automation") {
+                    var rendered = false
+                    if (showMultiRun) {
+                        CleanerSliderRow(
+                            title = "Double-checker (multi-run)",
+                            subtitle = "Repeat scan passes: $multiRun time${if (multiRun != 1) "s" else ""}",
+                            value = multiRun.toFloat(),
+                            onValueChange = { v ->
+                                val stepped = (v / 1f).roundToInt().coerceIn(1, 10)
+                                multiRun = stepped
+                                prefs.multiRun = stepped
+                            },
+                            valueRange = 1f..10f,
+                            steps = 8,
+                            startLabel = "1x",
+                            endLabel = "10x"
+                        )
+                        rendered = true
+                    }
+                    if (showAutoWhite) {
+                        if (rendered) HorizontalDivider(modifier = Modifier.padding(horizontal = 14.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
+                        CleanerSwitchRow(
+                            title = "Auto-whitelist",
+                            subtitle = "Auto-whitelist paths containing 'backup', 'important', etc.",
+                            checked = autoWhite,
+                            onCheckedChange = { v -> autoWhite = v; prefs.autoWhite = v }
+                        )
+                        rendered = true
+                    }
+                    if (showClipboard) {
+                        if (rendered) HorizontalDivider(modifier = Modifier.padding(horizontal = 14.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
+                        CleanerSwitchRow(
+                            title = "Clear Clipboard",
+                            subtitle = "Clear system clipboard after each clean",
+                            checked = cleanClipboard,
+                            onCheckedChange = { v -> cleanClipboard = v; prefs.cleanClipboard = v }
+                        )
+                        rendered = true
+                    }
+                    if (showCleanOnBoot) {
+                        if (rendered) HorizontalDivider(modifier = Modifier.padding(horizontal = 14.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
+                        CleanerSwitchRow(
+                            title = "Clean on Boot",
+                            subtitle = "Run a full clean automatically after device restart",
+                            checked = cleanOnBoot,
+                            onCheckedChange = { v -> cleanOnBoot = v; prefs.cleanOnBoot = v }
+                        )
+                        rendered = true
+                    }
+                    if (showScheduled) {
+                        if (rendered) HorizontalDivider(modifier = Modifier.padding(horizontal = 14.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
+                        CleanerSliderRow(
+                            title = "Scheduled Clean",
+                            subtitle = if (cleanEvery <= 0) "Disabled" else "Every $cleanEvery hour${if (cleanEvery != 1) "s" else ""}",
+                            value = if (cleanEvery <= 0) 0f else cleanEvery.toFloat(),
+                            onValueChange = { v ->
+                                val stepped = v.roundToInt().coerceIn(0, 24)
+                                cleanEvery = stepped
+                                prefs.cleanEvery = stepped
+                                if (stepped > 0) {
+                                    com.cleanify.data.cleaner.CleanerWorker.scheduleHourlyClean(ctx, stepped)
+                                } else {
+                                    com.cleanify.data.cleaner.CleanerWorker.cancelHourlyClean(ctx)
+                                }
+                            },
+                            valueRange = 0f..24f,
+                            steps = 23,
+                            startLabel = "Off",
+                            endLabel = "24h"
+                        )
+                        rendered = true
+                    }
+                    if (showStopBg) {
+                        if (rendered) HorizontalDivider(modifier = Modifier.padding(horizontal = 14.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
+                        CleanerSwitchRow(
+                            title = "Stop Background Apps",
+                            subtitle = "Kill background processes of non-system apps after clean",
+                            checked = stopBackgroundApps,
+                            onCheckedChange = { v -> stopBackgroundApps = v; prefs.stopBackgroundApps = v }
+                        )
+                    }
+                }
             }
 
             // ── Filter Lists ──
-            FrostedSettingsGroup(title = "Filter Lists") {
-                CleanerNavigationRow(
-                    title = "Blacklist",
-                    subtitle = "Paths and patterns excluded from cleaning",
-                    icon = Icons.Default.Block,
-                    onClick = onNavigateToBlacklist
-                )
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 14.dp),
-                    thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
-                )
-                CleanerNavigationRow(
-                    title = "Whitelist",
-                    subtitle = "Paths protected from cleaning",
-                    icon = Icons.Default.CheckCircle,
-                    onClick = onNavigateToWhitelist
-                )
+            if (hasFilterLists) {
+                FrostedSettingsGroup(title = "Filter Lists") {
+                    var rendered = false
+                    if (showBlacklist) {
+                        CleanerNavigationRow(
+                            title = "Blacklist",
+                            subtitle = "Paths and patterns excluded from cleaning",
+                            icon = Icons.Default.Block,
+                            onClick = onNavigateToBlacklist
+                        )
+                        rendered = true
+                    }
+                    if (showWhitelist) {
+                        if (rendered) HorizontalDivider(modifier = Modifier.padding(horizontal = 14.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
+                        CleanerNavigationRow(
+                            title = "Whitelist",
+                            subtitle = "Paths protected from cleaning",
+                            icon = Icons.Default.CheckCircle,
+                            onClick = onNavigateToWhitelist
+                        )
+                    }
+                }
             }
 
             // ── Import / Export ──
-            FrostedSettingsGroup(title = "Import / Export") {
-                CleanerNavigationRow(
-                    title = "Export Cleaner Settings",
-                    subtitle = "Save all cleaner preferences to a JSON file",
-                    icon = Icons.Default.FileUpload,
-                    onClick = { exportLauncher.launch("cleaner_settings.json") }
-                )
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 14.dp),
-                    thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
-                )
-                CleanerNavigationRow(
-                    title = "Import Cleaner Settings",
-                    subtitle = "Restore cleaner preferences from a JSON file",
-                    icon = Icons.Default.FileDownload,
-                    onClick = { importLauncher.launch(arrayOf("application/json")) }
-                )
+            if (hasImportExport) {
+                FrostedSettingsGroup(title = "Import / Export") {
+                    var rendered = false
+                    if (showExport) {
+                        CleanerNavigationRow(
+                            title = "Export Cleaner Settings",
+                            subtitle = "Save all cleaner preferences to a JSON file",
+                            icon = Icons.Default.FileUpload,
+                            onClick = { exportLauncher.launch("cleaner_settings.json") }
+                        )
+                        rendered = true
+                    }
+                    if (showImport) {
+                        if (rendered) HorizontalDivider(modifier = Modifier.padding(horizontal = 14.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
+                        CleanerNavigationRow(
+                            title = "Import Cleaner Settings",
+                            subtitle = "Restore cleaner preferences from a JSON file",
+                            icon = Icons.Default.FileDownload,
+                            onClick = { importLauncher.launch(arrayOf("application/json")) }
+                        )
+                    }
+                }
             }
 
             // ── About Tool ──
-            FrostedSettingsGroup(title = "About Empty Cleaner") {
-                ToolAboutCard(
-                    icon = Icons.Default.CleaningServices,
-                    title = "Empty Cleaner",
-                    description = "The Empty File Cleaner scans your device for junk files — empty files, empty folders, temporary files, APKs, and orphaned app data. It supports scheduled cleanups, auto-whitelisting, blacklist/whitelist filters, and can stop background apps after cleaning.",
-                    warning = "Files deleted during cleaning cannot be recovered. Be sure to check your whitelist before running deep scans."
-                )
+            if (showAbout) {
+                FrostedSettingsGroup(title = "About Empty Cleaner") {
+                    ToolAboutCard(
+                        icon = Icons.Default.CleaningServices,
+                        title = "Empty Cleaner",
+                        description = "The Empty File Cleaner scans your device for junk files — empty files, empty folders, temporary files, APKs, and orphaned app data. It supports scheduled cleanups, auto-whitelisting, blacklist/whitelist filters, and can stop background apps after cleaning.",
+                        warning = "Files deleted during cleaning cannot be recovered. Be sure to check your whitelist before running deep scans."
+                    )
+                }
             }
         }
     }

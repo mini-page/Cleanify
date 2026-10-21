@@ -90,13 +90,26 @@ class RecycleBinManager @Inject constructor(
         val recycledFile = File(categoryDir, uniqueName)
 
         try {
-            file.copyTo(recycledFile, overwrite = true)
-            if (!file.delete()) return null
+            categoryDir.mkdirs()
+            // High-speed atomic filesystem inode rename (< 1ms on the same storage mount)
+            val moved = file.renameTo(recycledFile)
+            if (!moved) {
+                // Cross-volume / cross-partition fallback: zero-copy NIO channel transfer
+                FileInputStream(file).channel.use { src ->
+                    FileOutputStream(recycledFile).channel.use { dst ->
+                        src.transferTo(0, src.size(), dst)
+                    }
+                }
+                if (!file.delete()) {
+                    recycledFile.delete()
+                    return null
+                }
+            }
         } catch (e: Exception) {
+            Log.e(TAG, "Error moving file to trash: $filePath", e)
             return null
         }
 
-        val isExternal = storageLocation == StorageLocation.EXTERNAL
         val entry = RecycleBinEntry(
             id = UUID.randomUUID().toString(),
             originalPath = filePath,
@@ -119,11 +132,19 @@ class RecycleBinManager @Inject constructor(
 
         return try {
             originalFile.parentFile?.mkdirs()
-            recycledFile.copyTo(originalFile, overwrite = true)
-            recycledFile.delete()
+            val moved = recycledFile.renameTo(originalFile)
+            if (!moved) {
+                FileInputStream(recycledFile).channel.use { src ->
+                    FileOutputStream(originalFile).channel.use { dst ->
+                        src.transferTo(0, src.size(), dst)
+                    }
+                }
+                recycledFile.delete()
+            }
             recycleBinDao.deleteEntry(entry)
             true
         } catch (e: Exception) {
+            Log.e(TAG, "Error restoring file from trash: ${entry.recycledPath}", e)
             false
         }
     }

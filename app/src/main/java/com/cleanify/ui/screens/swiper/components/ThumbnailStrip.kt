@@ -25,16 +25,21 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.DriveFileMove
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Slideshow
 import androidx.compose.material.icons.filled.TableChart
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -59,16 +64,26 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 
+enum class ThumbnailStatus {
+    KEEP,
+    DELETE,
+    SKIP,
+    MOVE,
+    SCREENSHOT
+}
+
 /**
  * Horizontal filmstrip of all items in the batch.
- * Selected item gets a primary-color border. Decided items get a checkmark overlay.
+ * Selected item gets a primary-color border. Decided/swiped items get a dark overlay
+ * with their corresponding action icon (Keep, Delete, Skip, Move, etc.).
  * Each thumbnail renders extracted artwork/preview and a bottom-left format badge.
  */
 @Composable
 internal fun ThumbnailStrip(
     items: List<MediaItem>,
     currentIndex: Int,
-    decidedIds: Set<String>,
+    itemStatuses: Map<String, ThumbnailStatus> = emptyMap(),
+    decidedIds: Set<String> = emptySet(),
     onTap: (Int) -> Unit,
     imageLoader: ImageLoader
 ) {
@@ -90,11 +105,11 @@ internal fun ThumbnailStrip(
         items(items.size) { index ->
             val item = items[index]
             val isActive = index == currentIndex
-            val isDecided = item.id in decidedIds
+            val status = itemStatuses[item.id] ?: if (item.id in decidedIds) ThumbnailStatus.KEEP else null
             ThumbnailStripItem(
                 item = item,
                 isActive = isActive,
-                isDecided = isDecided,
+                status = status,
                 onTap = { onTap(index) },
                 imageLoader = imageLoader
             )
@@ -106,7 +121,7 @@ internal fun ThumbnailStrip(
 private fun ThumbnailStripItem(
     item: MediaItem,
     isActive: Boolean,
-    isDecided: Boolean,
+    status: ThumbnailStatus?,
     onTap: () -> Unit,
     imageLoader: ImageLoader
 ) {
@@ -393,20 +408,96 @@ private fun ThumbnailStripItem(
             )
         }
 
-        // Decided checkmark overlay
-        if (isDecided) {
+        // Dark overlay + action icon for decided/swiped items
+        if (status != null) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.5f)),
+                    .background(Color.Black.copy(alpha = 0.58f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(22.dp)
-                )
+                when (status) {
+                    ThumbnailStatus.KEEP -> {
+                        Surface(
+                            shape = CircleShape,
+                            color = Color(0xFF22C55E).copy(alpha = 0.95f),
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Keep",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                    ThumbnailStatus.DELETE -> {
+                        Surface(
+                            shape = CircleShape,
+                            color = Color(0xFFEF4444).copy(alpha = 0.95f),
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Delete",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                            }
+                        }
+                    }
+                    ThumbnailStatus.SKIP -> {
+                        Surface(
+                            shape = CircleShape,
+                            color = Color(0xFF64748B).copy(alpha = 0.95f),
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.SkipNext,
+                                    contentDescription = "Skip",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                    ThumbnailStatus.MOVE -> {
+                        Surface(
+                            shape = CircleShape,
+                            color = Color(0xFF3B82F6).copy(alpha = 0.95f),
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.DriveFileMove,
+                                    contentDescription = "Move",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                            }
+                        }
+                    }
+                    ThumbnailStatus.SCREENSHOT -> {
+                        Surface(
+                            shape = CircleShape,
+                            color = Color(0xFFA855F7).copy(alpha = 0.95f),
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.CameraAlt,
+                                    contentDescription = "Screenshot",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }

@@ -84,9 +84,9 @@ private data class SettingsCategory(
 private val categories = listOf(
     SettingsCategory("appearance", R.string.appearance_section_title, R.string.appearance_section_desc, Icons.Default.Palette),
     SettingsCategory("sorting", R.string.gestures_section_title, R.string.gestures_section_desc, Icons.AutoMirrored.Filled.Sort),
+    SettingsCategory("storage_management", R.string.storage_management_title, R.string.storage_management_desc, Icons.Default.SdCard),
     SettingsCategory("duplicates", R.string.duplicate_finder_section_title, R.string.duplicate_finder_section_desc, Icons.Default.ContentCopy),
     SettingsCategory("cleaner", R.string.cleaner_section_title, R.string.cleaner_section_desc, Icons.Default.CleaningServices),
-    SettingsCategory("contact_cleaner", R.string.contact_cleaner_section_title, R.string.contact_cleaner_section_desc, Icons.Default.Contacts),
     SettingsCategory("help", R.string.help_support_section_title, R.string.help_support_section_desc, Icons.AutoMirrored.Filled.HelpOutline),
     SettingsCategory("about", R.string.about_section_title, R.string.about_section_desc, Icons.Default.Info)
 )
@@ -178,9 +178,9 @@ fun SettingsScreen(
             "appearance" -> R.string.appearance_section_title
             "sorting" -> R.string.gestures_section_title
             "behavior" -> R.string.behavior_section_title
+            "storage_management" -> R.string.storage_management_title
             "duplicates" -> R.string.duplicate_finder_section_title
             "media_storage" -> R.string.media_storage_section_title
-            "contact_cleaner" -> R.string.contact_cleaner_section_title
             "help" -> R.string.help_support_section_title
             "about" -> R.string.about_section_title
             else -> null
@@ -286,8 +286,11 @@ fun SettingsScreen(
                                     onNavigateUp = { if (initialPage != null) onNavigateUp() else currentPage = null }
                                 )
                                 "sorting", "behavior", "media_storage" -> SortingSection(viewModel = viewModel)
+                                "storage_management" -> StorageManagementSection(
+                                    viewModel = viewModel,
+                                    onNavigateToCleaner = onNavigateToCleanerSettings
+                                )
                                 "duplicates" -> DuplicatesSection(viewModel = viewModel)
-                                "contact_cleaner" -> ContactCleanerSection(viewModel = viewModel)
                                 "help" -> HelpSection(
                                     viewModel = viewModel,
                                     exportFavoritesLauncher = exportFavoritesLauncher,
@@ -648,7 +651,7 @@ private fun SettingsMainMenu(
                 filteredCategories.filter { it.id in listOf("appearance", "sorting") }
             }
             val toolCategories = remember(filteredCategories) {
-                filteredCategories.filter { it.id in listOf("duplicates", "cleaner", "contact_cleaner") }
+                filteredCategories.filter { it.id in listOf("storage_management", "duplicates", "cleaner") }
             }
             val supportCategories = remember(filteredCategories) {
                 filteredCategories.filter { it.id in listOf("help", "about") }

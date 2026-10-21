@@ -277,6 +277,79 @@ class DirectMediaRepositoryImpl @Inject constructor(
             emit(emptyList())
             return@flow
         }
+
+        // Virtual Bucket: Standalone APK Installers
+        if (bucketIds.contains("virtual:apks")) {
+            val apkFiles = withContext(Dispatchers.IO) {
+                val candidateDirs = listOf(
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                    Environment.getExternalStorageDirectory()
+                )
+                val found = mutableListOf<File>()
+                for (dir in candidateDirs) {
+                    if (dir.isDirectory) {
+                        dir.walkTopDown().maxDepth(3)
+                            .filter { it.isFile && it.extension.equals("apk", ignoreCase = true) }
+                            .forEach { found.add(it) }
+                    }
+                }
+                found.distinctBy { it.absolutePath }.sortedByDescending { it.lastModified() }
+            }
+            val apkItems = apkFiles.map { file ->
+                MediaItem(
+                    id = file.absolutePath,
+                    uri = file.toUri(),
+                    displayName = file.name,
+                    size = file.length(),
+                    dateModified = file.lastModified() / 1000,
+                    dateAdded = file.lastModified() / 1000,
+                    mimeType = "application/vnd.android.package-archive",
+                    bucketId = "virtual:apks",
+                    bucketName = "APKs",
+                    category = FileCategory.Other,
+                    width = 0,
+                    height = 0
+                )
+            }
+            emit(apkItems)
+            return@flow
+        }
+
+        // Virtual Bucket: Screenshots
+        if (bucketIds.contains("virtual:screenshots")) {
+            val screenshotFiles = withContext(Dispatchers.IO) {
+                val candidateDirs = listOf(
+                    File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "Screenshots"),
+                    File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM), "Screenshots")
+                )
+                val found = mutableListOf<File>()
+                for (dir in candidateDirs) {
+                    if (dir.isDirectory) {
+                        dir.listFiles { f -> f.isFile && (f.extension.lowercase() in listOf("jpg", "jpeg", "png", "webp")) }
+                            ?.forEach { found.add(it) }
+                    }
+                }
+                found.distinctBy { it.absolutePath }.sortedByDescending { it.lastModified() }
+            }
+            val screenshotItems = screenshotFiles.map { file ->
+                MediaItem(
+                    id = file.absolutePath,
+                    uri = file.toUri(),
+                    displayName = file.name,
+                    size = file.length(),
+                    dateModified = file.lastModified() / 1000,
+                    dateAdded = file.lastModified() / 1000,
+                    mimeType = "image/${file.extension.lowercase()}",
+                    bucketId = "virtual:screenshots",
+                    bucketName = "Screenshots",
+                    category = FileCategory.Image,
+                    width = 0,
+                    height = 0
+                )
+            }
+            emit(screenshotItems)
+            return@flow
+        }
         Log.d(logTag, "Starting batched media fetch for buckets: $bucketIds")
 
         // Step 1: Pre-fetch all available MediaStore data for the target buckets into a map for fast lookups.

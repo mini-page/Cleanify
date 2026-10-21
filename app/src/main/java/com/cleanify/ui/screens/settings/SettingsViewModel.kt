@@ -1311,6 +1311,34 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    val storageLargeFileThresholdMb: StateFlow<Long> = preferencesRepository.storageLargeFileThresholdMb
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 50L)
+
+    val storageOldDownloadsDays: StateFlow<Int> = preferencesRepository.storageOldDownloadsDays
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 30)
+
+    val storageScanHiddenFiles: StateFlow<Boolean> = preferencesRepository.storageScanHiddenFiles
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val storageHapticsEnabled: StateFlow<Boolean> = preferencesRepository.storageHapticsEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    fun setStorageLargeFileThresholdMb(threshold: Long) {
+        viewModelScope.launch { preferencesRepository.setStorageLargeFileThresholdMb(threshold) }
+    }
+
+    fun setStorageOldDownloadsDays(days: Int) {
+        viewModelScope.launch { preferencesRepository.setStorageOldDownloadsDays(days) }
+    }
+
+    fun setStorageScanHiddenFiles(enabled: Boolean) {
+        viewModelScope.launch { preferencesRepository.setStorageScanHiddenFiles(enabled) }
+    }
+
+    fun setStorageHapticsEnabled(enabled: Boolean) {
+        viewModelScope.launch { preferencesRepository.setStorageHapticsEnabled(enabled) }
+    }
+
     fun setScanVideoEnabled(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.setScanVideoEnabled(enabled)

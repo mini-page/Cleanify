@@ -56,6 +56,7 @@ fun SheetItemCard(
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
                     .data(item.uri)
+                    .size(160) // Prevent decoding full 200MB+ images/videos into memory bitmaps
                     .crossfade(true)
                     .build(),
                 contentDescription = null,

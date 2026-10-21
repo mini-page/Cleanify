@@ -30,7 +30,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import com.cleanify.ui.screens.tools.EmptyCleanerScreen
 import com.cleanify.ui.screens.duplicates.DuplicatesScreen
 import com.cleanify.ui.screens.duplicates.DuplicatesViewModel
-import com.cleanify.ui.screens.contacts.ContactCleanerScreen
 import com.cleanify.ui.screens.storage.StorageAnalysisScreen
 import com.cleanify.ui.screens.recyclebin.RecycleBinScreen
 import androidx.compose.foundation.BorderStroke
@@ -110,7 +109,6 @@ enum class HomeTool {
     FOLDERS,
     EMPTY_CLEANER,
     DUPLICATES,
-    CONTACTS,
     STORAGE,
     RECYCLE_BIN
 }
@@ -128,7 +126,6 @@ fun SessionSetupScreen(
     onNavigateToDuplicatesGroup: (String) -> Unit = {},
     onNavigateToEmptyCleaner: () -> Unit = {},
     onNavigateToRecycleBin: () -> Unit = {},
-    onNavigateToContactCleaner: () -> Unit = {},
     onNavigateToStorageAnalysis: () -> Unit = {},
     viewModel: SessionSetupViewModel = hiltViewModel()
 ) {
@@ -292,8 +289,7 @@ fun SessionSetupScreen(
                             HomeTool.FOLDERS -> onNavigateToSettings()
                             HomeTool.EMPTY_CLEANER -> onNavigateToCleanerSettings()
                             HomeTool.DUPLICATES -> onNavigateToSettingsForTool("duplicates")
-                            HomeTool.CONTACTS -> onNavigateToSettingsForTool("contact_cleaner")
-                            HomeTool.STORAGE -> onNavigateToSettings()
+                            HomeTool.STORAGE -> onNavigateToSettingsForTool("storage_management")
                             HomeTool.RECYCLE_BIN -> onNavigateToSettings()
                         }
 
@@ -386,25 +382,6 @@ fun SessionSetupScreen(
                     leadingIcon = {
                         Icon(
                             Icons.Default.ControlPointDuplicate,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    },
-                    shape = RoundedCornerShape(20.dp),
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                )
-
-                FilterChip(
-                    selected = activeTool == HomeTool.CONTACTS,
-                    onClick = { activeTool = HomeTool.CONTACTS },
-                    label = { Text("Contacts") },
-                    leadingIcon = {
-                        Icon(
-                            Icons.Default.Contacts,
                             contentDescription = null,
                             modifier = Modifier.size(18.dp)
                         )
@@ -743,20 +720,14 @@ fun SessionSetupScreen(
             embedded = true
         )
     }
-    HomeTool.CONTACTS -> {
-        ContactCleanerScreen(
-            onNavigateUp = { activeTool = HomeTool.FOLDERS },
-            onNavigateToSettings = { onNavigateToSettingsForTool("contact_cleaner") },
-            embedded = true
-        )
-    }
     HomeTool.STORAGE -> {
         StorageAnalysisScreen(
             onNavigateUp = { activeTool = HomeTool.FOLDERS },
             onNavigateToEmptyCleaner = { activeTool = HomeTool.EMPTY_CLEANER },
             onNavigateToDuplicates = { activeTool = HomeTool.DUPLICATES },
             onNavigateToRecycleBin = { activeTool = HomeTool.RECYCLE_BIN },
-            onNavigateToContactCleaner = { activeTool = HomeTool.CONTACTS },
+            onNavigateToSwiper = { bucketIds -> onStartSession(bucketIds) },
+            onNavigateToSettings = { page -> onNavigateToSettingsForTool(page) },
             embedded = true
         )
     }

@@ -141,4 +141,41 @@ object Constants {
         "do_not_edit",
         ".stfolder"
     )
+
+    /**
+     * Standard Android system and user media directories that should NEVER be deleted
+     * as empty folders during cleanup.
+     * Pattern inspired by SD Maid SE's EmptyDirectoryFilter (GPLv3, Darken).
+     */
+    val protectedBaseDirectories: Set<String> = setOf(
+        "camera",
+        "photos",
+        "dcim",
+        "pictures",
+        "movies",
+        "music",
+        "recordings",
+        "video",
+        "videos",
+        "download",
+        "downloads",
+        "audiobooks",
+        "documents",
+        "alarms",
+        "ringtones",
+        "notifications",
+        "podcasts",
+        "android"
+    )
+
+    /**
+     * Subdirectories directly under Android/ or app packages that must remain intact.
+     */
+    val protectedSubDirectories: Set<String> = setOf(
+        "data",
+        "media",
+        "obb",
+        "files",
+        "cache"
+    )
 }

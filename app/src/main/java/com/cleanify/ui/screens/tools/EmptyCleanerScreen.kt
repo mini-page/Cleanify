@@ -2,6 +2,7 @@ package com.cleanify.ui.screens.tools
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -10,8 +11,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CleaningServices
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Devices
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.SdCard
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -105,7 +109,7 @@ fun EmptyCleanerBody(
                 ResultsSection(
                     foundFiles = uiState.foundFiles,
                     totalSize = uiState.totalSize,
-                    onClean = { viewModel.executeClean(selectedVolumeIndex) },
+                    onCleanSelected = { files -> viewModel.executeCleanFiles(files) },
                     onRescan = { viewModel.startScan(selectedVolumeIndex) }
                 )
             }
@@ -320,11 +324,14 @@ private fun ScanningSection(progress: Double) {
 private fun ResultsSection(
     foundFiles: List<File>,
     totalSize: Long,
-    onClean: () -> Unit,
+    onCleanSelected: (List<File>) -> Unit,
     onRescan: () -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedPaths by remember(foundFiles) { mutableStateOf(foundFiles.map { it.absolutePath }.toSet()) }
+
     val format = DecimalFormat("#.##")
     val kib: Long = 1024
     val mib: Long = 1048576
@@ -334,25 +341,45 @@ private fun ResultsSection(
         else -> "$totalSize B"
     }
 
+    val filteredFiles = remember(foundFiles, searchQuery) {
+        val q = searchQuery.trim().lowercase()
+        if (q.isBlank()) foundFiles
+        else foundFiles.filter { it.name.lowercase().contains(q) || it.absolutePath.lowercase().contains(q) }
+    }
+
+    val selectedFiles = remember(selectedPaths, foundFiles) {
+        foundFiles.filter { it.absolutePath in selectedPaths }
+    }
+
     if (showDeleteConfirm) {
         AppDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("Delete all found items?") },
-            text = { Text("This will permanently delete ${foundFiles.size} empty file(s)/folder(s). This action cannot be undone.") }
+            title = { Text("Delete selected items?") },
+            text = { Text("This will permanently delete ${selectedFiles.size} empty file(s)/folder(s). Unchecked items will be kept.") }
         ) {
             TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
-            Button(onClick = { showDeleteConfirm = false; onClean() }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) {
-                Text("Delete All")
+            Button(
+                onClick = {
+                    showDeleteConfirm = false
+                    onCleanSelected(selectedFiles)
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text("Delete (${selectedFiles.size})")
             }
         }
     }
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-    ) {
-        if (foundFiles.isEmpty()) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    if (foundFiles.isEmpty()) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 Icon(
                     imageVector = Icons.Default.CheckCircle,
                     contentDescription = null,
@@ -368,28 +395,198 @@ private fun ResultsSection(
                     Text("Rescan")
                 }
             }
-        } else {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Scan Complete", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text("Found: ${foundFiles.size} items")
-                Text("Total size: $sizeStr")
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Button(onClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); showDeleteConfirm = true }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) {
-                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(20.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Delete All")
+        }
+    } else {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            // Header Action Card (Quarry style)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                "Scan Complete",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                "${foundFiles.size} items found • $sizeStr",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        val allFilteredSelected = filteredFiles.isNotEmpty() && filteredFiles.all { it.absolutePath in selectedPaths }
+                        TextButton(
+                            onClick = {
+                                val filteredPaths = filteredFiles.map { it.absolutePath }.toSet()
+                                selectedPaths = if (allFilteredSelected) {
+                                    selectedPaths - filteredPaths
+                                } else {
+                                    selectedPaths + filteredPaths
+                                }
+                            }
+                        ) {
+                            Text(if (allFilteredSelected) "Deselect All" else "Select All")
+                        }
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    OutlinedButton(onClick = onRescan) {
-                        Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(20.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Rescan")
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Button(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                showDeleteConfirm = true
+                            },
+                            enabled = selectedFiles.isNotEmpty(),
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Delete (${selectedFiles.size})")
+                        }
+
+                        OutlinedButton(onClick = onRescan) {
+                            Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Rescan")
+                        }
+                    }
+                }
+            }
+
+            // Accessible Search Bar for filtering candidate folders
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Search empty folders or path...") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = MaterialTheme.colorScheme.primary) },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(Icons.Default.Close, contentDescription = "Clear search")
+                        }
+                    }
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(14.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                )
+            )
+
+            // Candidates list header
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (searchQuery.isBlank()) "Empty Candidates (Uncheck to Keep)"
+                    else "Matching Candidates (${filteredFiles.size})",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = "${selectedFiles.size} selected",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            if (filteredFiles.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No empty folders match \"$searchQuery\"",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 420.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    items(filteredFiles, key = { it.absolutePath }) { file ->
+                        val isChecked = file.absolutePath in selectedPaths
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isChecked) MaterialTheme.colorScheme.surfaceContainerHigh
+                                else MaterialTheme.colorScheme.surface
+                            ),
+                            onClick = {
+                                selectedPaths = if (isChecked) selectedPaths - file.absolutePath
+                                else selectedPaths + file.absolutePath
+                            }
+                        ) {
+                            Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (file.isDirectory) Icons.Default.Folder else Icons.Default.Description,
+                                contentDescription = null,
+                                tint = if (isChecked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(24.dp)
+                            )
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = file.name,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = file.parent ?: "",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+
+                            Checkbox(
+                                checked = isChecked,
+                                onCheckedChange = { checked ->
+                                    selectedPaths = if (checked) selectedPaths + file.absolutePath
+                                    else selectedPaths - file.absolutePath
+                                }
+                            )
+                        }
                     }
                 }
             }
         }
     }
+}
 }
 
 @Composable

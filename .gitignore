@@ -48,6 +48,8 @@ google-services.json
 .claude/
 .gitnexus/
 .planning/
+MASTER DIRECTIVE*
+
 graphify-out/
 /*.png
 AGENTS.md
